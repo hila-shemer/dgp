@@ -207,9 +207,7 @@ public class TextActivity extends Activity implements Runnable {
 		}
 		if (key.length < 64) {
 			byte[] newkey = new byte[64];
-			for (int i = 0; i < key.length; i++) {
-				newkey[i] = key[i];
-			}
+			System.arraycopy(key, 0, newkey, 0, key.length);
 			for (int i = key.length; i < 64; i++) {
 				newkey[i] = (byte)0;
 			}
@@ -232,9 +230,7 @@ public class TextActivity extends Activity implements Runnable {
 
 	private static final byte[] pbkdf_block(byte[] key, byte[] salt, int iterations, int block) {
 		byte[] saltiter = new byte[salt.length + 4];
-		for (int i = 0; i < salt.length; i++) {
-			saltiter[i] = salt[i];
-		}
+		System.arraycopy(salt, 0, saltiter, 0, salt.length);
 		saltiter[salt.length] = (byte)((block >> 24) & 0xff);
 		saltiter[salt.length+1] = (byte)((block >> 16) & 0xff);
 		saltiter[salt.length+2] = (byte)((block >> 8) & 0xff);
@@ -251,24 +247,18 @@ public class TextActivity extends Activity implements Runnable {
 	}
 
 	private static final byte[] pbkdf(byte[] key, byte[] salt, int iterations, int outlen) {
-		int size = 0;
 		int blocknum = 0;
 		int outlen_aligned = 32 * ((outlen + 31) / 32);
 		byte[] output = new byte[outlen_aligned];
 		int cur_offset = 0;
-		while (size < outlen) {
+		while (cur_offset < outlen) {
 			blocknum++;
 			byte[] block = pbkdf_block(key, salt, iterations, blocknum);
-			for (int i = 0; i < 32; i++) {
-				output[cur_offset] = block[i];
-				cur_offset++;
-			}
-			size += 32;
+			System.arraycopy(block, 0, output, cur_offset, 32);
+			cur_offset += 32;
 		}
 		byte[] truncated_output = new byte[outlen];
-		for (int i = 0; i < outlen; i++) {
-			truncated_output[i] = output[i];
-		}
+		System.arraycopy(output, 0, truncated_output, 0, outlen);
 		return truncated_output;
 	}
 
