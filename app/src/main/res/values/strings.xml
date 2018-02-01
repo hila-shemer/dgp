@@ -43,6 +43,14 @@
 	<string name="contact">hobbyone.droid@gmail.com</string>
 	<string name="AlgoList">Select a hash function :</string>
 	<string name="Calculating">Calculating&#8230;</string>
+	<string-array name="Output_Formats">
+		<item>AlNum</item>
+		<item>AlNumLong</item>
+		<item>XKCD</item>
+		<item>XKCD-Long</item>
+		<item>Hex</item>
+		<item>HexLong</item>
+	</string-array>
 	<string-array name="Algo_Array">
 		<item>Adler-32</item>
 		<item>CRC-32</item>
