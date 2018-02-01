@@ -300,7 +300,7 @@ public class TextActivity extends Activity implements Runnable {
 			raw = raw.substring(1);
 		}
 		//assert false;
-		return "PANIC";
+		return "";
 	}
 
 	private static final String get_seed() {
