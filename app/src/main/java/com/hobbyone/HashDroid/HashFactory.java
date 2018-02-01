@@ -80,8 +80,6 @@ public class HashFactory {
 			result = new Haval();
 		else if (name.equalsIgnoreCase("md2"))
 			result = new MD2();
-		else if (name.equalsIgnoreCase("md4"))
-			result = new MD4();
 		else if (name.equalsIgnoreCase("md5"))
 			result = new MD5();
 		else if (name.equalsIgnoreCase("ripemd-128"))

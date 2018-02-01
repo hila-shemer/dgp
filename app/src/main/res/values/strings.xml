@@ -48,7 +48,6 @@
 		<item>CRC-32</item>
 		<item>Haval-128</item>
 		<item>MD2</item>
-		<item>MD4</item>
 		<item>MD5</item>
 		<item>RIPEMD-128</item>
 		<item>RIPEMD-160</item>

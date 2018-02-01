@@ -172,24 +172,22 @@ public class TextActivity extends Activity implements Runnable {
 		else if (miItePos == 3)
 			sAlgo = "md2";
 		else if (miItePos == 4)
-			sAlgo = "md4";
-		else if (miItePos == 5)
 			sAlgo = "md5";
-		else if (miItePos == 6)
+		else if (miItePos == 5)
 			sAlgo = "ripemd-128";
-		else if (miItePos == 7)
+		else if (miItePos == 6)
 			sAlgo = "ripemd-160";
-		else if (miItePos == 8)
+		else if (miItePos == 7)
 			sAlgo = "sha-1";
-		else if (miItePos == 9)
+		else if (miItePos == 8)
 			sAlgo = "sha-256";
-		else if (miItePos == 10)
+		else if (miItePos == 9)
 			sAlgo = "sha-384";
-		else if (miItePos == 11)
+		else if (miItePos == 10)
 			sAlgo = "sha-512";
-		else if (miItePos == 12)
+		else if (miItePos == 11)
 			sAlgo = "tiger";
-		else if (miItePos == 13)
+		else if (miItePos == 12)
 			sAlgo = "whirlpool";
 		mHashOpe.SetAlgorithm(sAlgo);
 
