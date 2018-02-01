@@ -76,28 +76,14 @@ public class HashFactory {
 
 		name = name.trim();
 		IMessageDigest result = null;
-		if (name.equalsIgnoreCase("haval"))
-			result = new Haval();
-		else if (name.equalsIgnoreCase("md2"))
-			result = new MD2();
-		else if (name.equalsIgnoreCase("md5"))
-			result = new MD5();
-		else if (name.equalsIgnoreCase("ripemd-128"))
-			result = new RipeMD128();
-		else if (name.equalsIgnoreCase("ripemd-160"))
+		if (name.equalsIgnoreCase("ripemd-160"))
 			result = new RipeMD160();
-		else if (name.equalsIgnoreCase("sha-1"))
-			result = new Sha160();
 		else if (name.equalsIgnoreCase("sha-256"))
 			result = new Sha256();
 		else if (name.equalsIgnoreCase("sha-384"))
 			result = new Sha384();
 		else if (name.equalsIgnoreCase("sha-512"))
 			result = new Sha512();
-		else if (name.equalsIgnoreCase("tiger"))
-			result = new Tiger();
-		else if (name.equalsIgnoreCase("whirlpool"))
-			result = new Whirlpool();
 
 		return result;
 	}
