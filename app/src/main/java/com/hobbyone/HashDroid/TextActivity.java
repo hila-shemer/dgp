@@ -52,8 +52,7 @@ public class TextActivity extends Activity implements Runnable {
 	private ClipboardManager mClipboard = null;
 	private String msHash = "";
 	private String msToHash = "";
-	private String[] mFunctions;
-	private HashFunctionOperator mHashOpe = null;
+	private String[] mOutputFormats;
 	private ProgressDialog mProgressDialog = null;
 	private int miItePos = -1;
 
@@ -70,14 +69,14 @@ public class TextActivity extends Activity implements Runnable {
 		mResultTV = (TextView) findViewById(R.id.label_result);
 		mCopyButton = (Button) findViewById(R.id.CopyButton);
 		mClipboard = (ClipboardManager) getSystemService("clipboard");
-		mFunctions = getResources().getStringArray(R.array.Algo_Array);
+		mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
 		mCheckBox = (CheckBox) findViewById(R.id.UpperCaseCB);
 
 		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-				this, R.array.Algo_Array, android.R.layout.simple_spinner_item);
+				this, R.array.Output_Formats, android.R.layout.simple_spinner_item);
 		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		mSpinner.setAdapter(adapter);
-		mSpinner.setSelection(5); // MD5 by default
+		mSpinner.setSelection(0); // alnum by default
 		mSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
 			public void onItemSelected(AdapterView<?> parentView,
@@ -160,37 +159,6 @@ public class TextActivity extends Activity implements Runnable {
 	}
 
 	private void ComputeAndDisplayHash() {
-		if (mHashOpe == null)
-			mHashOpe = new HashFunctionOperator();
-		String sAlgo = "";
-		if (miItePos == 0)
-			sAlgo = "Adler-32";
-		else if (miItePos == 1)
-			sAlgo = "CRC-32";
-		else if (miItePos == 2)
-			sAlgo = "haval";
-		else if (miItePos == 3)
-			sAlgo = "md2";
-		else if (miItePos == 4)
-			sAlgo = "md5";
-		else if (miItePos == 5)
-			sAlgo = "ripemd-128";
-		else if (miItePos == 6)
-			sAlgo = "ripemd-160";
-		else if (miItePos == 7)
-			sAlgo = "sha-1";
-		else if (miItePos == 8)
-			sAlgo = "sha-256";
-		else if (miItePos == 9)
-			sAlgo = "sha-384";
-		else if (miItePos == 10)
-			sAlgo = "sha-512";
-		else if (miItePos == 11)
-			sAlgo = "tiger";
-		else if (miItePos == 12)
-			sAlgo = "whirlpool";
-		mHashOpe.SetAlgorithm(sAlgo);
-
 		String sCalculating = getString(R.string.Calculating);
 		mProgressDialog = ProgressDialog.show(TextActivity.this, "",
 				sCalculating, true);
@@ -325,8 +293,6 @@ public class TextActivity extends Activity implements Runnable {
 		msHash = grab_alnum(int_data, 8);
 //		msHash = get_base58(int_data);
 
-//		if (mHashOpe != null)
-//			msHash = mHashOpe.StringToHash(msToHash);
 		handler.sendEmptyMessage(0);
 	}
 
@@ -350,11 +316,11 @@ public class TextActivity extends Activity implements Runnable {
 						msHash = msHash.toLowerCase();
 					}
 				}
-				String Function = "";
+				String OutputFormat = "";
 				if (miItePos >= 0)
-					Function = mFunctions[miItePos];
+					OutputFormat = mOutputFormats[miItePos];
 				sTextHashTitle = String.format(res.getString(R.string.Hash),
-						Function, msHash);
+						OutputFormat, msHash);
 				// Show the copy button
 				if (mCopyButton != null)
 					mCopyButton.setVisibility(View.VISIBLE);
