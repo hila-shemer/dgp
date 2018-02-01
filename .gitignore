@@ -23,3 +23,5 @@ build/
 
 # Android import
 import-summary.txt
+
+app/release
