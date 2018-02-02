@@ -161,9 +161,13 @@ public class TextActivity extends Activity implements Runnable {
 				}
 			}
 		});
+	}
 
+	@Override
+	public void onResume() {
 		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 		mSeed = settings.getString("seed", "test");
+		super.onResume();
 	}
 
 	private void ComputeAndDisplayHash() {
