@@ -243,11 +243,11 @@ public class TextActivity extends Activity implements Runnable {
 	}
 
 
-	private static final BigInteger bytes_to_int(byte[] data) {
+	public static final BigInteger bytes_to_int(byte[] data) {
 		return new BigInteger(1, data);
 	}
 
-	private static final String get_base58(BigInteger int_data) {
+	public static final String get_base58(BigInteger int_data) {
 		final String digits = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 		String res = "";
 		while (int_data.signum() == 1) {
