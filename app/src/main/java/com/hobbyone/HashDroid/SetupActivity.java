@@ -1,4 +1,4 @@
-/* CompareActivity.java -- 
+/* SetupActivity.java --
    Copyright (C) 2010 Christophe Bouyer (Hobby One)
 
 This file is part of Hash Droid.
