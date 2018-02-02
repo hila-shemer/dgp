@@ -2,7 +2,7 @@
 <resources>
 	<string name="app_name">DGP</string>
 	<string name="tab_text">Hash a text</string>
-	<string name="tab_compare">Compare hashes</string>
+	<string name="tab_setup">Setup</string>
 	<string name="input_txt">Input the text to hash :</string>
 	<string name="Text">Text : %1$s\n</string>
 	<string name="Hash">%1$s output : %2$s</string>

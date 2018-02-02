@@ -29,7 +29,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-public class CompareActivity extends Activity {
+public class SetupActivity extends Activity {
 
 	private EditText mEditText1 = null;
 	private EditText mEditText2 = null;
@@ -42,7 +42,7 @@ public class CompareActivity extends Activity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.compare);
+		setContentView(R.layout.setup);
 
 		mEditText1 = (EditText) findViewById(R.id.edit_txt1);
 		mClearButton1 = (Button) findViewById(R.id.ClearButton1);

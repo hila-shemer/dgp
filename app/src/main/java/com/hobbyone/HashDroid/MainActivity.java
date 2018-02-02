@@ -64,12 +64,12 @@ public class MainActivity extends TabActivity {
 		tabHost.addTab(spec);
 
 		// Do the same for the other tabs
-		intent = new Intent().setClass(this, CompareActivity.class);
+		intent = new Intent().setClass(this, SetupActivity.class);
 		String sCompareTabTitle = getString(R.string.tab_compare);
 		spec = tabHost
-				.newTabSpec("compare")
+				.newTabSpec("setup")
 				.setIndicator(sCompareTabTitle,
-						res.getDrawable(R.drawable.ic_tab_compare))
+						res.getDrawable(R.drawable.ic_tab_setup))
 				.setContent(intent);
 		tabHost.addTab(spec);
 

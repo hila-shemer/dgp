@@ -33,7 +33,7 @@
         </activity>
         <activity android:name=".TextActivity" >
         </activity>
-        <activity android:name=".CompareActivity" >
+        <activity android:name=".SetupActivity" >
         </activity>
 
     </application>
