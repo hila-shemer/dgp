@@ -6,7 +6,6 @@
 	<string name="input_txt">Input the text to hash :</string>
 	<string name="Text">Text : %1$s\n</string>
 	<string name="Hash">%1$s output : %2$s</string>
-	<string name="cb_upper_case">Result in upper case</string>
 	<string name="unable_to_calculate">Unable to calculate the checksum of %1$s</string>
 	<string name="calculate_but">Calculate</string>
 	<string name="clear_but">Clear</string>

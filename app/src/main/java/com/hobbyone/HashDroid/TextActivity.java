@@ -46,7 +46,6 @@ import java.math.BigInteger;
 
 public class TextActivity extends Activity implements Runnable {
 	private EditText mEditText = null;
-	private CheckBox mCheckBox = null;
 	private Button mClearButton = null;
 	private Button mGenerateButton = null;
 	private Button mCopyButton = null;
@@ -76,7 +75,6 @@ public class TextActivity extends Activity implements Runnable {
 		mCopyButton = (Button) findViewById(R.id.CopyButton);
 		mClipboard = (ClipboardManager) getSystemService("clipboard");
 		mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
-		mCheckBox = (CheckBox) findViewById(R.id.UpperCaseCB);
 
 		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
 				this, R.array.Output_Formats, android.R.layout.simple_spinner_item);
@@ -135,29 +133,6 @@ public class TextActivity extends Activity implements Runnable {
 					String sCopied = getString(R.string.copied);
 					Toast.makeText(TextActivity.this, sCopied,
 							Toast.LENGTH_SHORT).show();
-				}
-			}
-		});
-
-		mCheckBox.setChecked(false); // lower case by default
-		mCheckBox.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				// Perform action on clicks
-				if (!msHash.equals("")) {
-					// A hash value has already been calculated,
-					// just convert it to lower or upper case
-					String OldHash = msHash;
-					if (mCheckBox.isChecked()) {
-						msHash = OldHash.toUpperCase();
-					} else {
-						msHash = OldHash.toLowerCase();
-					}
-					if (mResultTV != null) {
-						String sResult = mResultTV.getText().toString();
-						sResult = sResult.replaceAll(OldHash, msHash);
-						mResultTV.setText(sResult);
-					}
 				}
 			}
 		});
@@ -317,13 +292,6 @@ public class TextActivity extends Activity implements Runnable {
 					msToHash);
 			String sTextHashTitle = "";
 			if (!msHash.equals("")) {
-				if (mCheckBox != null) {
-					if (mCheckBox.isChecked()) {
-						msHash = msHash.toUpperCase();
-					} else {
-						msHash = msHash.toLowerCase();
-					}
-				}
 				String OutputFormat = "";
 				if (miItePos >= 0)
 					OutputFormat = mOutputFormats[miItePos];
