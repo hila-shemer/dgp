@@ -119,12 +119,6 @@ public class MainActivity extends TabActivity {
 								}
 							}).show();
 			break;
-		case R.id.menu_rateit:
-			Intent intent = new Intent(Intent.ACTION_VIEW);
-			intent.setData(Uri
-					.parse("market://details?id="+getPackageName()));
-			startActivity(intent);
-			break;
 		case R.id.menu_about:
 			LayoutInflater about_inflater = getLayoutInflater();
 			View AboutView = about_inflater.inflate(R.layout.about,

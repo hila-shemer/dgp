@@ -24,7 +24,6 @@
 	<string name="Close_but">Close</string>
 	<string name="copied">Hash copied to clipboard</string>
 	<string name="label_menu_about">About</string>
-	<string name="label_menu_rateit">Rate it</string>
 	<string name="label_menu_help">Help</string>
 	<string name="up_one_level">..</string>
 	<string name="selectedfile_confirmation">Do you want to compute the file %1$s ?</string>

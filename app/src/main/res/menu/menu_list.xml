@@ -6,10 +6,6 @@
         android:icon="@drawable/ic_menu_help"
         android:title="@string/label_menu_help"/>
     <item
-        android:id="@+id/menu_rateit"
-        android:icon="@drawable/ic_menu_rateit"
-        android:title="@string/label_menu_rateit"/>
-    <item
         android:id="@+id/menu_about"
         android:icon="@drawable/ic_menu_about"
         android:title="@string/label_menu_about"/>
