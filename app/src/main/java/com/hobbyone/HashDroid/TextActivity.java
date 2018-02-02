@@ -39,6 +39,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.content.SharedPreferences;
+
+
 import java.math.BigInteger;
 
 public class TextActivity extends Activity implements Runnable {
@@ -55,6 +58,9 @@ public class TextActivity extends Activity implements Runnable {
 	private String[] mOutputFormats;
 	private ProgressDialog mProgressDialog = null;
 	private int miItePos = -1;
+	private String mSeed = "";
+
+	public static final String PREFS_NAME = "DgpConfig";
 
 	/** Called when the activity is first created. */
 	@Override
@@ -156,6 +162,8 @@ public class TextActivity extends Activity implements Runnable {
 			}
 		});
 
+		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+		mSeed = settings.getString("seed", "test");
 	}
 
 	private void ComputeAndDisplayHash() {
@@ -271,12 +279,8 @@ public class TextActivity extends Activity implements Runnable {
 		return "";
 	}
 
-	private static final String get_seed() {
-		return new String("test");
-	}
-
-	private static final BigInteger gen_large_int(String name) {
-		byte[] bin_data = pbkdf(get_seed().getBytes(), name.getBytes(), 8192, 32);
+	private static final BigInteger gen_large_int(String seed, String name) {
+		byte[] bin_data = pbkdf(seed.getBytes(), name.getBytes(), 8192, 32);
 		return bytes_to_int(bin_data);
 	}
 
@@ -289,7 +293,7 @@ public class TextActivity extends Activity implements Runnable {
 //		msHash = UtilServices.toString(md.digest());
 //		msHash = UtilServices.toString(hmac("key".getBytes(), "The quick brown fox jumps over the lazy dog".getBytes()));
 		//msHash = UtilServices.toString(pbkdf("password".getBytes(), "salt".getBytes(), 4096, 20));
-		BigInteger int_data = gen_large_int(msToHash);
+		BigInteger int_data = gen_large_int(mSeed, msToHash);
 		msHash = grab_alnum(int_data, 8);
 //		msHash = get_base58(int_data);
 
