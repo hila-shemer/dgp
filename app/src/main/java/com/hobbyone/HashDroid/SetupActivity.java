@@ -20,6 +20,7 @@ along with Hash Droid. If not, see <http://www.gnu.org/licenses/>.
 package com.hobbyone.HashDroid;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
@@ -29,13 +30,14 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.security.SecureRandom;
+
 public class SetupActivity extends Activity {
 
 	private EditText mEditText1 = null;
-	private EditText mEditText2 = null;
-	private Button mCompareButton = null;
-	private Button mClearButton1 = null;
-	private Button mClearButton2 = null;
+	private Button mSetupButton = null;
+	private Button mClearButton = null;
+	private Button mGenButton = null;
 	private TextView mResultTV = null;
 
 	/** Called when the activity is first created. */
@@ -45,38 +47,30 @@ public class SetupActivity extends Activity {
 		setContentView(R.layout.setup);
 
 		mEditText1 = (EditText) findViewById(R.id.edit_txt1);
-		mClearButton1 = (Button) findViewById(R.id.ClearButton1);
-		mEditText2 = (EditText) findViewById(R.id.edit_txt2);
-		mClearButton2 = (Button) findViewById(R.id.ClearButton2);
-		mCompareButton = (Button) findViewById(R.id.CompareButton);
+		mClearButton = (Button) findViewById(R.id.ClearButton);
+		mGenButton = (Button) findViewById(R.id.GenButton);
+		mSetupButton = (Button) findViewById(R.id.SaveButton);
 		mResultTV = (TextView) findViewById(R.id.label_result);
 
-		mCompareButton.setOnClickListener(new OnClickListener() {
+		mSetupButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				// Perform action on clicks
 				Editable InputEdit1 = mEditText1.getText();
 				String sInputText1 = InputEdit1.toString();
-				Editable InputEdit2 = mEditText2.getText();
-				String sInputText2 = InputEdit2.toString();
-				if (sInputText1 != null && sInputText2 != null) {
-					String sText = "";
-					int IsIdentical = sInputText1
-							.compareToIgnoreCase(sInputText2);
-					if (IsIdentical == 0) {
-						sText = getString(R.string.IdenticalHashes);
-						mResultTV.setTextColor(Color.GREEN);
-					} else {
-						sText = getString(R.string.DifferentHashes);
-						mResultTV.setTextColor(Color.RED);
-					}
-					if (mResultTV != null)
-						mResultTV.setText(sText);
-				}
+				if (sInputText1 == null) return;
+				SharedPreferences settings = getSharedPreferences(TextActivity.PREFS_NAME, 0);
+				SharedPreferences.Editor editor = settings.edit();
+				editor.putString("seed", sInputText1);
+				editor.commit();
+				String sText = getString(R.string.SetupSuccess);
+				mResultTV.setTextColor(Color.GREEN);
+				if (mResultTV != null)
+					mResultTV.setText(sText);
 			}
 		});
 
-		mClearButton1.setOnClickListener(new OnClickListener() {
+		mClearButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				// Perform action on clicks
@@ -85,11 +79,14 @@ public class SetupActivity extends Activity {
 			}
 		});
 
-		mClearButton2.setOnClickListener(new OnClickListener() {
+		mGenButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				// Perform action on clicks
-				mEditText2.setText("");
+				SecureRandom random = new SecureRandom();
+				byte bytes[] = new byte[20];
+				random.nextBytes(bytes);
+				mEditText1.setText(TextActivity.get_base58(TextActivity.bytes_to_int(bytes)));
 				mResultTV.setText("");
 			}
 		});
