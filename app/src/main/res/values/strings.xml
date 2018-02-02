@@ -59,5 +59,4 @@
 	<string name="input_seed">Input a seed :</string>
 	<string name="setup_but">Save</string>
 	<string name="SetupSuccess">Success!</string>
-	<string name="DifferentHashes">Hashes do not match !</string>
 </resources>
