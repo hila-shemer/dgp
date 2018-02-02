@@ -2,18 +2,12 @@
 <resources>
 	<string name="app_name">DGP</string>
 	<string name="tab_text">Hash a text</string>
-	<string name="tab_file">Hash a file</string>
 	<string name="tab_compare">Compare hashes</string>
 	<string name="input_txt">Input the text to hash :</string>
 	<string name="Text">Text : %1$s\n</string>
-	<string name="FileName">Name : %1$s\n</string>
-	<string name="FileSize">Size : %1$s\n</string>
-	<string name="FileDateModified">Date modified : %1$s %2$s\n</string>
 	<string name="Hash">%1$s output : %2$s</string>
-	<string name="but_title_select_file">Click here to select the file to hash</string>
 	<string name="cb_upper_case">Result in upper case</string>
 	<string name="unable_to_calculate">Unable to calculate the checksum of %1$s</string>
-	<string name="wrong_file">The file does not exist</string>
 	<string name="calculate_but">Calculate</string>
 	<string name="clear_but">Clear</string>
 	<string name="copy_but">Copy checksum to clipboard</string>
@@ -25,9 +19,6 @@
 	<string name="copied">Hash copied to clipboard</string>
 	<string name="label_menu_about">About</string>
 	<string name="label_menu_help">Help</string>
-	<string name="up_one_level">..</string>
-	<string name="selectedfile_confirmation">Do you want to compute the file %1$s ?</string>
-	<string name="selectedfile_error">%1$s cannot be read !</string>
 	<string name="version">Version</string>
 	<string name="copyright">Copyright © 2010&#8211;2016 Christophe Bouyer (Hobby One)</string>
 	<string name="LicenseTitle">Licensed under the GPLv3</string>

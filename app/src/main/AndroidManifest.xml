@@ -33,11 +33,7 @@
         </activity>
         <activity android:name=".TextActivity" >
         </activity>
-        <activity android:name=".FileActivity" >
-        </activity>
         <activity android:name=".CompareActivity" >
-        </activity>
-        <activity android:name=".FileBrowser" >
         </activity>
 
     </application>

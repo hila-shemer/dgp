@@ -64,15 +64,6 @@ public class MainActivity extends TabActivity {
 		tabHost.addTab(spec);
 
 		// Do the same for the other tabs
-		String sFileTabTitle = getString(R.string.tab_file);
-		intent = new Intent().setClass(this, FileActivity.class);
-		spec = tabHost
-				.newTabSpec("file")
-				.setIndicator(sFileTabTitle,
-						res.getDrawable(R.drawable.ic_tab_file))
-				.setContent(intent);
-		tabHost.addTab(spec);
-
 		intent = new Intent().setClass(this, CompareActivity.class);
 		String sCompareTabTitle = getString(R.string.tab_compare);
 		spec = tabHost
