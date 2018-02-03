@@ -79,6 +79,9 @@ public class TextActivity extends Activity implements Runnable {
 
 	private KeyguardManager mKeyguardManager;
 
+	private static final int BLOCK_SIZE = 64;
+	private static final int DIGEST_SIZE = 32;
+
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -275,22 +278,22 @@ public class TextActivity extends Activity implements Runnable {
 		return data;
 	}
 
-	private static final byte[] hmac(byte[] key, byte[] msg) {
-		if (key.length > 64) {
+	private static byte[] hmac(byte[] key, byte[] msg) {
+		if (key.length > BLOCK_SIZE) {
 			Sha256 md = new Sha256();
 			md.update(key);
 			key = md.digest();
 		}
-		if (key.length < 64) {
-			byte[] newkey = new byte[64];
+		if (key.length < BLOCK_SIZE) {
+			byte[] newkey = new byte[BLOCK_SIZE];
 			System.arraycopy(key, 0, newkey, 0, key.length);
-			for (int i = key.length; i < 64; i++) {
+			for (int i = key.length; i < BLOCK_SIZE; i++) {
 				newkey[i] = (byte)0;
 			}
 			key = newkey;
 		}
-		byte[] ikey = new byte[64];
-		byte[] okey = new byte[64];
+		byte[] ikey = new byte[BLOCK_SIZE];
+		byte[] okey = new byte[BLOCK_SIZE];
 		for (int i = 0; i < key.length; i++) {
 			okey[i] = (byte)(key[i] ^ (byte)0x5c);
 			ikey[i] = (byte)(key[i] ^ (byte)0x36);
@@ -315,7 +318,7 @@ public class TextActivity extends Activity implements Runnable {
 		byte[] result = digtmp;
 		for (int i = 1; i < iterations; i++) {
 			digtmp = hmac(key, digtmp);
-			for (int j = 0; j < 32; j++) {
+			for (int j = 0; j < DIGEST_SIZE; j++) {
 				result[j] = (byte)(result[j] ^ digtmp[j]);
 			}
 		}
@@ -324,14 +327,14 @@ public class TextActivity extends Activity implements Runnable {
 
 	private static byte[] pbkdf(byte[] key, byte[] salt, int iterations, int outlen) {
 		int blocknum = 0;
-		int outlen_aligned = 32 * ((outlen + 31) / 32);
+		int outlen_aligned = DIGEST_SIZE * ((outlen + (DIGEST_SIZE-1)) / DIGEST_SIZE);
 		byte[] output = new byte[outlen_aligned];
 		int cur_offset = 0;
 		while (cur_offset < outlen) {
 			blocknum++;
 			byte[] block = pbkdf_block(key, salt, iterations, blocknum);
-			System.arraycopy(block, 0, output, cur_offset, 32);
-			cur_offset += 32;
+			System.arraycopy(block, 0, output, cur_offset, DIGEST_SIZE);
+			cur_offset += DIGEST_SIZE;
 		}
 		byte[] truncated_output = new byte[outlen];
 		System.arraycopy(output, 0, truncated_output, 0, outlen);
