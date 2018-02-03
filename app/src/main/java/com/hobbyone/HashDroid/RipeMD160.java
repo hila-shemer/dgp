@@ -121,7 +121,7 @@ public class RipeMD160 extends BaseHash {
 		this.h3 = md.h3;
 		this.h4 = md.h4;
 		this.count = md.count;
-		this.buffer = (byte[]) md.buffer.clone();
+		this.buffer = md.buffer.clone();
 	}
 
 	// Class methods
@@ -297,9 +297,9 @@ public class RipeMD160 extends BaseHash {
 
 	public boolean selfTest() {
 		if (valid == null) {
-			valid = Boolean.valueOf(DIGEST0.equals(UtilServices
-					.toString(new RipeMD160().digest())));
+			valid = DIGEST0.equals(UtilServices
+					.toString(new RipeMD160().digest()));
 		}
-		return valid.booleanValue();
+		return valid;
 	}
 }

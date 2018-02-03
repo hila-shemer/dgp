@@ -17,10 +17,7 @@
 		<EditText android:id="@+id/edit_txt1" android:layout_height="wrap_content"
 		  android:layout_width="fill_parent"
 		  android:layout_toLeftOf="@id/ClearButton"/>
-		</RelativeLayout><![CDATA[
-		-->
-		]]>
-
+		</RelativeLayout>
 		<RelativeLayout android:orientation="horizontal"
 		android:layout_width="fill_parent" android:layout_height="fill_parent">
 

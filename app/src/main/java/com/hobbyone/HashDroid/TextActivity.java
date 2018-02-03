@@ -193,7 +193,7 @@ public class TextActivity extends Activity implements Runnable {
 	}
 
 	/**
-	 * Tries to encrypt some data with the generated key in {@link #createKey} which
+	 * Tries to decrypt some data with the generated key in createKey which
 	 * only works if the user has just authenticated via device credentials.
 	 */
 	private boolean tryDecrypt() {
@@ -271,12 +271,11 @@ public class TextActivity extends Activity implements Runnable {
 	}
 
 	public static String bytes_to_hex(byte[] b) {
-		int len = b.length;
-		String data = new String();
+		String data = "";
 
-		for (int i = 0; i < len; i++){
-			data += Integer.toHexString((b[i] >>> 4) & 0xf);
-			data += Integer.toHexString(b[i] & 0xf);
+		for (byte aB : b) {
+			data += Integer.toHexString((aB >>> 4) & 0xf);
+			data += Integer.toHexString(aB & 0xf);
 		}
 		return data;
 	}
@@ -417,7 +416,7 @@ public class TextActivity extends Activity implements Runnable {
 			Resources res = getResources();
 			String sTextTitle = String.format(res.getString(R.string.Text),
 					msToHash);
-			String sTextHashTitle = "";
+			String sTextHashTitle;
 			if (!msHash.equals("")) {
 				String OutputFormat = "";
 				if (miItePos >= 0)
