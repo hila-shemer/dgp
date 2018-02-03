@@ -177,16 +177,7 @@ public class TextActivity extends Activity implements Runnable {
 			mSeed = "test";
 		} else {
 			mSeedIV = settings.getString("seed_iv", "");
-			Toast.makeText(this,
-					"seed: " + mEncSeed + " IV: " + mSeedIV,
-					Toast.LENGTH_LONG).show();
-			boolean success = tryDecrypt();
-			if (!success) {
-				Toast.makeText(this,
-						"Failed to get the seed.\n" + "Run setup again",
-						Toast.LENGTH_LONG).show();
-			}
-
+			tryDecrypt();
 		}
 	}
 
@@ -194,7 +185,7 @@ public class TextActivity extends Activity implements Runnable {
 	 * Tries to decrypt some data with the generated key in createKey which
 	 * only works if the user has just authenticated via device credentials.
 	 */
-	private boolean tryDecrypt() {
+	private void tryDecrypt() {
 		try {
 			KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
 			keyStore.load(null);
@@ -208,21 +199,17 @@ public class TextActivity extends Activity implements Runnable {
 			cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(hex_to_bytes(mSeedIV)));
 			byte[] result = cipher.doFinal(hex_to_bytes(mEncSeed));
 			mSeed = new String(result);
-			return true;
 		} catch (UserNotAuthenticatedException e) {
 			// User is not authenticated, let's authenticate with device credentials.
 			showAuthenticationScreen();
-			return false;
 		} catch (KeyPermanentlyInvalidatedException e) {
 			// This happens if the lock screen has been disabled or reset after the key was
 			// generated after the key was generated.
 			Toast.makeText(this, "Keys are invalidated after created. Regenerate\n"
 							+ e.getMessage(),
 					Toast.LENGTH_LONG).show();
-			return false;
 		} catch (Exception e) {
 			mResultTV.setText("Failed to encrypt: " + e.getMessage());
-			return false;
 		}
 	}
 
