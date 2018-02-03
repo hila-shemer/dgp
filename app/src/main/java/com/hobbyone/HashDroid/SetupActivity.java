@@ -91,6 +91,8 @@ public class SetupActivity extends Activity {
 				// Perform action on clicks
 				Editable InputEdit1 = mEditText1.getText();
 				String sInputText1 = InputEdit1.toString();
+				mSeed = sInputText1;
+				InputEdit1.clear();
 
 				if (mResultTV != null) {
 					mResultTV.setTextColor(Color.RED);
@@ -99,7 +101,6 @@ public class SetupActivity extends Activity {
 
 				createKey();
 
-				mSeed = sInputText1;
 
 				if (mResultTV != null) {
 					mResultTV.setTextColor(Color.RED);
@@ -163,6 +164,7 @@ public class SetupActivity extends Activity {
 			cipher.init(Cipher.ENCRYPT_MODE, secretKey);
 			byte[] iv = cipher.getIV();
 			byte[] result = cipher.doFinal(mSeed.getBytes());
+			mSeed = "";
 			store_seed(result, iv);
 			return true;
 		} catch (UserNotAuthenticatedException e) {
