@@ -20,11 +20,17 @@ along with Hash Droid. If not, see <http://www.gnu.org/licenses/>.
 package com.hobbyone.HashDroid;
 
 import android.app.Activity;
+import android.app.KeyguardManager;
 import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.security.keystore.KeyPermanentlyInvalidatedException;
+import android.security.keystore.KeyProperties;
+import android.security.keystore.UserNotAuthenticatedException;
 import android.text.ClipboardManager;
 import android.text.Editable;
 import android.view.View;
@@ -43,6 +49,11 @@ import android.content.SharedPreferences;
 
 
 import java.math.BigInteger;
+import java.security.KeyStore;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 
 public class TextActivity extends Activity implements Runnable {
 	private EditText mEditText = null;
@@ -58,8 +69,20 @@ public class TextActivity extends Activity implements Runnable {
 	private ProgressDialog mProgressDialog = null;
 	private int miItePos = -1;
 	private String mSeed = "";
+	private String mEncSeed = "";
+	private String mSeedIV = "";
+
+	/**
+	 * If the user has unlocked the device Within the last this number of seconds,
+	 * it can be considered as an authenticator.
+	 */
+	private static final int AUTHENTICATION_DURATION_SECONDS = 30;
+	private static final int REQUEST_CODE_CONFIRM_DEVICE_CREDENTIALS = 1;
 
 	public static final String PREFS_NAME = "DgpConfig";
+	public static final String KEY_NAME = "DgpKey";
+
+	private KeyguardManager mKeyguardManager;
 
 	/** Called when the activity is first created. */
 	@Override
@@ -75,6 +98,15 @@ public class TextActivity extends Activity implements Runnable {
 		mCopyButton = (Button) findViewById(R.id.CopyButton);
 		mClipboard = (ClipboardManager) getSystemService("clipboard");
 		mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
+
+		mKeyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+		if (!mKeyguardManager.isKeyguardSecure()) {
+			// Show a message that the user hasn't set up a lock screen.
+			Toast.makeText(this,
+					"Secure lock screen hasn't set up.\n"
+							+ "Go to 'Settings -> Security -> Screenlock' to set up a lock screen",
+					Toast.LENGTH_LONG).show();
+		}
 
 		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
 				this, R.array.Output_Formats, android.R.layout.simple_spinner_item);
@@ -140,9 +172,83 @@ public class TextActivity extends Activity implements Runnable {
 
 	@Override
 	public void onResume() {
-		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-		mSeed = settings.getString("seed", "test");
 		super.onResume();
+		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+		mEncSeed = settings.getString("seed", "");
+		if (mEncSeed.compareTo("test") == 0) {
+			mSeed = "test";
+		} else {
+			mSeedIV = settings.getString("seed_iv", "");
+			Toast.makeText(this,
+					"seed: " + mEncSeed + " IV: " + mSeedIV,
+					Toast.LENGTH_LONG).show();
+			boolean success = tryDecrypt();
+			if (!success) {
+				Toast.makeText(this,
+						"Failed to get the seed.\n" + "Run setup again",
+						Toast.LENGTH_LONG).show();
+			}
+
+		}
+	}
+
+	/**
+	 * Tries to encrypt some data with the generated key in {@link #createKey} which
+	 * only works if the user has just authenticated via device credentials.
+	 */
+	private boolean tryDecrypt() {
+		try {
+			KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+			keyStore.load(null);
+			SecretKey secretKey = (SecretKey) keyStore.getKey(TextActivity.KEY_NAME, null);
+			Cipher cipher = Cipher.getInstance(
+					KeyProperties.KEY_ALGORITHM_AES + "/" + KeyProperties.BLOCK_MODE_CBC + "/"
+							+ KeyProperties.ENCRYPTION_PADDING_PKCS7);
+
+			// Try encrypting something, it will only work if the user authenticated within
+			// the last AUTHENTICATION_DURATION_SECONDS seconds.
+			cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(hex_to_bytes(mSeedIV)));
+			byte[] result = cipher.doFinal(hex_to_bytes(mEncSeed));
+			mSeed = new String(result);
+			return true;
+		} catch (UserNotAuthenticatedException e) {
+			// User is not authenticated, let's authenticate with device credentials.
+			showAuthenticationScreen();
+			return false;
+		} catch (KeyPermanentlyInvalidatedException e) {
+			// This happens if the lock screen has been disabled or reset after the key was
+			// generated after the key was generated.
+			Toast.makeText(this, "Keys are invalidated after created. Regenerate\n"
+							+ e.getMessage(),
+					Toast.LENGTH_LONG).show();
+			return false;
+		} catch (Exception e) {
+			mResultTV.setText("Failed to encrypt: " + e.getMessage());
+			return false;
+		}
+	}
+
+	private void showAuthenticationScreen() {
+		// Create the Confirm Credentials screen. You can customize the title and description. Or
+		// we will provide a generic one for you if you leave it null
+		Intent intent = mKeyguardManager.createConfirmDeviceCredentialIntent(null, null);
+		if (intent != null) {
+			startActivityForResult(intent, REQUEST_CODE_CONFIRM_DEVICE_CREDENTIALS);
+		}
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		if (requestCode == REQUEST_CODE_CONFIRM_DEVICE_CREDENTIALS) {
+			// Challenge completed, proceed with using cipher
+			if (resultCode == RESULT_OK) {
+				tryDecrypt();
+			} else {
+				// The user canceled or didn’t complete the lock screen
+				// operation. Go to error/cancellation flow.
+				Toast.makeText(this, "Authentication failed.", Toast.LENGTH_SHORT).show();
+			}
+		}
 	}
 
 	private void ComputeAndDisplayHash() {
@@ -152,6 +258,27 @@ public class TextActivity extends Activity implements Runnable {
 
 		Thread thread = new Thread(this);
 		thread.start();
+	}
+
+	public static byte[] hex_to_bytes(String s) {
+		int len = s.length();
+		byte[] data = new byte[len / 2];
+		for (int i = 0; i < len; i += 2) {
+			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+					+ Character.digit(s.charAt(i+1), 16));
+		}
+		return data;
+	}
+
+	public static String bytes_to_hex(byte[] b) {
+		int len = b.length;
+		String data = new String();
+
+		for (int i = 0; i < len; i++){
+			data += Integer.toHexString((b[i] >>> 4) & 0xf);
+			data += Integer.toHexString(b[i] & 0xf);
+		}
+		return data;
 	}
 
 	private static final byte[] hmac(byte[] key, byte[] msg) {
