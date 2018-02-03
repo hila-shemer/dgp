@@ -22,6 +22,7 @@ package com.hobbyone.HashDroid;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.app.ProgressDialog;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
@@ -159,7 +160,7 @@ public class TextActivity extends Activity implements Runnable {
 			public void onClick(View v) {
 				// Perform action on clicks
 				if (mClipboard != null) {
-					mClipboard.setText(msHash);
+					mClipboard.setPrimaryClip(ClipData.newPlainText("hash", msHash));
 					String sCopied = getString(R.string.copied);
 					Toast.makeText(TextActivity.this, sCopied,
 							Toast.LENGTH_SHORT).show();
