@@ -101,26 +101,12 @@ public class SetupActivity extends Activity {
 
 				createKey();
 
-
 				if (mResultTV != null) {
 					mResultTV.setTextColor(Color.RED);
 					mResultTV.setText("Saving");
 				}
 
-				boolean success = tryEncrypt();
-				if (success) {
-					String sText = getString(R.string.SetupSuccess);
-					if (mResultTV != null) {
-						mResultTV.setTextColor(Color.GREEN);
-						mResultTV.setText(sText);
-					}
-				} else {
-					String sText = "Failed";
-					if (mResultTV != null) {
-						mResultTV.setTextColor(Color.RED);
-						mResultTV.setText(sText);
-					}
-				}
+				tryEncrypt();
 			}
 		});
 
@@ -150,7 +136,7 @@ public class SetupActivity extends Activity {
 	 * Tries to encrypt some data with the generated key in {@link #createKey} which
 	 * only works if the user has just authenticated via device credentials.
 	 */
-	private boolean tryEncrypt() {
+	private void tryEncrypt() {
 		try {
 			KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
 			keyStore.load(null);
@@ -166,21 +152,17 @@ public class SetupActivity extends Activity {
 			byte[] result = cipher.doFinal(mSeed.getBytes());
 			mSeed = "";
 			store_seed(result, iv);
-			return true;
 		} catch (UserNotAuthenticatedException e) {
 			// User is not authenticated, let's authenticate with device credentials.
 			showAuthenticationScreen();
-			return false;
 		} catch (KeyPermanentlyInvalidatedException e) {
 			// This happens if the lock screen has been disabled or reset after the key was
 			// generated after the key was generated.
 			Toast.makeText(this, "Keys are invalidated after created. Regenerate\n"
 							+ e.getMessage(),
 					Toast.LENGTH_LONG).show();
-			return false;
 		} catch (Exception e) {
 			mResultTV.setText("Failed to encrypt: " + e.getMessage());
-			return false;
 		}
 	}
 
