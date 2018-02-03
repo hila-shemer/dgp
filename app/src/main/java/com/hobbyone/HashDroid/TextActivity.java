@@ -304,7 +304,7 @@ public class TextActivity extends Activity implements Runnable {
 		return omd.digest();
 	}
 
-	private static final byte[] pbkdf_block(byte[] key, byte[] salt, int iterations, int block) {
+	private static byte[] pbkdf_block(byte[] key, byte[] salt, int iterations, int block) {
 		byte[] saltiter = new byte[salt.length + 4];
 		System.arraycopy(salt, 0, saltiter, 0, salt.length);
 		saltiter[salt.length] = (byte)((block >> 24) & 0xff);
@@ -322,7 +322,7 @@ public class TextActivity extends Activity implements Runnable {
 		return result;
 	}
 
-	private static final byte[] pbkdf(byte[] key, byte[] salt, int iterations, int outlen) {
+	private static byte[] pbkdf(byte[] key, byte[] salt, int iterations, int outlen) {
 		int blocknum = 0;
 		int outlen_aligned = 32 * ((outlen + 31) / 32);
 		byte[] output = new byte[outlen_aligned];
@@ -339,11 +339,11 @@ public class TextActivity extends Activity implements Runnable {
 	}
 
 
-	public static final BigInteger bytes_to_int(byte[] data) {
+	public static BigInteger bytes_to_int(byte[] data) {
 		return new BigInteger(1, data);
 	}
 
-	public static final String get_base58(BigInteger int_data) {
+	public static String get_base58(BigInteger int_data) {
 		final String digits = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 		String res = "";
 		while (int_data.signum() == 1) {
@@ -355,7 +355,7 @@ public class TextActivity extends Activity implements Runnable {
 		return res;
 	}
 
-	private static final boolean is_alnum(String str) {
+	private static boolean is_alnum(String str) {
 		boolean has_lower = false;
 		boolean has_upper = false;
 		boolean has_digit = false;
@@ -368,7 +368,7 @@ public class TextActivity extends Activity implements Runnable {
 		return has_digit && has_lower && has_upper;
 	}
 
-	private static final String grab_alnum(BigInteger int_data, int length) {
+	private static String grab_alnum(BigInteger int_data, int length) {
 		String raw = get_base58(int_data);
 		while (raw.length() > length) {
 			String res = raw.substring(0, length);
@@ -379,7 +379,7 @@ public class TextActivity extends Activity implements Runnable {
 		return "";
 	}
 
-	private static final BigInteger gen_large_int(String seed, String name) {
+	private static BigInteger gen_large_int(String seed, String name) {
 		byte[] bin_data = pbkdf(seed.getBytes(), name.getBytes(), 8192, 32);
 		return bytes_to_int(bin_data);
 	}
