@@ -31,7 +31,7 @@ import android.os.Message;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.security.keystore.KeyProperties;
 import android.security.keystore.UserNotAuthenticatedException;
-import android.text.ClipboardManager;
+import android.content.ClipboardManager;
 import android.text.Editable;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -96,7 +96,7 @@ public class TextActivity extends Activity implements Runnable {
 		mSpinner = (Spinner) findViewById(R.id.spinner);
 		mResultTV = (TextView) findViewById(R.id.label_result);
 		mCopyButton = (Button) findViewById(R.id.CopyButton);
-		mClipboard = (ClipboardManager) getSystemService("clipboard");
+		mClipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 		mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
 
 		mKeyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
