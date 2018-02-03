@@ -72,11 +72,6 @@ public class TextActivity extends Activity implements Runnable {
 	private String mEncSeed = "";
 	private String mSeedIV = "";
 
-	/**
-	 * If the user has unlocked the device Within the last this number of seconds,
-	 * it can be considered as an authenticator.
-	 */
-	private static final int AUTHENTICATION_DURATION_SECONDS = 30;
 	private static final int REQUEST_CODE_CONFIRM_DEVICE_CREDENTIALS = 1;
 
 	public static final String PREFS_NAME = "DgpConfig";
