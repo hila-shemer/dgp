@@ -109,7 +109,7 @@ public class Sha160 extends BaseHash {
 		this.h3 = md.h3;
 		this.h4 = md.h4;
 		this.count = md.count;
-		this.buffer = (byte[]) md.buffer.clone();
+		this.buffer = md.buffer.clone();
 	}
 
 	// Class methods

@@ -146,7 +146,6 @@ public class MainActivity extends TabActivity {
 		} catch (PackageManager.NameNotFoundException e) {
 			Log.e("AboutActivity", "Package name not found", e);
 		}
-		;
 		return sRetString;
 	}
 }
