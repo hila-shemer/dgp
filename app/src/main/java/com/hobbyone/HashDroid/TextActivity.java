@@ -50,10 +50,13 @@ import android.content.SharedPreferences;
 
 import java.math.BigInteger;
 import java.security.KeyStore;
+import java.security.spec.KeySpec;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 
 public class TextActivity extends Activity implements Runnable {
 	private EditText mEditText = null;
@@ -394,8 +397,28 @@ public class TextActivity extends Activity implements Runnable {
 //		msHash = UtilServices.toString(md.digest());
 //		msHash = UtilServices.toString(hmac("key".getBytes(), "The quick brown fox jumps over the lazy dog".getBytes()));
 		//msHash = UtilServices.toString(pbkdf("password".getBytes(), "salt".getBytes(), 4096, 20));
-		BigInteger int_data = gen_large_int(mSeed, msToHash);
-		msHash = grab_alnum(int_data, 8);
+		if (false) {
+			BigInteger int_data = gen_large_int(mSeed, msToHash);
+			msHash = grab_alnum(int_data, 8);
+		}
+
+		final int iterations = 32768;//16*1024;
+
+		final int outputKeyLength = 160;
+
+		try {
+			SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+			KeySpec keySpec = new PBEKeySpec(mSeed.toCharArray(), msToHash.getBytes(), iterations, outputKeyLength);
+			SecretKey secretKey = secretKeyFactory.generateSecret(keySpec);
+			msHash = grab_alnum(bytes_to_int(secretKey.getEncoded()), 8);
+		} catch (java.security.NoSuchAlgorithmException e) {
+			msHash = "AlgoError " + e.getMessage();
+		} catch (java.security.spec.InvalidKeySpecException e) {
+			msHash = "KeySpecError " + e.getMessage();
+		} catch (Exception e) {
+			msHash = "Error " + e.getMessage();
+		}
+
 //		msHash = get_base58(int_data);
 
 		handler.sendEmptyMessage(0);
