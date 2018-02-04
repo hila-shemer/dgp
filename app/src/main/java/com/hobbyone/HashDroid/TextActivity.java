@@ -172,7 +172,7 @@ public class TextActivity extends Activity implements Runnable {
 	public void onResume() {
 		super.onResume();
 		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-		mEncSeed = settings.getString("seed", "");
+		mEncSeed = settings.getString("seed", "test");
 		if (mEncSeed.compareTo("test") == 0) {
 			mSeed = "test";
 		} else {
