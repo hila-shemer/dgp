@@ -97,6 +97,16 @@ public class TextActivity extends Activity implements Runnable {
 		mClipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 		mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
 
+		if (!new Sha160().selfTest()) {
+			Toast.makeText(this, "SHA-256 self-tst failed", Toast.LENGTH_LONG).show();
+		}
+		if (!new Sha256().selfTest()) {
+			Toast.makeText(this, "SHA-256 self-tst failed", Toast.LENGTH_LONG).show();
+		}
+		if (!new Sha512().selfTest()) {
+			Toast.makeText(this, "SHA-256 self-tst failed", Toast.LENGTH_LONG).show();
+		}
+
 		mKeyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
 		if (!mKeyguardManager.isKeyguardSecure()) {
 			// Show a message that the user hasn't set up a lock screen.
