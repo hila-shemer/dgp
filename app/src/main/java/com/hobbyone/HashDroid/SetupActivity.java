@@ -170,7 +170,7 @@ public class SetupActivity extends Activity {
 	 * Creates a symmetric key in the Android Key Store which can only be used after the user has
 	 * authenticated with device credentials within the last X seconds.
 	 */
-	private boolean createKey() {
+	private void createKey() {
 		// Generate a key to decrypt payment credentials, tokens, etc.
 		// This will most likely be a registration step for the user when they are setting up your app.
 		try {
@@ -192,9 +192,7 @@ public class SetupActivity extends Activity {
 			keyGenerator.generateKey();
 		} catch (Exception e) {
 			mResultTV.setText("Failed to create key: " + e.getMessage());
-			return false;
 		}
-		return true;
 	}
 
 	private void showAuthenticationScreen() {
