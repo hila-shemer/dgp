@@ -220,7 +220,7 @@ public class TextActivity extends Activity implements Runnable {
 							+ e.getMessage(),
 					Toast.LENGTH_LONG).show();
 		} catch (Exception e) {
-			mResultTV.setText("Failed to encrypt: " + e.getMessage());
+			mResultTV.setText("Failed to decrypt: " + e.getMessage());
 		}
 	}
 
