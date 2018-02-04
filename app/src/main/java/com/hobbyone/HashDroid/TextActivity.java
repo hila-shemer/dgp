@@ -209,8 +209,8 @@ public class TextActivity extends Activity implements Runnable {
 
 			// Try encrypting something, it will only work if the user authenticated within
 			// the last AUTHENTICATION_DURATION_SECONDS seconds.
-			cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(hex_to_bytes(mSeedIV)));
-			byte[] result = cipher.doFinal(hex_to_bytes(mEncSeed));
+			cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(UtilServices.hex_to_bytes(mSeedIV)));
+			byte[] result = cipher.doFinal(UtilServices.hex_to_bytes(mEncSeed));
 			mSeed = new String(result);
 		} catch (UserNotAuthenticatedException e) {
 			// User is not authenticated, let's authenticate with device credentials.
@@ -257,26 +257,6 @@ public class TextActivity extends Activity implements Runnable {
 
 		Thread thread = new Thread(this);
 		thread.start();
-	}
-
-	private static byte[] hex_to_bytes(String s) {
-		int len = s.length();
-		byte[] data = new byte[len / 2];
-		for (int i = 0; i < len; i += 2) {
-			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-					+ Character.digit(s.charAt(i+1), 16));
-		}
-		return data;
-	}
-
-	public static String bytes_to_hex(byte[] b) {
-		StringBuilder data = new StringBuilder();
-
-		for (byte aB : b) {
-			data.append(Integer.toHexString((aB >>> 4) & 0xf));
-			data.append(Integer.toHexString(aB & 0xf));
-		}
-		return data.toString();
 	}
 
 	private static byte[] hmac(byte[] key, byte[] msg) {

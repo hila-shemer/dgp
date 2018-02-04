@@ -221,9 +221,9 @@ public class SetupActivity extends Activity {
 	private void store_seed(byte[] seed, byte[] iv) {
 		SharedPreferences settings = getSharedPreferences(TextActivity.PREFS_NAME, 0);
 		SharedPreferences.Editor editor = settings.edit();
-		String encoded = TextActivity.bytes_to_hex(seed);
+		String encoded = UtilServices.bytes_to_hex(seed);
 		editor.putString("seed", encoded);
-		encoded = TextActivity.bytes_to_hex(iv);
+		encoded = UtilServices.bytes_to_hex(iv);
 		editor.putString("seed_iv", encoded);
 		editor.apply();
 		String sText = getString(R.string.SetupSuccess);

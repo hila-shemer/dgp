@@ -44,71 +44,29 @@ package com.hobbyone.HashDroid;
  */
 public class UtilServices {
 
-	// Constants and variables
-	// -------------------------------------------------------------------------
-
-	// Hex charset
-	private static final char[] HEX_DIGITS = "0123456789ABCDEF".toCharArray();
-
-	// Constructor(s)
-	// -------------------------------------------------------------------------
-
 	/** Trivial constructor to enforce Singleton pattern. */
 	private UtilServices() {
 		super();
 	}
 
-	// Class methods
-	// -------------------------------------------------------------------------
+	public static String bytes_to_hex(byte[] b) {
+		StringBuilder data = new StringBuilder();
 
-	/**
-	 * <p>
-	 * Returns a string of hexadecimal digits from a byte array. Each byte is
-	 * converted to 2 hex symbols; zero(es) included.
-	 * </p>
-	 * 
-	 * <p>
-	 * This method calls the method with same name and three arguments as:
-	 * </p>
-	 * 
-	 * <pre>
-	 * toString(ba, 0, ba.length);
-	 * </pre>
-	 * 
-	 * @param ba
-	 *            the byte array to convert.
-	 * @return a string of hexadecimal characters (two for each byte)
-	 *         representing the designated input byte array.
-	 */
-	public static String toString(byte[] ba) {
-		return toString(ba, 0, ba.length);
-	}
-
-	/**
-	 * <p>
-	 * Returns a string of hexadecimal digits from a byte array, starting at
-	 * <code>offset</code> and consisting of <code>length</code> bytes. Each
-	 * byte is converted to 2 hex symbols; zero(es) included.
-	 * </p>
-	 * 
-	 * @param ba
-	 *            the byte array to convert.
-	 * @param offset
-	 *            the index from which to start considering the bytes to
-	 *            convert.
-	 * @param length
-	 *            the count of bytes, starting from the designated offset to
-	 *            convert.
-	 * @return a string of hexadecimal characters (two for each byte)
-	 *         representing the designated input byte sub-array.
-	 */
-	private static String toString(byte[] ba, int offset, int length) {
-		char[] buf = new char[length * 2];
-		for (int i = 0, j = 0, k; i < length;) {
-			k = ba[offset + i++];
-			buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-			buf[j++] = HEX_DIGITS[k & 0x0F];
+		for (byte aB : b) {
+			data.append(Integer.toHexString((aB >>> 4) & 0xf));
+			data.append(Integer.toHexString(aB & 0xf));
 		}
-		return new String(buf);
+		return data.toString();
 	}
+
+	public static byte[] hex_to_bytes(String s) {
+		int len = s.length();
+		byte[] data = new byte[len / 2];
+		for (int i = 0; i < len; i += 2) {
+			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+					+ Character.digit(s.charAt(i+1), 16));
+		}
+		return data;
+	}
+
 }

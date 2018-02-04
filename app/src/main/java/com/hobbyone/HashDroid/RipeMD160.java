@@ -298,7 +298,7 @@ public class RipeMD160 extends BaseHash {
 	public boolean selfTest() {
 		if (valid == null) {
 			valid = DIGEST0.equals(UtilServices
-					.toString(new RipeMD160().digest()));
+					.bytes_to_hex(new RipeMD160().digest()));
 		}
 		return valid;
 	}

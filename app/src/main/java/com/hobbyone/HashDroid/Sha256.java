@@ -200,7 +200,7 @@ public class Sha256 extends BaseHash {
 			md.update((byte) 0x61); // a
 			md.update((byte) 0x62); // b
 			md.update((byte) 0x63); // c
-			String result = UtilServices.toString(md.digest());
+			String result = UtilServices.bytes_to_hex(md.digest()).toUpperCase();
 			valid = DIGEST0.equals(result);
 		}
 

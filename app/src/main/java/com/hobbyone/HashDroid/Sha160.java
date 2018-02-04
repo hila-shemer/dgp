@@ -216,8 +216,8 @@ public class Sha160 extends BaseHash {
 			md.update((byte) 0x61); // a
 			md.update((byte) 0x62); // b
 			md.update((byte) 0x63); // c
-			String result = UtilServices.toString(md.digest());
-			valid = DIGEST0.equals(result);
+			String result = UtilServices.bytes_to_hex(md.digest());
+			valid = DIGEST0.equalsIgnoreCase(result);
 		}
 		return valid;
 	}
