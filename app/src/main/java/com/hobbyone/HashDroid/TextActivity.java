@@ -201,7 +201,8 @@ public class TextActivity extends Activity implements Runnable {
 			mSeed = new String(result);
 		} catch (UserNotAuthenticatedException e) {
 			// User is not authenticated, let's authenticate with device credentials.
-			showAuthenticationScreen();
+			mResultTV.setText("Not authenticated");
+//			showAuthenticationScreen();
 		} catch (KeyPermanentlyInvalidatedException e) {
 			// This happens if the lock screen has been disabled or reset after the key was
 			// generated after the key was generated.

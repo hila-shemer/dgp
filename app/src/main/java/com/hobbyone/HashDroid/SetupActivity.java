@@ -153,7 +153,8 @@ public class SetupActivity extends Activity {
 			store_seed(result, iv);
 		} catch (UserNotAuthenticatedException e) {
 			// User is not authenticated, let's authenticate with device credentials.
-			showAuthenticationScreen();
+			mResultTV.setText("Not authenticated");
+//			showAuthenticationScreen();
 		} catch (KeyPermanentlyInvalidatedException e) {
 			// This happens if the lock screen has been disabled or reset after the key was
 			// generated after the key was generated.
@@ -183,9 +184,9 @@ public class SetupActivity extends Activity {
 			keyGenerator.init(new KeyGenParameterSpec.Builder(TextActivity.KEY_NAME,
 					KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
 					.setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-					.setUserAuthenticationRequired(true)
+//					.setUserAuthenticationRequired(true)
 					// Require that the user has unlocked in the last 30 seconds
-					.setUserAuthenticationValidityDurationSeconds(AUTHENTICATION_DURATION_SECONDS)
+//					.setUserAuthenticationValidityDurationSeconds(AUTHENTICATION_DURATION_SECONDS)
 					.setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
 					.build());
 			keyGenerator.generateKey();
