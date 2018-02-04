@@ -117,8 +117,8 @@ public class Sha256 extends BaseHash {
 	// Class methods
 	// -------------------------------------------------------------------------
 
-	public static final int[] G(int hh0, int hh1, int hh2, int hh3, int hh4,
-			int hh5, int hh6, int hh7, byte[] in, int offset) {
+	public static int[] G(int hh0, int hh1, int hh2, int hh3, int hh4,
+						  int hh5, int hh6, int hh7, byte[] in, int offset) {
 		return sha(hh0, hh1, hh2, hh3, hh4, hh5, hh6, hh7, in, offset);
 	}
 
@@ -201,16 +201,16 @@ public class Sha256 extends BaseHash {
 			md.update((byte) 0x62); // b
 			md.update((byte) 0x63); // c
 			String result = UtilServices.toString(md.digest());
-			valid = Boolean.valueOf(DIGEST0.equals(result));
+			valid = DIGEST0.equals(result);
 		}
 
-		return valid.booleanValue();
+		return valid;
 	}
 
 	// SHA specific methods ----------------------------------------------------
 
-	private static final synchronized int[] sha(int hh0, int hh1, int hh2,
-			int hh3, int hh4, int hh5, int hh6, int hh7, byte[] in, int offset) {
+	private static synchronized int[] sha(int hh0, int hh1, int hh2,
+										  int hh3, int hh4, int hh5, int hh6, int hh7, byte[] in, int offset) {
 		int A = hh0;
 		int B = hh1;
 		int C = hh2;

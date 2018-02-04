@@ -40,7 +40,6 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -246,7 +245,7 @@ public class TextActivity extends Activity implements Runnable {
 		thread.start();
 	}
 
-	public static byte[] hex_to_bytes(String s) {
+	private static byte[] hex_to_bytes(String s) {
 		int len = s.length();
 		byte[] data = new byte[len / 2];
 		for (int i = 0; i < len; i += 2) {
@@ -257,13 +256,13 @@ public class TextActivity extends Activity implements Runnable {
 	}
 
 	public static String bytes_to_hex(byte[] b) {
-		String data = "";
+		StringBuilder data = new StringBuilder();
 
 		for (byte aB : b) {
-			data += Integer.toHexString((aB >>> 4) & 0xf);
-			data += Integer.toHexString(aB & 0xf);
+			data.append(Integer.toHexString((aB >>> 4) & 0xf));
+			data.append(Integer.toHexString(aB & 0xf));
 		}
-		return data;
+		return data.toString();
 	}
 
 	private static byte[] hmac(byte[] key, byte[] msg) {

@@ -102,7 +102,7 @@ public class UtilServices {
 	 * @return a string of hexadecimal characters (two for each byte)
 	 *         representing the designated input byte sub-array.
 	 */
-	public static final String toString(byte[] ba, int offset, int length) {
+	private static String toString(byte[] ba, int offset, int length) {
 		char[] buf = new char[length * 2];
 		for (int i = 0, j = 0, k; i < length;) {
 			k = ba[offset + i++];

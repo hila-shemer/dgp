@@ -11,10 +11,6 @@
 	<string name="clear_but">Clear</string>
 	<string name="gen_but">Generate</string>
 	<string name="copy_but">Copy checksum to clipboard</string>
-	<string name="Ok_but">OK</string>
-	<string name="Cancel_but">Cancel</string>
-	<string name="Yes_but">Yes</string>
-	<string name="No_but">No</string>
 	<string name="Close_but">Close</string>
 	<string name="copied">Hash copied to clipboard</string>
 	<string name="label_menu_about">About</string>
@@ -40,21 +36,6 @@
 		<item>XKCD-Long</item>
 		<item>Hex</item>
 		<item>HexLong</item>
-	</string-array>
-	<string-array name="Algo_Array">
-		<item>Adler-32</item>
-		<item>CRC-32</item>
-		<item>Haval-128</item>
-		<item>MD2</item>
-		<item>MD5</item>
-		<item>RIPEMD-128</item>
-		<item>RIPEMD-160</item>
-		<item>SHA-1</item>
-		<item>SHA-256</item>
-		<item>SHA-384</item>
-		<item>SHA-512</item>
-		<item>Tiger</item>
-		<item>Whirlpool</item>
 	</string-array>
 	<string name="input_seed">Input a seed :</string>
 	<string name="setup_but">Save</string>

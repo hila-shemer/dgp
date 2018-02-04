@@ -115,8 +115,8 @@ public class Sha160 extends BaseHash {
 	// Class methods
 	// -------------------------------------------------------------------------
 
-	public static final int[] G(int hh0, int hh1, int hh2, int hh3, int hh4,
-			byte[] in, int offset) {
+	public static int[] G(int hh0, int hh1, int hh2, int hh3, int hh4,
+						  byte[] in, int offset) {
 		// int[] w = new int[80];
 		// int i, T;
 		// for (i = 0; i < 16; i++) {
@@ -191,15 +191,14 @@ public class Sha160 extends BaseHash {
 	}
 
 	protected byte[] getResult() {
-		byte[] result = new byte[] { (byte) (h0 >>> 24), (byte) (h0 >>> 16),
+
+		return new byte[] { (byte) (h0 >>> 24), (byte) (h0 >>> 16),
 				(byte) (h0 >>> 8), (byte) h0, (byte) (h1 >>> 24),
 				(byte) (h1 >>> 16), (byte) (h1 >>> 8), (byte) h1,
 				(byte) (h2 >>> 24), (byte) (h2 >>> 16), (byte) (h2 >>> 8),
 				(byte) h2, (byte) (h3 >>> 24), (byte) (h3 >>> 16),
 				(byte) (h3 >>> 8), (byte) h3, (byte) (h4 >>> 24),
 				(byte) (h4 >>> 16), (byte) (h4 >>> 8), (byte) h4 };
-
-		return result;
 	}
 
 	protected void resetContext() {
@@ -218,14 +217,14 @@ public class Sha160 extends BaseHash {
 			md.update((byte) 0x62); // b
 			md.update((byte) 0x63); // c
 			String result = UtilServices.toString(md.digest());
-			valid = Boolean.valueOf(DIGEST0.equals(result));
+			valid = DIGEST0.equals(result);
 		}
-		return valid.booleanValue();
+		return valid;
 	}
 
 	// SHA specific methods ----------------------------------------------------
 
-	private static final synchronized int[]
+	private static synchronized int[]
 	// sha(int hh0, int hh1, int hh2, int hh3, int hh4, byte[] in, int offset,
 	// int[] w) {
 	sha(int hh0, int hh1, int hh2, int hh3, int hh4, byte[] in, int offset) {

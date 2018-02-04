@@ -4,7 +4,8 @@
 	android:scrollbarSize="12dip">
 	<LinearLayout android:orientation="vertical"
 		android:layout_width="fill_parent" android:layout_height="fill_parent">
-		<TextView android:id="@+id/InputText1" android:layout_width="fill_parent"
+		<TextView
+			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
 			android:layout_marginTop="5dip"
 			android:text="@string/input_seed" />

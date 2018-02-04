@@ -90,8 +90,7 @@ public class SetupActivity extends Activity {
 			public void onClick(View v) {
 				// Perform action on clicks
 				Editable InputEdit1 = mEditText1.getText();
-				String sInputText1 = InputEdit1.toString();
-				mSeed = sInputText1;
+				mSeed = InputEdit1.toString();
 				InputEdit1.clear();
 
 				if (mResultTV != null) {

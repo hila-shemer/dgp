@@ -132,8 +132,8 @@ public class Sha384 extends BaseHash {
 	// Class methods
 	// -------------------------------------------------------------------------
 
-	public static final long[] G(long hh0, long hh1, long hh2, long hh3,
-			long hh4, long hh5, long hh6, long hh7, byte[] in, int offset) {
+	public static long[] G(long hh0, long hh1, long hh2, long hh3,
+						   long hh4, long hh5, long hh6, long hh7, byte[] in, int offset) {
 		return sha(hh0, hh1, hh2, hh3, hh4, hh5, hh6, hh7, in, offset);
 	}
 
@@ -231,16 +231,16 @@ public class Sha384 extends BaseHash {
 			md.update((byte) 0x62); // b
 			md.update((byte) 0x63); // c
 			String result = UtilServices.toString(md.digest());
-			valid = Boolean.valueOf(DIGEST0.equals(result));
+			valid = DIGEST0.equals(result);
 		}
-		return valid.booleanValue();
+		return valid;
 	}
 
 	// SHA specific methods ----------------------------------------------------
 
-	private static final synchronized long[] sha(long hh0, long hh1, long hh2,
-			long hh3, long hh4, long hh5, long hh6, long hh7, byte[] in,
-			int offset) {
+	private static synchronized long[] sha(long hh0, long hh1, long hh2,
+										   long hh3, long hh4, long hh5, long hh6, long hh7, byte[] in,
+										   int offset) {
 		long A = hh0;
 		long B = hh1;
 		long C = hh2;
