@@ -38,6 +38,7 @@
 		<item>HexLong</item>
 	</string-array>
 	<string name="input_seed">Input a seed :</string>
+	<string name="input_account">Account :</string>
 	<string name="setup_but">Save</string>
 	<string name="SetupSuccess">Success!</string>
 </resources>

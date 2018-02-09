@@ -47,12 +47,14 @@ import javax.crypto.SecretKey;
 
 public class SetupActivity extends Activity {
 
-	private EditText mEditText1 = null;
-	private Button mSetupButton = null;
+	private EditText mSeedText = null;
+	private EditText mAccountText = null;
+	private Button mSaveButton = null;
 	private Button mClearButton = null;
 	private Button mGenButton = null;
 	private TextView mResultTV = null;
 	private String mSeed = "";
+	private String mAccount = "";
 
 	/**
 	 * If the user has unlocked the device Within the last this number of seconds,
@@ -69,10 +71,11 @@ public class SetupActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.setup);
 
-		mEditText1 = (EditText) findViewById(R.id.edit_txt1);
+		mSeedText = (EditText) findViewById(R.id.seed_txt);
+		mAccountText = (EditText) findViewById(R.id.account_txt);
 		mClearButton = (Button) findViewById(R.id.ClearButton);
 		mGenButton = (Button) findViewById(R.id.GenButton);
-		mSetupButton = (Button) findViewById(R.id.SaveButton);
+		mSaveButton = (Button) findViewById(R.id.SaveButton);
 		mResultTV = (TextView) findViewById(R.id.label_result);
 
 		mKeyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
@@ -84,34 +87,42 @@ public class SetupActivity extends Activity {
 					Toast.LENGTH_LONG).show();
 		}
 
-		mSetupButton.setOnClickListener(new OnClickListener() {
+		mSaveButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				// Perform action on clicks
-				Editable InputEdit1 = mEditText1.getText();
-				mSeed = InputEdit1.toString();
-				InputEdit1.clear();
-
-				if (mResultTV != null) {
-					mResultTV.setTextColor(Color.RED);
-					mResultTV.setText("Generating key");
+				Editable AccountEdit = mAccountText.getText();
+				mAccount = AccountEdit.toString();
+				AccountEdit.clear();
+				if (!mAccount.equals("")) {
+					SharedPreferences settings = getSharedPreferences(TextActivity.PREFS_NAME, 0);
+					SharedPreferences.Editor editor = settings.edit();
+					editor.putString("account", mAccount);
+					editor.apply();
 				}
 
-				createKey();
-
-				if (mResultTV != null) {
-					mResultTV.setTextColor(Color.RED);
-					mResultTV.setText("Saving");
+				Editable SeedEdit = mSeedText.getText();
+				mSeed = SeedEdit.toString();
+				SeedEdit.clear();
+				if (!mSeed.equals("")) {
+					if (mResultTV != null) {
+						mResultTV.setTextColor(Color.RED);
+						mResultTV.setText("Generating key");
+					}
+					createKey();
+					if (mResultTV != null) {
+						mResultTV.setTextColor(Color.RED);
+						mResultTV.setText("Saving");
+					}
+					showAuthenticationScreen();
 				}
-				showAuthenticationScreen();
 			}
 		});
 
 		mClearButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				// Perform action on clicks
-				mEditText1.setText("");
+				mSeedText.setText("");
+				mAccountText.setText("");
 				mResultTV.setText("");
 			}
 		});
@@ -123,7 +134,7 @@ public class SetupActivity extends Activity {
 				SecureRandom random = new SecureRandom();
 				byte bytes[] = new byte[20];
 				random.nextBytes(bytes);
-				mEditText1.setText(TextActivity.get_base58(TextActivity.bytes_to_int(bytes)));
+				mSeedText.setText(TextActivity.get_base58(TextActivity.bytes_to_int(bytes)));
 				mResultTV.setText("");
 			}
 		});
