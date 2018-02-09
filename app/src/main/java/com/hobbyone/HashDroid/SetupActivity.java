@@ -29,7 +29,6 @@ import android.os.Bundle;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.security.keystore.KeyProperties;
-import android.security.keystore.UserNotAuthenticatedException;
 import android.text.Editable;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -104,8 +103,7 @@ public class SetupActivity extends Activity {
 					mResultTV.setTextColor(Color.RED);
 					mResultTV.setText("Saving");
 				}
-
-				tryEncrypt();
+				showAuthenticationScreen();
 			}
 		});
 
@@ -144,17 +142,11 @@ public class SetupActivity extends Activity {
 					KeyProperties.KEY_ALGORITHM_AES + "/" + KeyProperties.BLOCK_MODE_CBC + "/"
 							+ KeyProperties.ENCRYPTION_PADDING_PKCS7);
 
-			// Try encrypting something, it will only work if the user authenticated within
-			// the last AUTHENTICATION_DURATION_SECONDS seconds.
 			cipher.init(Cipher.ENCRYPT_MODE, secretKey);
 			byte[] iv = cipher.getIV();
 			byte[] result = cipher.doFinal(mSeed.getBytes());
 			mSeed = "";
 			store_seed(result, iv);
-		} catch (UserNotAuthenticatedException e) {
-			// User is not authenticated, let's authenticate with device credentials.
-			mResultTV.setText("Not authenticated");
-//			showAuthenticationScreen();
 		} catch (KeyPermanentlyInvalidatedException e) {
 			// This happens if the lock screen has been disabled or reset after the key was
 			// generated after the key was generated.
@@ -184,9 +176,6 @@ public class SetupActivity extends Activity {
 			keyGenerator.init(new KeyGenParameterSpec.Builder(TextActivity.KEY_NAME,
 					KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
 					.setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-//					.setUserAuthenticationRequired(true)
-					// Require that the user has unlocked in the last 30 seconds
-//					.setUserAuthenticationValidityDurationSeconds(AUTHENTICATION_DURATION_SECONDS)
 					.setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
 					.build());
 			keyGenerator.generateKey();
