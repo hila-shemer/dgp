@@ -41,6 +41,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -61,6 +62,7 @@ import javax.crypto.spec.PBEKeySpec;
 
 public class TextActivity extends Activity implements Runnable {
 	private EditText mEditText = null;
+	private CheckBox mCheckBox = null;
 	private Button mClearButton = null;
 	private Button mGenerateButton = null;
 	private Button mCopyButton = null;
@@ -101,6 +103,7 @@ public class TextActivity extends Activity implements Runnable {
 		mCopyButton = (Button) findViewById(R.id.CopyButton);
 		mClipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 		mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
+		mCheckBox = (CheckBox) findViewById(R.id.SaveHistoryCB);
 
 		if (!new Sha160().selfTest()) {
 			Toast.makeText(this, "SHA-160 self-tst failed", Toast.LENGTH_LONG).show();
@@ -192,6 +195,8 @@ public class TextActivity extends Activity implements Runnable {
 				}
 			}
 		});
+
+		mCheckBox.setChecked(false);
 	}
 
 	@Override
@@ -430,6 +435,11 @@ public class TextActivity extends Activity implements Runnable {
 					msToHash);
 			String sTextHashTitle;
 			if (!msHash.equals("")) {
+				if (mCheckBox != null) {
+					if (mCheckBox.isChecked()) {
+						msHash = msHash.toUpperCase();
+					}
+				}
 				String OutputFormat = "";
 				if (miItePos >= 0)
 					OutputFormat = mOutputFormats[miItePos];

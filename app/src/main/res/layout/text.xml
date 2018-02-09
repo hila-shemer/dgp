@@ -14,6 +14,10 @@
 			android:text="@string/input_txt" />
 		<EditText android:id="@+id/edittext" android:layout_width="fill_parent"
 			android:layout_height="wrap_content" />
+		<CheckBox android:id="@+id/SaveHistoryCB"
+		    android:layout_width="wrap_content" android:layout_height="wrap_content"
+		    android:text="@string/SaveHistory" />
+
 
 		<RelativeLayout android:orientation="vertical"
 			android:layout_width="fill_parent" android:layout_height="fill_parent">

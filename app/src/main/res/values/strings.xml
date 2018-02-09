@@ -41,4 +41,5 @@
 	<string name="input_account">Account :</string>
 	<string name="setup_but">Save</string>
 	<string name="SetupSuccess">Success!</string>
+	<string name="SaveHistory">Save to history</string>
 </resources>
