@@ -27,6 +27,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Message;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
@@ -74,6 +75,7 @@ public class TextActivity extends Activity implements Runnable {
 	private String mSeed = "";
 	private String mEncSeed = "";
 	private String mSeedIV = "";
+	private CountDownTimer clear_timer = null;
 
 	private static final int REQUEST_CODE_CONFIRM_DEVICE_CREDENTIALS = 1;
 
@@ -176,6 +178,17 @@ public class TextActivity extends Activity implements Runnable {
 					String sCopied = getString(R.string.copied);
 					Toast.makeText(TextActivity.this, sCopied,
 							Toast.LENGTH_SHORT).show();
+					if (clear_timer != null) {
+						clear_timer.cancel();
+						clear_timer = null;
+					}
+					clear_timer = new CountDownTimer(30000, 1000) {
+						public void onTick(long millisUntilFinished) {}
+						public void onFinish() {
+							mClipboard.setPrimaryClip(ClipData.newPlainText("hash", ""));
+							clear_timer = null;
+						}
+					}.start();
 				}
 			}
 		});
