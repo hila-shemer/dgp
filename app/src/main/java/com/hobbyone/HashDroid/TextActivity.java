@@ -32,7 +32,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.security.keystore.KeyProperties;
-import android.security.keystore.UserNotAuthenticatedException;
 import android.content.ClipboardManager;
 import android.text.Editable;
 import android.view.View;
@@ -77,7 +76,8 @@ public class TextActivity extends Activity implements Runnable {
 	private String mSeed = "";
 	private String mEncSeed = "";
 	private String mSeedIV = "";
-	private CountDownTimer clear_timer = null;
+	private CountDownTimer clear_clipboard_timer = null;
+	private CountDownTimer clear_seed_timer = null;
 
 	private static final int REQUEST_CODE_CONFIRM_DEVICE_CREDENTIALS = 1;
 
@@ -181,15 +181,15 @@ public class TextActivity extends Activity implements Runnable {
 					String sCopied = getString(R.string.copied);
 					Toast.makeText(TextActivity.this, sCopied,
 							Toast.LENGTH_SHORT).show();
-					if (clear_timer != null) {
-						clear_timer.cancel();
-						clear_timer = null;
+					if (clear_clipboard_timer != null) {
+						clear_clipboard_timer.cancel();
+						clear_clipboard_timer = null;
 					}
-					clear_timer = new CountDownTimer(30000, 1000) {
+					clear_clipboard_timer = new CountDownTimer(30000, 1000) {
 						public void onTick(long millisUntilFinished) {}
 						public void onFinish() {
 							mClipboard.setPrimaryClip(ClipData.newPlainText("hash", ""));
-							clear_timer = null;
+							clear_clipboard_timer = null;
 						}
 					}.start();
 				}
@@ -203,12 +203,14 @@ public class TextActivity extends Activity implements Runnable {
 	public void onResume() {
 		super.onResume();
 		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-		mEncSeed = settings.getString("seed", "test");
+		String tmp = settings.getString("seed", "test");
+		if (mEncSeed.equals(tmp) && !mSeed.equals("cleared")) return;
+		mEncSeed = tmp;
 		if (mEncSeed.compareTo("test") == 0) {
 			mSeed = "test";
 		} else {
 			mSeedIV = settings.getString("seed_iv", "");
-			tryDecrypt();
+			showAuthenticationScreen();
 		}
 	}
 
@@ -225,15 +227,20 @@ public class TextActivity extends Activity implements Runnable {
 					KeyProperties.KEY_ALGORITHM_AES + "/" + KeyProperties.BLOCK_MODE_CBC + "/"
 							+ KeyProperties.ENCRYPTION_PADDING_PKCS7);
 
-			// Try encrypting something, it will only work if the user authenticated within
-			// the last AUTHENTICATION_DURATION_SECONDS seconds.
 			cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(UtilServices.hex_to_bytes(mSeedIV)));
 			byte[] result = cipher.doFinal(UtilServices.hex_to_bytes(mEncSeed));
 			mSeed = new String(result);
-		} catch (UserNotAuthenticatedException e) {
-			// User is not authenticated, let's authenticate with device credentials.
-			mResultTV.setText("Not authenticated");
-//			showAuthenticationScreen();
+			if (clear_seed_timer != null) {
+				clear_seed_timer.cancel();
+				clear_seed_timer = null;
+			}
+			clear_seed_timer = new CountDownTimer(30000, 1000) {
+				public void onTick(long millisUntilFinished) {}
+				public void onFinish() {
+					mSeed = "cleared";
+					clear_seed_timer = null;
+				}
+			}.start();
 		} catch (KeyPermanentlyInvalidatedException e) {
 			// This happens if the lock screen has been disabled or reset after the key was
 			// generated after the key was generated.
