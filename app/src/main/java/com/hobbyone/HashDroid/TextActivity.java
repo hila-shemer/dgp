@@ -300,7 +300,7 @@ public class TextActivity extends Activity implements Runnable {
 
         final int iterations = 42000;
 
-        final int outputKeyLength = 160;
+        final int outputKeyLength = 320;
 
         try {
             SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
