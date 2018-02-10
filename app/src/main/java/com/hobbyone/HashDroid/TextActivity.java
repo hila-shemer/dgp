@@ -334,7 +334,10 @@ public class TextActivity extends Activity implements Runnable {
             String suffix = " (" + mOutputFormats[i] + ")";
             if (!s.endsWith(suffix)) continue;
             mSpinner.setSelection(i);
-            mEditText.setText(s.substring(0, s.lastIndexOf(suffix)));
+            miItePos = i;
+            String to_hash = s.substring(0, s.lastIndexOf(suffix));
+            mEditText.setText(to_hash);
+            msToHash = to_hash;
             return;
         }
         Toast.makeText(this, "Invalid entry.", Toast.LENGTH_SHORT).show();
