@@ -68,6 +68,14 @@ public class MainActivity extends TabActivity {
 				.setContent(intent);
 		tabHost.addTab(spec);
 
+		intent = new Intent().setClass(this, HistoryActivity.class);
+		String sHistTabTitle = getString(R.string.tab_history);
+		spec = tabHost
+				.newTabSpec("history")
+				.setIndicator(sHistTabTitle)
+				.setContent(intent);
+		tabHost.addTab(spec);
+
 		tabHost.setCurrentTab(0);
 
 		// methods called to get a smoother gradient background on all devices
