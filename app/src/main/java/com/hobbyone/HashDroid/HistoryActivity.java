@@ -32,6 +32,7 @@ import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.security.keystore.KeyProperties;
 import android.content.ClipboardManager;
 import android.text.Editable;
+import android.util.ArraySet;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -45,6 +46,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import android.content.SharedPreferences;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class HistoryActivity extends Activity {
 	private EditText mEditText = null;
@@ -68,11 +75,6 @@ public class HistoryActivity extends Activity {
 		mClipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 		mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
 
-		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-				this, R.array.Output_Formats, android.R.layout.simple_spinner_item);
-		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-		mSpinner.setAdapter(adapter);
-		mSpinner.setSelection(0); // alnum by default
 		mSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
 			public void onItemSelected(AdapterView<?> parentView,
@@ -89,8 +91,7 @@ public class HistoryActivity extends Activity {
 		mDeleteButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-
-				// Perform action on clicks
+                delete_item();
 			}
 		});
 
@@ -104,4 +105,41 @@ public class HistoryActivity extends Activity {
 //		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 //		String tmp = settings.getString("seed", "test");
 	}
+
+	private void update_list() {
+		SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
+		Set<String> hist_items = settings.getStringSet("History", null);
+        SortedSet<String> sorted_items = new TreeSet<String>(hist_items);
+        ArrayList<String> items = new ArrayList<String>();
+		if (hist_items != null) {
+            for (String s : sorted_items) {
+                items.add(s);
+            }
+        } else {
+		    items.add("Empty");
+        }
+        ArrayAdapter<String> adapter = new ArrayAdapter<String> (this, android.R.layout.simple_spinner_dropdown_item, items);
+        mSpinner.setAdapter(adapter);
+        mSpinner.setSelection(0);
+	}
+
+    private void delete_item() {
+        //miItePos = mSpinner.getSelectedItemPosition();
+        String s = mSpinner.getSelectedItem().toString();
+        Toast.makeText(this,"Chosen: " + s, Toast.LENGTH_LONG).show();
+        SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
+        Set<String> hist_items = settings.getStringSet("History", null);
+        if (hist_items == null) return;
+        Set<String> output = new HashSet<String>(hist_items);
+        output.remove(s);
+        settings.edit().putStringSet("History", output).apply();
+        update_list();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        update_list();
+    }
+
 }

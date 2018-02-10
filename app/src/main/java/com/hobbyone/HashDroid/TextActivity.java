@@ -82,6 +82,7 @@ public class TextActivity extends Activity implements Runnable {
 	private static final int REQUEST_CODE_CONFIRM_DEVICE_CREDENTIALS = 1;
 
 	public static final String PREFS_NAME = "DgpConfig";
+	public static final String HISTORY_PREFS_NAME = "DgpHistory";
 	public static final String KEY_NAME = "DgpKey";
 
 	private KeyguardManager mKeyguardManager;
