@@ -70,7 +70,7 @@ public class TextActivity extends Activity implements Runnable {
     private String msToHash = "";
     private String[] mOutputFormats;
     private ProgressDialog mProgressDialog = null;
-    private int miItePos = -1;
+    private String mFormat = "";
     private String mSeed = "";
     private String mAccount = "";
     private String mEncSeed = "";
@@ -152,7 +152,7 @@ public class TextActivity extends Activity implements Runnable {
             @Override
             public void onClick(View v) {
                 // Perform action on clicks
-                miItePos = mSpinner.getSelectedItemPosition();
+                mFormat = mSpinner.getSelectedItem().toString();
                 Editable InputEdit = mEditText.getText();
                 msToHash = InputEdit.toString();
                 ComputeAndDisplayHash();
@@ -316,7 +316,7 @@ public class TextActivity extends Activity implements Runnable {
             String suffix = " (" + mOutputFormats[i] + ")";
             if (!s.endsWith(suffix)) continue;
             mSpinner.setSelection(i);
-            miItePos = i;
+            mFormat = mOutputFormats[i];
             String to_hash = s.substring(0, s.lastIndexOf(suffix));
             mEditText.setText(to_hash);
             msToHash = to_hash;
@@ -338,17 +338,13 @@ public class TextActivity extends Activity implements Runnable {
                     msToHash);
             String sTextHashTitle;
             if (!msHash.equals("")) {
-                String OutputFormat = "";
-                if (miItePos >= 0)
-                    OutputFormat = mOutputFormats[miItePos];
-                sTextHashTitle = String.format(res.getString(R.string.Hash),
-                        OutputFormat, msHash);
+                sTextHashTitle = String.format(res.getString(R.string.Hash), mFormat, msHash);
                 // Show the copy button
                 if (mCopyButton != null)
                     mCopyButton.setVisibility(View.VISIBLE);
                 if (mCheckBox != null) {
                     if (mCheckBox.isChecked()) {
-                        add_item(msToHash + " (" + OutputFormat + ")");
+                        add_item(msToHash + " (" + mFormat + ")");
                     }
                 }
             } else {
