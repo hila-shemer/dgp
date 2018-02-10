@@ -55,8 +55,7 @@ public class MainActivity extends TabActivity {
 		// Initialize a TabSpec for each tab and add it to the TabHost
 		spec = tabHost
 				.newTabSpec("text")
-				.setIndicator(sTextTabTitle,
-						res.getDrawable(R.drawable.ic_tab_text))
+				.setIndicator(sTextTabTitle)
 				.setContent(intent);
 		tabHost.addTab(spec);
 
@@ -65,8 +64,7 @@ public class MainActivity extends TabActivity {
 		String sSetupTabTitle = getString(R.string.tab_setup);
 		spec = tabHost
 				.newTabSpec("setup")
-				.setIndicator(sSetupTabTitle,
-						res.getDrawable(R.drawable.ic_tab_setup))
+				.setIndicator(sSetupTabTitle)
 				.setContent(intent);
 		tabHost.addTab(spec);
 
