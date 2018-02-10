@@ -192,9 +192,26 @@ public class TextActivity extends Activity implements Runnable {
     @Override
     public void onResume() {
         super.onResume();
+
+        /* Check for message from HistoryActivity (so ugly) */
+        boolean needs_generate = false;
+        MainActivity parent = (MainActivity)TextActivity.super.getParent();
+        String s = parent.get_msg_between_tabs();
+        parent.set_msg_between_tabs("");
+        if (!s.equals("")) {
+            run_history_entry(s);
+            needs_generate = true;
+        }
+
+        /* Restore/Load key (if invalidated or changed) */
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         String tmp = settings.getString("seed", "test");
-        if (mEncSeed.equals(tmp) && !mSeed.equals("cleared")) return;
+        if (mEncSeed.equals(tmp) && !mSeed.equals("cleared")) {
+            if (needs_generate) {
+                ComputeAndDisplayHash();
+            }
+            return;
+        }
         mEncSeed = tmp;
         if (mEncSeed.compareTo("test") == 0) {
             mSeed = "test";
@@ -352,6 +369,16 @@ public class TextActivity extends Activity implements Runnable {
         settings.edit().putStringSet("History", output).apply();
     }
 
+    public void run_history_entry(String s) {
+        for (int i = 0; i < mOutputFormats.length; i++) {
+            String suffix = " (" + mOutputFormats[i] + ")";
+            if (!s.endsWith(suffix)) continue;
+            mSpinner.setSelection(i);
+            mEditText.setText(s.substring(0, s.lastIndexOf(suffix)));
+            return;
+        }
+        Toast.makeText(this, "Invalid entry.", Toast.LENGTH_SHORT).show();
+    }
 
     // This method is called when the computation is over
     private Handler handler = new Handler() {

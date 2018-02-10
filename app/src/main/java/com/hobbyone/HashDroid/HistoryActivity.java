@@ -98,35 +98,35 @@ public class HistoryActivity extends Activity {
         mGenerateButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Perform action on clicks
-            //    miItePos = mSpinner.getSelectedItemPosition();
+                MainActivity parent = (MainActivity)HistoryActivity.super.getParent();
+                parent.set_msg_between_tabs(mSpinner.getSelectedItem().toString());
+                parent.get_tab_host().setCurrentTab(0);
             }
         });
-//      SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-//      String tmp = settings.getString("seed", "test");
     }
 
     private void update_list() {
+        int i = mSpinner.getSelectedItemPosition();
         SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
         Set<String> hist_items = settings.getStringSet("History", null);
         SortedSet<String> sorted_items = new TreeSet<String>(hist_items);
         ArrayList<String> items = new ArrayList<String>();
-        if (hist_items != null) {
+        if (hist_items.size() != 0) {
             for (String s : sorted_items) {
                 items.add(s);
             }
         } else {
             items.add("Empty");
+            i = 0;
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<String> (this, android.R.layout.simple_spinner_dropdown_item, items);
         mSpinner.setAdapter(adapter);
-        mSpinner.setSelection(0);
+        mSpinner.setSelection(i);
     }
 
     private void delete_item() {
         //miItePos = mSpinner.getSelectedItemPosition();
         String s = mSpinner.getSelectedItem().toString();
-        Toast.makeText(this,"Chosen: " + s, Toast.LENGTH_LONG).show();
         SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
         Set<String> hist_items = settings.getStringSet("History", null);
         if (hist_items == null) return;

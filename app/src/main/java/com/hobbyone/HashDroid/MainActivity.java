@@ -38,6 +38,9 @@ import android.widget.TextView;
 
 public class MainActivity extends TabActivity {
 
+    TabHost tabHost = null;
+    String msg_between_tabs = "";
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -45,7 +48,7 @@ public class MainActivity extends TabActivity {
         setContentView(R.layout.main);
 
         Resources res = getResources(); // Resource object to get Drawables
-        TabHost tabHost = getTabHost(); // The activity TabHost
+        tabHost = getTabHost(); // The activity TabHost
         TabHost.TabSpec spec; // Reusable TabSpec for each tab
         Intent intent; // Reusable Intent for each tab
 
@@ -83,6 +86,10 @@ public class MainActivity extends TabActivity {
         // especially for Donut 1.6
         //getWindow().addFlags(WindowManager.LayoutParams.FLAG_DITHER);
     }
+
+    public TabHost get_tab_host() { return tabHost; }
+    public String get_msg_between_tabs() { return msg_between_tabs; }
+    public void set_msg_between_tabs(String s) { msg_between_tabs = s; }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
