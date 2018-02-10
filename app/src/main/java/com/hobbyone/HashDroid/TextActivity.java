@@ -52,6 +52,8 @@ import android.content.SharedPreferences;
 import java.math.BigInteger;
 import java.security.KeyStore;
 import java.security.spec.KeySpec;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -337,6 +339,20 @@ public class TextActivity extends Activity implements Runnable {
 		handler.sendEmptyMessage(0);
 	}
 
+    private void add_item(String s) {
+        SharedPreferences settings = getSharedPreferences(HISTORY_PREFS_NAME, 0);
+        Set<String> hist_items = settings.getStringSet("History", null);
+        Set<String> output = null;
+        if (hist_items == null) {
+            output = new HashSet<String>();
+        } else {
+            output = new HashSet<String>(hist_items);
+        }
+        output.add(s);
+        settings.edit().putStringSet("History", output).apply();
+    }
+
+
 	// This method is called when the computation is over
 	private Handler handler = new Handler() {
 		@Override
@@ -350,11 +366,6 @@ public class TextActivity extends Activity implements Runnable {
 					msToHash);
 			String sTextHashTitle;
 			if (!msHash.equals("")) {
-				if (mCheckBox != null) {
-					if (mCheckBox.isChecked()) {
-						msHash = msHash.toUpperCase();
-					}
-				}
 				String OutputFormat = "";
 				if (miItePos >= 0)
 					OutputFormat = mOutputFormats[miItePos];
@@ -362,7 +373,12 @@ public class TextActivity extends Activity implements Runnable {
 						OutputFormat, msHash);
 				// Show the copy button
 				if (mCopyButton != null)
-					mCopyButton.setVisibility(View.VISIBLE);
+                    mCopyButton.setVisibility(View.VISIBLE);
+                if (mCheckBox != null) {
+                    if (mCheckBox.isChecked()) {
+                        add_item(msToHash + " (" + OutputFormat + ")");
+                    }
+                }
 			} else {
 				sTextHashTitle = String.format(
 						res.getString(R.string.unable_to_calculate), msToHash);
