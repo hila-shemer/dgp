@@ -407,7 +407,7 @@ public class TextActivity extends Activity implements Runnable {
 			msHash = grab_alnum(int_data, 8);
 		}
 
-		final int iterations = 32768;//16*1024;
+		final int iterations = 42000;
 
 		final int outputKeyLength = 160;
 
