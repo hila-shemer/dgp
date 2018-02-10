@@ -105,16 +105,6 @@ public class TextActivity extends Activity implements Runnable {
 		mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
 		mCheckBox = (CheckBox) findViewById(R.id.SaveHistoryCB);
 
-		if (!new Sha160().selfTest()) {
-			Toast.makeText(this, "SHA-160 self-tst failed", Toast.LENGTH_LONG).show();
-		}
-		if (!new Sha256().selfTest()) {
-			Toast.makeText(this, "SHA-256 self-tst failed", Toast.LENGTH_LONG).show();
-		}
-		if (!new Sha512().selfTest()) {
-			Toast.makeText(this, "SHA-512 self-tst failed", Toast.LENGTH_LONG).show();
-		}
-
 		mKeyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
 		if (!mKeyguardManager.isKeyguardSecure()) {
 			// Show a message that the user hasn't set up a lock screen.
@@ -397,11 +387,6 @@ public class TextActivity extends Activity implements Runnable {
 	// Call when the thread is started
 	public void run() {
 		msHash = "";
-//		Sha256 md = new Sha256();
-//		md.update(msToHash.getBytes());
-//		msHash = UtilServices.toString(md.digest());
-//		msHash = UtilServices.toString(hmac("key".getBytes(), "The quick brown fox jumps over the lazy dog".getBytes()));
-		//msHash = UtilServices.toString(pbkdf("password".getBytes(), "salt".getBytes(), 4096, 20));
 		if (false) {
 			BigInteger int_data = gen_large_int(mSeed, msToHash);
 			msHash = grab_alnum(int_data, 8);
