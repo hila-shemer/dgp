@@ -1,51 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="fill_parent" android:layout_height="wrap_content"
-	android:scrollbarSize="12dip">
+    android:layout_width="fill_parent" android:layout_height="wrap_content"
+    android:scrollbarSize="12dip">
 <LinearLayout
-	android:id="@+id/about_layout_root"
-	android:layout_width="fill_parent" android:layout_height="fill_parent"
-	android:orientation="vertical"
+    android:id="@+id/about_layout_root"
+    android:layout_width="fill_parent" android:layout_height="fill_parent"
+    android:orientation="vertical"
     android:padding="8dip">
-	<ImageView
+    <ImageView
         android:layout_width="48dip"
-		android:layout_height="48dip" android:layout_gravity="center_horizontal"
-		android:layout_marginTop="8dip" android:layout_marginBottom="8dip"
-		android:src="@drawable/icon"/>
-	<TextView
+        android:layout_height="48dip" android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dip" android:layout_marginBottom="8dip"
+        android:src="@drawable/icon"/>
+    <TextView
         android:layout_width="fill_parent"
-		android:layout_height="wrap_content" android:layout_gravity="center_horizontal"
-		android:gravity="center" android:textAppearance="?android:attr/textAppearanceLarge"
-		android:text="@string/app_name"/>
-	<TextView android:id="@+id/about_version"
-		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:layout_gravity="center_horizontal"
-		android:layout_marginBottom="8dip" android:gravity="center"
-		android:textAppearance="?android:attr/textAppearanceSmall"
-		android:text="@string/version"/>
-	<TextView
+        android:layout_height="wrap_content" android:layout_gravity="center_horizontal"
+        android:gravity="center" android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="@string/app_name"/>
+    <TextView android:id="@+id/about_version"
         android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:layout_gravity="center_horizontal" android:layout_marginTop="8dip"
-		android:layout_marginBottom="8dip" android:gravity="center"
-		android:textAppearance="?android:attr/textAppearanceSmall"
-		android:text="@string/copyright"/>
-	<TextView
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="8dip" android:gravity="center"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="@string/version"/>
+    <TextView
         android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:layout_gravity="center_horizontal" android:layout_marginTop="8dip"
-		android:layout_marginBottom="8dip" android:gravity="center"
-		android:textAppearance="?android:attr/textAppearanceSmall"
-		android:text="@string/contact" android:autoLink="email"/>
-	<TextView
+        android:layout_gravity="center_horizontal" android:layout_marginTop="8dip"
+        android:layout_marginBottom="8dip" android:gravity="center"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="@string/copyright"/>
+    <TextView
         android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:layout_gravity="center_horizontal" android:layout_marginTop="8dip"
-		android:layout_marginBottom="8dip" android:gravity="center"
-		android:textAppearance="?android:attr/textAppearanceSmall"
-		android:text="@string/LicenseTitle" android:textStyle="bold" android:textColor="#ffffff"/>
-	<TextView
+        android:layout_gravity="center_horizontal" android:layout_marginTop="8dip"
+        android:layout_marginBottom="8dip" android:gravity="center"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="@string/contact" android:autoLink="email"/>
+    <TextView
         android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:layout_marginTop="2dip"
-		android:layout_marginBottom="8dip" android:textAppearance="?android:attr/textAppearanceSmall"
-		android:text="@string/License" android:gravity="left" android:autoLink="web"
-		android:textColor="#ffffff" android:textColorLink="#7d95c6"/>
-	</LinearLayout>
+        android:layout_gravity="center_horizontal" android:layout_marginTop="8dip"
+        android:layout_marginBottom="8dip" android:gravity="center"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="@string/LicenseTitle" android:textStyle="bold" android:textColor="#ffffff"/>
+    <TextView
+        android:layout_width="fill_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="2dip"
+        android:layout_marginBottom="8dip" android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="@string/License" android:gravity="left" android:autoLink="web"
+        android:textColor="#ffffff" android:textColorLink="#7d95c6"/>
+    </LinearLayout>
 </ScrollView>

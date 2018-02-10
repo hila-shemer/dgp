@@ -3,21 +3,21 @@
 
     <string name="help_text">Bla bla help text.\n\n
         Choose between: alnum,
-		Adler-32, CRC-32,
-		Haval-128, MD2, MD5, RIPEMD-128, RIPEMD-160, SHA-1, SHA-256,
-		SHA-384, SHA-512, Tiger and Whirlpool.
-		\nThe calculated hash can be
-		copied to the clipboard to be reused
-		elsewhere.
-		\n\nThe first tab
-		enables to calculate the hash of a given string.
-		\n\nThis is published under
-		the GPLv3 (GNU General Public License version 3). Please contact me to
-		get the source code.</string>
+        Adler-32, CRC-32,
+        Haval-128, MD2, MD5, RIPEMD-128, RIPEMD-160, SHA-1, SHA-256,
+        SHA-384, SHA-512, Tiger and Whirlpool.
+        \nThe calculated hash can be
+        copied to the clipboard to be reused
+        elsewhere.
+        \n\nThe first tab
+        enables to calculate the hash of a given string.
+        \n\nThis is published under
+        the GPLv3 (GNU General Public License version 3). Please contact me to
+        get the source code.</string>
     <string name="changelog_text">Changelog:
-		\n\nv0.1 :
+        \n\nv0.1 :
         \n* Improved Bla
-		\n\nv1.0 :
-		\n* Initial release (who starts with 1.0? Really)</string>
+        \n\nv1.0 :
+        \n* Initial release (who starts with 1.0? Really)</string>
 
 </resources>

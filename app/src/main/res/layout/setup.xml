@@ -1,57 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="fill_parent" android:layout_height="wrap_content"
-	android:scrollbarSize="12dip">
-	<LinearLayout android:orientation="vertical"
-		android:layout_width="fill_parent" android:layout_height="fill_parent">
-		<TextView
-			android:layout_width="fill_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="5dip"
-			android:text="@string/input_seed" />
+    android:layout_width="fill_parent" android:layout_height="wrap_content"
+    android:scrollbarSize="12dip">
+    <LinearLayout android:orientation="vertical"
+        android:layout_width="fill_parent" android:layout_height="fill_parent">
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:text="@string/input_seed" />
 
-		<RelativeLayout android:orientation="horizontal"
-		android:layout_width="fill_parent" android:layout_height="fill_parent">
-		<Button android:id="@+id/ClearButton" android:text="@string/clear_but"
-			android:layout_height="wrap_content" android:layout_width="wrap_content"
-			android:layout_marginLeft="5dip" 
-			android:layout_alignParentRight="true" />
+        <RelativeLayout android:orientation="horizontal"
+        android:layout_width="fill_parent" android:layout_height="fill_parent">
+        <Button android:id="@+id/ClearButton" android:text="@string/clear_but"
+            android:layout_height="wrap_content" android:layout_width="wrap_content"
+            android:layout_marginLeft="5dip" 
+            android:layout_alignParentRight="true" />
 
-			<EditText
-				android:id="@+id/seed_txt"
-				android:layout_width="fill_parent"
-				android:layout_height="wrap_content"
-				android:layout_toLeftOf="@id/ClearButton" />
-		</RelativeLayout>
-		<RelativeLayout android:orientation="horizontal"
-		android:layout_width="fill_parent" android:layout_height="fill_parent">
+            <EditText
+                android:id="@+id/seed_txt"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_toLeftOf="@id/ClearButton" />
+        </RelativeLayout>
+        <RelativeLayout android:orientation="horizontal"
+        android:layout_width="fill_parent" android:layout_height="fill_parent">
 
-			<Button
-				android:id="@+id/GenButton"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_alignParentLeft="true"
-				android:layout_alignParentRight="true"
-				android:text="@string/gen_but" />
-		</RelativeLayout>
+            <Button
+                android:id="@+id/GenButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentRight="true"
+                android:text="@string/gen_but" />
+        </RelativeLayout>
 
-		<TextView
-			android:id="@+id/textView"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginTop="5dip"
-			android:text="@string/input_account" />
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:text="@string/input_account" />
 
-		<EditText
-			android:id="@+id/account_txt"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_toLeftOf="@id/ClearButton" />
+        <EditText
+            android:id="@+id/account_txt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toLeftOf="@id/ClearButton" />
 
-		<Button android:id="@+id/SaveButton" android:text="@string/setup_but"
-			android:layout_width="fill_parent" android:layout_height="wrap_content"/>
-		<TextView android:id="@+id/label_result"
-			android:layout_width="wrap_content" android:layout_height="wrap_content"
-			android:layout_below="@+id/SaveButton" android:textStyle="bold" android:layout_gravity="center"/>
-	</LinearLayout>-->
+        <Button android:id="@+id/SaveButton" android:text="@string/setup_but"
+            android:layout_width="fill_parent" android:layout_height="wrap_content"/>
+        <TextView android:id="@+id/label_result"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_below="@+id/SaveButton" android:textStyle="bold" android:layout_gravity="center"/>
+    </LinearLayout>-->
 </ScrollView>

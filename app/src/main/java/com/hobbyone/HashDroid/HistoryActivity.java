@@ -99,11 +99,11 @@ public class HistoryActivity extends Activity {
             @Override
             public void onClick(View v) {
                 // Perform action on clicks
-            //	miItePos = mSpinner.getSelectedItemPosition();
+            //    miItePos = mSpinner.getSelectedItemPosition();
             }
         });
-//		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-//		String tmp = settings.getString("seed", "test");
+//      SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+//      String tmp = settings.getString("seed", "test");
     }
 
     private void update_list() {
