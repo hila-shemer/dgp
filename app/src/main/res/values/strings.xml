@@ -3,12 +3,14 @@
 	<string name="app_name">DGP</string>
 	<string name="tab_text">Hash a text</string>
 	<string name="tab_setup">Setup</string>
+	<string name="tab_history">History</string>
 	<string name="input_txt">Input the text to hash :</string>
 	<string name="Text">Text : %1$s\n</string>
 	<string name="Hash">%1$s output : %2$s</string>
 	<string name="unable_to_calculate">Unable to calculate the checksum of %1$s</string>
 	<string name="calculate_but">Calculate</string>
 	<string name="clear_but">Clear</string>
+	<string name="delete_but">Delete</string>
 	<string name="gen_but">Generate</string>
 	<string name="copy_but">Copy checksum to clipboard</string>
 	<string name="Close_but">Close</string>
@@ -42,4 +44,5 @@
 	<string name="setup_but">Save</string>
 	<string name="SetupSuccess">Success!</string>
 	<string name="SaveHistory">Save to history</string>
+	<string name="HistList">Select a history item :</string>
 </resources>
