@@ -76,6 +76,7 @@ public class TextActivity extends Activity implements Runnable {
     private ProgressDialog mProgressDialog = null;
     private int miItePos = -1;
     private String mSeed = "";
+    private String mAccount = "";
     private String mEncSeed = "";
     private String mSeedIV = "";
     private CountDownTimer clear_clipboard_timer = null;
@@ -205,6 +206,7 @@ public class TextActivity extends Activity implements Runnable {
 
         /* Restore/Load key (if invalidated or changed) */
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        mAccount = settings.getString("account", "default");
         String tmp = settings.getString("seed", "test");
         if (mEncSeed.equals(tmp) && !mSeed.equals("cleared")) {
             if (needs_generate) {
@@ -302,7 +304,8 @@ public class TextActivity extends Activity implements Runnable {
 
         try {
             SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-            KeySpec keySpec = new PBEKeySpec(mSeed.toCharArray(), msToHash.getBytes(), iterations, outputKeyLength);
+            String seed_with_account = mSeed + mAccount;
+            KeySpec keySpec = new PBEKeySpec(seed_with_account.toCharArray(), msToHash.getBytes(), iterations, outputKeyLength);
             SecretKey secretKey = secretKeyFactory.generateSecret(keySpec);
             msHash = UtilServices.grab_alnum(UtilServices.bytes_to_int(secretKey.getEncoded()), 8);
         } catch (java.security.NoSuchAlgorithmException e) {
@@ -318,7 +321,8 @@ public class TextActivity extends Activity implements Runnable {
 
     private void add_item(String s) {
         SharedPreferences settings = getSharedPreferences(HISTORY_PREFS_NAME, 0);
-        Set<String> hist_items = settings.getStringSet("History", null);
+        String history_key = "History" + mAccount;
+        Set<String> hist_items = settings.getStringSet(history_key, null);
         Set<String> output = null;
         if (hist_items == null) {
             output = new HashSet<String>();
@@ -326,7 +330,7 @@ public class TextActivity extends Activity implements Runnable {
             output = new HashSet<String>(hist_items);
         }
         output.add(s);
-        settings.edit().putStringSet("History", output).apply();
+        settings.edit().putStringSet(history_key, output).apply();
     }
 
     public void run_history_entry(String s) {

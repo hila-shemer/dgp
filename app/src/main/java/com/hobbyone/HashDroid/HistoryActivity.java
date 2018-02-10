@@ -61,6 +61,7 @@ public class HistoryActivity extends Activity {
     private ClipboardManager mClipboard = null;
     private String[] mOutputFormats;
     private int miItePos = -1;
+    private String mAccount = "";
 
     /** Called when the activity is first created. */
     @Override
@@ -107,11 +108,14 @@ public class HistoryActivity extends Activity {
 
     private void update_list() {
         int i = mSpinner.getSelectedItemPosition();
+        SharedPreferences account_settings = getSharedPreferences(TextActivity.PREFS_NAME, 0);
+        mAccount = account_settings.getString("account", "default");
         SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
-        Set<String> hist_items = settings.getStringSet("History", null);
-        SortedSet<String> sorted_items = new TreeSet<String>(hist_items);
+        String history_key = "History" + mAccount;
+        Set<String> hist_items = settings.getStringSet(history_key, null);
         ArrayList<String> items = new ArrayList<String>();
-        if (hist_items.size() != 0) {
+        if (hist_items != null && hist_items.size() != 0) {
+            SortedSet<String> sorted_items = new TreeSet<String>(hist_items);
             for (String s : sorted_items) {
                 items.add(s);
             }
@@ -128,7 +132,7 @@ public class HistoryActivity extends Activity {
         //miItePos = mSpinner.getSelectedItemPosition();
         String s = mSpinner.getSelectedItem().toString();
         SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
-        Set<String> hist_items = settings.getStringSet("History", null);
+        Set<String> hist_items = settings.getStringSet("History" + mAccount, null);
         if (hist_items == null) return;
         Set<String> output = new HashSet<String>(hist_items);
         output.remove(s);
