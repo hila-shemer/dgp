@@ -49,17 +49,13 @@ import android.widget.Toast;
 import android.content.SharedPreferences;
 
 
-import java.math.BigInteger;
 import java.security.KeyStore;
-import java.security.spec.KeySpec;
 import java.util.HashSet;
 import java.util.Set;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
 
 public class TextActivity extends Activity implements Runnable {
     private EditText mEditText = null;
@@ -296,25 +292,7 @@ public class TextActivity extends Activity implements Runnable {
     @Override
     // Call when the thread is started
     public void run() {
-        msHash = "";
-
-        final int iterations = 42000;
-
-        final int outputKeyLength = 320;
-
-        try {
-            SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-            String seed_with_account = mSeed + mAccount;
-            KeySpec keySpec = new PBEKeySpec(seed_with_account.toCharArray(), msToHash.getBytes(), iterations, outputKeyLength);
-            SecretKey secretKey = secretKeyFactory.generateSecret(keySpec);
-            msHash = UtilServices.grab_alnum(UtilServices.bytes_to_int(secretKey.getEncoded()), 8);
-        } catch (java.security.NoSuchAlgorithmException e) {
-            msHash = "AlgoError " + e.getMessage();
-        } catch (java.security.spec.InvalidKeySpecException e) {
-            msHash = "KeySpecError " + e.getMessage();
-        } catch (Exception e) {
-            msHash = "Error " + e.getMessage();
-        }
+        msHash = UtilServices.generate_password(mSeed, mAccount, msToHash);
 
         handler.sendEmptyMessage(0);
     }

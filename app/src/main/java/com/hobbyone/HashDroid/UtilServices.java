@@ -38,6 +38,11 @@ exception statement from your version.  */
 package com.hobbyone.HashDroid;
 
 import java.math.BigInteger;
+import java.security.spec.KeySpec;
+
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 /**
  * <p>
@@ -107,7 +112,28 @@ public class UtilServices {
             if (is_alnum(res)) return res;
             raw = raw.substring(1);
         }
-        return "";
+        return "FailedGrabAlnum from "+ get_base58(int_data);
+    }
+
+    public static String generate_password(String seed, String account, String name)
+    {
+        final int iterations = 42000;
+
+        final int outputKeyLength = 320;
+
+        try {
+            SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+            String seed_with_account = seed + account;
+            KeySpec keySpec = new PBEKeySpec(seed_with_account.toCharArray(), name.getBytes(), iterations, outputKeyLength);
+            SecretKey secretKey = secretKeyFactory.generateSecret(keySpec);
+            return grab_alnum(bytes_to_int(secretKey.getEncoded()), 8);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            return "AlgoError " + e.getMessage();
+        } catch (java.security.spec.InvalidKeySpecException e) {
+            return "KeySpecError " + e.getMessage();
+        } catch (Exception e) {
+            return "Error " + e.getMessage();
+        }
     }
 
 }
