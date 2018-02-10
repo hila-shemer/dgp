@@ -119,6 +119,9 @@ public class HistoryActivity extends Activity {
             for (String s : sorted_items) {
                 items.add(s);
             }
+            if (i >= items.size()) {
+                i = 0;
+            }
         } else {
             items.add("Empty");
             i = 0;
