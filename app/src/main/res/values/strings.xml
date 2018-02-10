@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<string name="app_name">DGP</string>
-	<string name="tab_text">Hash a text</string>
+	<string name="tab_text">Text</string>
 	<string name="tab_setup">Setup</string>
 	<string name="tab_history">History</string>
 	<string name="input_txt">Input the text to hash :</string>
