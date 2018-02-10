@@ -134,7 +134,7 @@ public class SetupActivity extends Activity {
                 SecureRandom random = new SecureRandom();
                 byte bytes[] = new byte[20];
                 random.nextBytes(bytes);
-                mSeedText.setText(TextActivity.get_base58(TextActivity.bytes_to_int(bytes)));
+                mSeedText.setText(UtilServices.get_base58(UtilServices.bytes_to_int(bytes)));
                 mResultTV.setText("");
             }
         });

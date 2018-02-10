@@ -37,6 +37,8 @@ exception statement from your version.  */
 
 package com.hobbyone.HashDroid;
 
+import java.math.BigInteger;
+
 /**
  * <p>
  * A collection of utility methods used throughout this project.
@@ -67,6 +69,45 @@ public class UtilServices {
                     + Character.digit(s.charAt(i+1), 16));
         }
         return data;
+    }
+
+    public static BigInteger bytes_to_int(byte[] data) {
+        return new BigInteger(1, data);
+    }
+
+    public static String get_base58(BigInteger int_data) {
+        final String digits = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+        String res = "";
+        while (int_data.signum() == 1) {
+            BigInteger[] t = int_data.divideAndRemainder(BigInteger.valueOf(58));
+            int_data = t[0];
+            int mod = t[1].intValue();
+            res = res.concat(digits.substring(mod, mod+1));
+        }
+        return res;
+    }
+
+    private static boolean is_alnum(String str) {
+        boolean has_lower = false;
+        boolean has_upper = false;
+        boolean has_digit = false;
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            if ((c >= '0') && (c <= '9')) has_digit = true;
+            if ((c >= 'a') && (c <= 'z')) has_lower = true;
+            if ((c >= 'A') && (c <= 'Z')) has_upper = true;
+        }
+        return has_digit && has_lower && has_upper;
+    }
+
+    public static String grab_alnum(BigInteger int_data, int length) {
+        String raw = get_base58(int_data);
+        while (raw.length() > length) {
+            String res = raw.substring(0, length);
+            if (is_alnum(res)) return res;
+            raw = raw.substring(1);
+        }
+        return "";
     }
 
 }
