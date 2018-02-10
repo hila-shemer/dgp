@@ -86,9 +86,6 @@ public class TextActivity extends Activity implements Runnable {
 
 	private KeyguardManager mKeyguardManager;
 
-	private static final int BLOCK_SIZE = 64;
-	private static final int DIGEST_SIZE = 32;
-
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -274,70 +271,6 @@ public class TextActivity extends Activity implements Runnable {
 		thread.start();
 	}
 
-	private static byte[] hmac(byte[] key, byte[] msg) {
-		if (key.length > BLOCK_SIZE) {
-			Sha256 md = new Sha256();
-			md.update(key);
-			key = md.digest();
-		}
-		if (key.length < BLOCK_SIZE) {
-			byte[] newkey = new byte[BLOCK_SIZE];
-			System.arraycopy(key, 0, newkey, 0, key.length);
-			for (int i = key.length; i < BLOCK_SIZE; i++) {
-				newkey[i] = (byte)0;
-			}
-			key = newkey;
-		}
-		byte[] ikey = new byte[BLOCK_SIZE];
-		byte[] okey = new byte[BLOCK_SIZE];
-		for (int i = 0; i < key.length; i++) {
-			okey[i] = (byte)(key[i] ^ (byte)0x5c);
-			ikey[i] = (byte)(key[i] ^ (byte)0x36);
-		}
-		Sha256 imd = new Sha256();
-		imd.update(ikey);
-		imd.update(msg);
-		Sha256 omd = new Sha256();
-		omd.update(okey);
-		omd.update(imd.digest());
-		return omd.digest();
-	}
-
-	private static byte[] pbkdf_block(byte[] key, byte[] salt, int iterations, int block) {
-		byte[] saltiter = new byte[salt.length + 4];
-		System.arraycopy(salt, 0, saltiter, 0, salt.length);
-		saltiter[salt.length] = (byte)((block >> 24) & 0xff);
-		saltiter[salt.length+1] = (byte)((block >> 16) & 0xff);
-		saltiter[salt.length+2] = (byte)((block >> 8) & 0xff);
-		saltiter[salt.length+3] = (byte)(block & 0xff);
-		byte[] digtmp = hmac(key, saltiter);
-		byte[] result = digtmp;
-		for (int i = 1; i < iterations; i++) {
-			digtmp = hmac(key, digtmp);
-			for (int j = 0; j < DIGEST_SIZE; j++) {
-				result[j] = (byte)(result[j] ^ digtmp[j]);
-			}
-		}
-		return result;
-	}
-
-	private static byte[] pbkdf(byte[] key, byte[] salt, int iterations, int outlen) {
-		int blocknum = 0;
-		int outlen_aligned = DIGEST_SIZE * ((outlen + (DIGEST_SIZE-1)) / DIGEST_SIZE);
-		byte[] output = new byte[outlen_aligned];
-		int cur_offset = 0;
-		while (cur_offset < outlen) {
-			blocknum++;
-			byte[] block = pbkdf_block(key, salt, iterations, blocknum);
-			System.arraycopy(block, 0, output, cur_offset, DIGEST_SIZE);
-			cur_offset += DIGEST_SIZE;
-		}
-		byte[] truncated_output = new byte[outlen];
-		System.arraycopy(output, 0, truncated_output, 0, outlen);
-		return truncated_output;
-	}
-
-
 	public static BigInteger bytes_to_int(byte[] data) {
 		return new BigInteger(1, data);
 	}
@@ -378,19 +311,10 @@ public class TextActivity extends Activity implements Runnable {
 		return "";
 	}
 
-	private static BigInteger gen_large_int(String seed, String name) {
-		byte[] bin_data = pbkdf(seed.getBytes(), name.getBytes(), 8192, 32);
-		return bytes_to_int(bin_data);
-	}
-
 	@Override
 	// Call when the thread is started
 	public void run() {
 		msHash = "";
-		if (false) {
-			BigInteger int_data = gen_large_int(mSeed, msToHash);
-			msHash = grab_alnum(int_data, 8);
-		}
 
 		final int iterations = 42000;
 
@@ -408,8 +332,6 @@ public class TextActivity extends Activity implements Runnable {
 		} catch (Exception e) {
 			msHash = "Error " + e.getMessage();
 		}
-
-//		msHash = get_base58(int_data);
 
 		handler.sendEmptyMessage(0);
 	}
