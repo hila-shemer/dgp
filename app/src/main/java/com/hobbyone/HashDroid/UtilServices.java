@@ -44,29 +44,29 @@ package com.hobbyone.HashDroid;
  */
 public class UtilServices {
 
-	/** Trivial constructor to enforce Singleton pattern. */
-	private UtilServices() {
-		super();
-	}
+    /** Trivial constructor to enforce Singleton pattern. */
+    private UtilServices() {
+        super();
+    }
 
-	public static String bytes_to_hex(byte[] b) {
-		StringBuilder data = new StringBuilder();
+    public static String bytes_to_hex(byte[] b) {
+        StringBuilder data = new StringBuilder();
 
-		for (byte aB : b) {
-			data.append(Integer.toHexString((aB >>> 4) & 0xf));
-			data.append(Integer.toHexString(aB & 0xf));
-		}
-		return data.toString();
-	}
+        for (byte aB : b) {
+            data.append(Integer.toHexString((aB >>> 4) & 0xf));
+            data.append(Integer.toHexString(aB & 0xf));
+        }
+        return data.toString();
+    }
 
-	public static byte[] hex_to_bytes(String s) {
-		int len = s.length();
-		byte[] data = new byte[len / 2];
-		for (int i = 0; i < len; i += 2) {
-			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-					+ Character.digit(s.charAt(i+1), 16));
-		}
-		return data;
-	}
+    public static byte[] hex_to_bytes(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
 
 }

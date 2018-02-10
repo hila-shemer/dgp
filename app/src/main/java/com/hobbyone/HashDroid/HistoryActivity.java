@@ -54,74 +54,74 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class HistoryActivity extends Activity {
-	private EditText mEditText = null;
-	private Button mDeleteButton = null;
-	private Button mGenerateButton = null;
-	private Spinner mSpinner = null;
-	private ClipboardManager mClipboard = null;
-	private String[] mOutputFormats;
-	private int miItePos = -1;
+    private EditText mEditText = null;
+    private Button mDeleteButton = null;
+    private Button mGenerateButton = null;
+    private Spinner mSpinner = null;
+    private ClipboardManager mClipboard = null;
+    private String[] mOutputFormats;
+    private int miItePos = -1;
 
-	/** Called when the activity is first created. */
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.history);
+    /** Called when the activity is first created. */
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.history);
 
-		mEditText = (EditText) findViewById(R.id.edittext);
-		mDeleteButton = (Button) findViewById(R.id.DeleteButton);
-		mGenerateButton = (Button) findViewById(R.id.GenerateButton);
-		mSpinner = (Spinner) findViewById(R.id.spinner);
-		mClipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-		mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
+        mEditText = (EditText) findViewById(R.id.edittext);
+        mDeleteButton = (Button) findViewById(R.id.DeleteButton);
+        mGenerateButton = (Button) findViewById(R.id.GenerateButton);
+        mSpinner = (Spinner) findViewById(R.id.spinner);
+        mClipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
 
-		mSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-			@Override
-			public void onItemSelected(AdapterView<?> parentView,
-					View selectedItemView, int position, long id) {
-				// your code here
-			}
+        mSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView,
+                    View selectedItemView, int position, long id) {
+                // your code here
+            }
 
-			@Override
-			public void onNothingSelected(AdapterView<?> parentView) {
-				// your code here
-			}
-		});
+            @Override
+            public void onNothingSelected(AdapterView<?> parentView) {
+                // your code here
+            }
+        });
 
-		mDeleteButton.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
+        mDeleteButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
                 delete_item();
-			}
-		});
+            }
+        });
 
-		mGenerateButton.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				// Perform action on clicks
-			//	miItePos = mSpinner.getSelectedItemPosition();
-			}
-		});
+        mGenerateButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Perform action on clicks
+            //	miItePos = mSpinner.getSelectedItemPosition();
+            }
+        });
 //		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 //		String tmp = settings.getString("seed", "test");
-	}
+    }
 
-	private void update_list() {
-		SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
-		Set<String> hist_items = settings.getStringSet("History", null);
+    private void update_list() {
+        SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
+        Set<String> hist_items = settings.getStringSet("History", null);
         SortedSet<String> sorted_items = new TreeSet<String>(hist_items);
         ArrayList<String> items = new ArrayList<String>();
-		if (hist_items != null) {
+        if (hist_items != null) {
             for (String s : sorted_items) {
                 items.add(s);
             }
         } else {
-		    items.add("Empty");
+            items.add("Empty");
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<String> (this, android.R.layout.simple_spinner_dropdown_item, items);
         mSpinner.setAdapter(adapter);
         mSpinner.setSelection(0);
-	}
+    }
 
     private void delete_item() {
         //miItePos = mSpinner.getSelectedItemPosition();
