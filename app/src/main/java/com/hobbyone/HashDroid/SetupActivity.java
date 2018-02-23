@@ -132,9 +132,20 @@ public class SetupActivity extends Activity {
             public void onClick(View v) {
                 // Perform action on clicks
                 SecureRandom random = new SecureRandom();
-                byte bytes[] = new byte[20];
+                byte bytes[] = new byte[40];
                 random.nextBytes(bytes);
-                mSeedText.setText(UtilServices.get_base58(UtilServices.bytes_to_int(bytes)));
+                try {
+                    String[] words = UtilServices.get_words(UtilServices.bytes_to_int(bytes), 24);
+                    String tmp = "";
+                    for (String word : words) {
+                        tmp = tmp.concat(word);
+                        tmp = tmp.concat(" ");
+                    }
+                    tmp = tmp.substring(0, tmp.lastIndexOf(' '));
+                    mSeedText.setText(tmp);
+                } catch (Exception e) {
+                    mSeedText.setText("Error " + e.getMessage());
+                }
                 mResultTV.setText("");
             }
         });
