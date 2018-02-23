@@ -45,13 +45,12 @@
         <EditText
             android:id="@+id/account_txt"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_toLeftOf="@id/ClearButton" />
+            android:layout_height="wrap_content" />
 
         <Button android:id="@+id/SaveButton" android:text="@string/setup_but"
             android:layout_width="fill_parent" android:layout_height="wrap_content"/>
         <TextView android:id="@+id/label_result"
             android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_below="@+id/SaveButton" android:textStyle="bold" android:layout_gravity="center"/>
+            android:textStyle="bold" android:layout_gravity="center"/>
     </LinearLayout>
 </ScrollView>
