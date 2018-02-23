@@ -49,7 +49,7 @@ import javax.crypto.spec.PBEKeySpec;
  * A collection of utility methods used throughout this project.
  * </p>
  */
-public class UtilServices {
+class UtilServices {
 
     /** Trivial constructor to enforce Singleton pattern. */
     private UtilServices() {
@@ -57,7 +57,7 @@ public class UtilServices {
     }
 
     /** English wordlist */
-    private static String[] wordlist = {
+    private static final String[] wordlist = {
             "abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract", "absurd", "abuse", "access", "accident", "account", "accuse", "achieve", "acid",
             "acoustic", "acquire", "across", "act", "action", "actor", "actress", "actual", "adapt", "add", "addict", "address", "adjust", "admit", "adult", "advance",
             "advice", "aerobic", "affair", "afford", "afraid", "again", "age", "agent", "agree", "ahead", "aim", "air", "airport", "aisle", "alarm", "album",
@@ -212,7 +212,7 @@ public class UtilServices {
         return new BigInteger(1, data);
     }
 
-    public static String get_base58(BigInteger int_data) {
+    private static String get_base58(BigInteger int_data) {
         final String digits = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
         String res = "";
         while (int_data.signum() == 1) {
@@ -237,7 +237,7 @@ public class UtilServices {
         return has_digit && has_lower && has_upper;
     }
 
-    public static String grab_alnum(BigInteger int_data, int length) {
+    private static String grab_alnum(BigInteger int_data, int length) {
         String raw = get_base58(int_data);
         while (raw.length() > length) {
             String res = raw.substring(0, length);
@@ -261,7 +261,7 @@ public class UtilServices {
         throw new Exception();
     }
 
-    public static String get_xkcd(String[] words) {
+    private static String get_xkcd(String[] words) {
         String res = "";
         for (String word : words) {
             res = res.concat(word.substring(0,1).toUpperCase());
@@ -281,24 +281,25 @@ public class UtilServices {
             String seed_with_account = seed + account;
             KeySpec keySpec = new PBEKeySpec(seed_with_account.toCharArray(), name.getBytes(), iterations, outputKeyLength);
             SecretKey secretKey = secretKeyFactory.generateSecret(keySpec);
-            if (format.equals("AlNum")) {
-                return grab_alnum(bytes_to_int(secretKey.getEncoded()), 8);
-            } else if (format.equals("AlNumLong")) {
-                return grab_alnum(bytes_to_int(secretKey.getEncoded()), 12);
-            } else if (format.equals("Hex")) {
-                return bytes_to_hex(secretKey.getEncoded()).substring(0, 8);
-            } else if (format.equals("HexLong")) {
-                return bytes_to_hex(secretKey.getEncoded()).substring(0, 16);
-            } else if (format.equals("Base58")) {
-                return get_base58(bytes_to_int(secretKey.getEncoded())).substring(0, 8);
-            } else if (format.equals("Base58Long")) {
-                return get_base58(bytes_to_int(secretKey.getEncoded())).substring(0, 12);
-            } else if (format.equals("XKCD")) {
-                return get_xkcd(get_words(bytes_to_int(secretKey.getEncoded()), 4));
-            } else if (format.equals("XKCD-Long")) {
-                return get_xkcd(get_words(bytes_to_int(secretKey.getEncoded()), 6));
-            } else {
-                return "UnknownFormat";
+            switch (format) {
+                case "AlNum":
+                    return grab_alnum(bytes_to_int(secretKey.getEncoded()), 8);
+                case "AlNumLong":
+                    return grab_alnum(bytes_to_int(secretKey.getEncoded()), 12);
+                case "Hex":
+                    return bytes_to_hex(secretKey.getEncoded()).substring(0, 8);
+                case "HexLong":
+                    return bytes_to_hex(secretKey.getEncoded()).substring(0, 16);
+                case "Base58":
+                    return get_base58(bytes_to_int(secretKey.getEncoded())).substring(0, 8);
+                case "Base58Long":
+                    return get_base58(bytes_to_int(secretKey.getEncoded())).substring(0, 12);
+                case "XKCD":
+                    return get_xkcd(get_words(bytes_to_int(secretKey.getEncoded()), 4));
+                case "XKCD-Long":
+                    return get_xkcd(get_words(bytes_to_int(secretKey.getEncoded()), 6));
+                default:
+                    return "UnknownFormat";
             }
         } catch (java.security.NoSuchAlgorithmException e) {
             return "AlgoError " + e.getMessage();

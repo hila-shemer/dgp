@@ -49,9 +49,6 @@ public class SetupActivity extends Activity {
 
     private EditText mSeedText = null;
     private EditText mAccountText = null;
-    private Button mSaveButton = null;
-    private Button mClearButton = null;
-    private Button mGenButton = null;
     private TextView mResultTV = null;
     private String mSeed = "";
     private String mAccount = "";
@@ -60,7 +57,6 @@ public class SetupActivity extends Activity {
      * If the user has unlocked the device Within the last this number of seconds,
      * it can be considered as an authenticator.
      */
-    private static final int AUTHENTICATION_DURATION_SECONDS = 30;
     private static final int REQUEST_CODE_CONFIRM_DEVICE_CREDENTIALS = 1;
 
     private KeyguardManager mKeyguardManager;
@@ -73,9 +69,9 @@ public class SetupActivity extends Activity {
 
         mSeedText = (EditText) findViewById(R.id.seed_txt);
         mAccountText = (EditText) findViewById(R.id.account_txt);
-        mClearButton = (Button) findViewById(R.id.ClearButton);
-        mGenButton = (Button) findViewById(R.id.GenButton);
-        mSaveButton = (Button) findViewById(R.id.SaveButton);
+        Button mClearButton = (Button) findViewById(R.id.ClearButton);
+        Button mGenButton = (Button) findViewById(R.id.GenButton);
+        Button mSaveButton = (Button) findViewById(R.id.SaveButton);
         mResultTV = (TextView) findViewById(R.id.label_result);
 
         mKeyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);

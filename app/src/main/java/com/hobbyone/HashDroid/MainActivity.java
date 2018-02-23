@@ -38,8 +38,8 @@ import android.widget.TextView;
 
 public class MainActivity extends TabActivity {
 
-    TabHost tabHost = null;
-    String msg_between_tabs = "";
+    private TabHost tabHost = null;
+    private String msg_between_tabs = "";
 
     /** Called when the activity is first created. */
     @Override

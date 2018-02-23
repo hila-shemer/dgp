@@ -53,5 +53,5 @@
         <TextView android:id="@+id/label_result"
             android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_below="@+id/SaveButton" android:textStyle="bold" android:layout_gravity="center"/>
-    </LinearLayout>-->
+    </LinearLayout>
 </ScrollView>

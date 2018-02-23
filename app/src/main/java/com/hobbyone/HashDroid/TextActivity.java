@@ -60,8 +60,6 @@ import javax.crypto.spec.IvParameterSpec;
 public class TextActivity extends Activity implements Runnable {
     private EditText mEditText = null;
     private CheckBox mCheckBox = null;
-    private Button mClearButton = null;
-    private Button mGenerateButton = null;
     private Button mCopyButton = null;
     private Spinner mSpinner = null;
     private TextView mResultTV = null;
@@ -93,8 +91,8 @@ public class TextActivity extends Activity implements Runnable {
         setContentView(R.layout.text);
 
         mEditText = (EditText) findViewById(R.id.edittext);
-        mClearButton = (Button) findViewById(R.id.ClearButton);
-        mGenerateButton = (Button) findViewById(R.id.GenerateButton);
+        Button mClearButton = (Button) findViewById(R.id.ClearButton);
+        Button mGenerateButton = (Button) findViewById(R.id.GenerateButton);
         mSpinner = (Spinner) findViewById(R.id.spinner);
         mResultTV = (TextView) findViewById(R.id.label_result);
         mCopyButton = (Button) findViewById(R.id.CopyButton);
@@ -310,7 +308,7 @@ public class TextActivity extends Activity implements Runnable {
         SharedPreferences settings = getSharedPreferences(HISTORY_PREFS_NAME, 0);
         String history_key = "History" + mAccount;
         Set<String> hist_items = settings.getStringSet(history_key, null);
-        Set<String> output = null;
+        Set<String> output;
         if (hist_items == null) {
             output = new HashSet<String>();
         } else {
@@ -320,7 +318,7 @@ public class TextActivity extends Activity implements Runnable {
         settings.edit().putStringSet(history_key, output).apply();
     }
 
-    public void run_history_entry(String s) {
+    private void run_history_entry(String s) {
         for (int i = 0; i < mOutputFormats.length; i++) {
             String suffix = " (" + mOutputFormats[i] + ")";
             if (!s.endsWith(suffix)) continue;

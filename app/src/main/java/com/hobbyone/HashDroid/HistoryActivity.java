@@ -41,13 +41,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class HistoryActivity extends Activity {
-    private EditText mEditText = null;
-    private Button mDeleteButton = null;
-    private Button mGenerateButton = null;
     private Spinner mSpinner = null;
-    private ClipboardManager mClipboard = null;
-    private String[] mOutputFormats;
-    private int miItePos = -1;
     private String mAccount = "";
 
     /** Called when the activity is first created. */
@@ -56,12 +50,9 @@ public class HistoryActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.history);
 
-        mEditText = (EditText) findViewById(R.id.edittext);
-        mDeleteButton = (Button) findViewById(R.id.DeleteButton);
-        mGenerateButton = (Button) findViewById(R.id.GenerateButton);
+        Button mDeleteButton = (Button) findViewById(R.id.DeleteButton);
+        Button mGenerateButton = (Button) findViewById(R.id.GenerateButton);
         mSpinner = (Spinner) findViewById(R.id.spinner);
-        mClipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        mOutputFormats = getResources().getStringArray(R.array.Output_Formats);
 
         mSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
@@ -117,7 +108,6 @@ public class HistoryActivity extends Activity {
     }
 
     private void delete_item() {
-        //miItePos = mSpinner.getSelectedItemPosition();
         String s = mSpinner.getSelectedItem().toString();
         SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
         Set<String> hist_items = settings.getStringSet("History" + mAccount, null);
