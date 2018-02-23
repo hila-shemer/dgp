@@ -32,6 +32,8 @@
     <string name="AlgoList">Select a hash function :</string>
     <string name="Calculating">Calculating&#8230;</string>
     <string-array name="Output_Formats">
+        <item>Base58</item>
+        <item>Base58Long</item>
         <item>AlNum</item>
         <item>AlNumLong</item>
         <item>XKCD</item>

@@ -115,7 +115,7 @@ public class UtilServices {
         return "FailedGrabAlnum from "+ get_base58(int_data);
     }
 
-    public static String generate_password(String seed, String account, String name)
+    public static String generate_password(String seed, String account, String name, String format)
     {
         final int iterations = 42000;
 
@@ -126,7 +126,21 @@ public class UtilServices {
             String seed_with_account = seed + account;
             KeySpec keySpec = new PBEKeySpec(seed_with_account.toCharArray(), name.getBytes(), iterations, outputKeyLength);
             SecretKey secretKey = secretKeyFactory.generateSecret(keySpec);
-            return grab_alnum(bytes_to_int(secretKey.getEncoded()), 8);
+            if (format.equals("AlNum")) {
+                return grab_alnum(bytes_to_int(secretKey.getEncoded()), 8);
+            } else if (format.equals("AlNumLong")) {
+                return grab_alnum(bytes_to_int(secretKey.getEncoded()), 12);
+            } else if (format.equals("Hex")) {
+                return bytes_to_hex(secretKey.getEncoded()).substring(0, 8);
+            } else if (format.equals("HexLong")) {
+                return bytes_to_hex(secretKey.getEncoded()).substring(0, 16);
+            } else if (format.equals("Base58")) {
+                return get_base58(bytes_to_int(secretKey.getEncoded())).substring(0, 8);
+            } else if (format.equals("Base58Long")) {
+                return get_base58(bytes_to_int(secretKey.getEncoded())).substring(0, 12);
+            } else {
+                return "UnknownFormat";
+            }
         } catch (java.security.NoSuchAlgorithmException e) {
             return "AlgoError " + e.getMessage();
         } catch (java.security.spec.InvalidKeySpecException e) {

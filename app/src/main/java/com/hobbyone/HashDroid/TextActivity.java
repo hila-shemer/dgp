@@ -292,7 +292,7 @@ public class TextActivity extends Activity implements Runnable {
     @Override
     // Call when the thread is started
     public void run() {
-        msHash = UtilServices.generate_password(mSeed, mAccount, msToHash);
+        msHash = UtilServices.generate_password(mSeed, mAccount, msToHash, mFormat);
 
         handler.sendEmptyMessage(0);
     }
