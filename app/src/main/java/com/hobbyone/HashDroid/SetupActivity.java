@@ -75,7 +75,14 @@ public class SetupActivity extends Activity {
         mResultTV = (TextView) findViewById(R.id.label_result);
 
         mKeyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
-        try {
+        if (mKeyguardManager == null) {
+            // Show a message that the user hasn't set up a lock screen.
+            Toast.makeText(this,
+                    "Secure lock screen hasn't set up.\n"
+                            + "Go to 'Settings -> Security -> Screenlock' to set up a lock screen\n"
+                            + "Error - no keyguard manager",
+                    Toast.LENGTH_LONG).show();
+        } else {
             if (!mKeyguardManager.isKeyguardSecure()) {
                 // Show a message that the user hasn't set up a lock screen.
                 Toast.makeText(this,
@@ -83,12 +90,6 @@ public class SetupActivity extends Activity {
                                 + "Go to 'Settings -> Security -> Screenlock' to set up a lock screen",
                         Toast.LENGTH_LONG).show();
             }
-        } catch (Exception e) {
-            Toast.makeText(this,
-                    "Secure lock screen hasn't set up.\n"
-                            + "Go to 'Settings -> Security -> Screenlock' to set up a lock screen\n"
-                            + "Error: " + e.getMessage(),
-                    Toast.LENGTH_LONG).show();
         }
 
         mSaveButton.setOnClickListener(new OnClickListener() {

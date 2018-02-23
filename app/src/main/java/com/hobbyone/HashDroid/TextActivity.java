@@ -102,7 +102,14 @@ public class TextActivity extends Activity implements Runnable {
         mCheckBox = (CheckBox) findViewById(R.id.SaveHistoryCB);
 
         mKeyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
-        try {
+        if (mKeyguardManager == null) {
+            // Show a message that the user hasn't set up a lock screen.
+            Toast.makeText(this,
+                    "Secure lock screen hasn't set up.\n"
+                            + "Go to 'Settings -> Security -> Screenlock' to set up a lock screen\n"
+                            + "Error - no keyguard manager",
+                    Toast.LENGTH_LONG).show();
+        } else {
             if (!mKeyguardManager.isKeyguardSecure()) {
                 // Show a message that the user hasn't set up a lock screen.
                 Toast.makeText(this,
@@ -110,13 +117,6 @@ public class TextActivity extends Activity implements Runnable {
                                 + "Go to 'Settings -> Security -> Screenlock' to set up a lock screen",
                         Toast.LENGTH_LONG).show();
             }
-        } catch (Exception e) {
-            // Show a message that the user hasn't set up a lock screen.
-            Toast.makeText(this,
-                    "Secure lock screen hasn't set up.\n"
-                            + "Go to 'Settings -> Security -> Screenlock' to set up a lock screen\n"
-                            + "Error: " + e.getMessage(),
-                    Toast.LENGTH_LONG).show();
         }
 
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
