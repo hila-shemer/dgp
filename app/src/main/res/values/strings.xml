@@ -29,7 +29,7 @@
     GNU General Public License for more details.\nYou should have received a copy of the GNU General Public License
     along with this program. If not, see http://www.gnu.org/licenses/</string>
     <string name="contact">hobbyone.droid@gmail.com</string>
-    <string name="AlgoList">Select a hash function :</string>
+    <string name="OutputFormatList">Select an output format :</string>
     <string name="Calculating">Calculating&#8230;</string>
     <string-array name="Output_Formats">
         <item>Base58</item>
