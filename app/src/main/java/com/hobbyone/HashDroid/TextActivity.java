@@ -162,7 +162,7 @@ public class TextActivity extends Activity implements Runnable {
                 mFormat = mSpinner.getSelectedItem().toString();
                 Editable InputEdit = mEditText.getText();
                 msToHash = InputEdit.toString();
-                ComputeAndDisplayHash();
+                check_seed(true);
             }
         });
 
@@ -206,7 +206,10 @@ public class TextActivity extends Activity implements Runnable {
             run_history_entry(s);
             needs_generate = true;
         }
+        check_seed(needs_generate);
+    }
 
+    private void check_seed(boolean needs_generate) {
         /* Restore/Load key (if invalidated or changed) */
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         mAccount = settings.getString("account", "default");
@@ -299,7 +302,11 @@ public class TextActivity extends Activity implements Runnable {
     @Override
     // Call when the thread is started
     public void run() {
-        msHash = UtilServices.generate_password(mSeed, mAccount, msToHash, mFormat);
+        if (mSeed.equals("cleared")) {
+            msHash = "Error - seed was cleared";
+        } else {
+            msHash = UtilServices.generate_password(mSeed, mAccount, msToHash, mFormat);
+        }
 
         handler.sendEmptyMessage(0);
     }

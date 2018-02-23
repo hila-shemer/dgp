@@ -272,6 +272,7 @@ class UtilServices {
 
     public static String generate_password(String seed, String account, String name, String format)
     {
+        if (seed.equals("cleared")) return "Error - seed cleared";
         final int iterations = 42000;
 
         final int outputKeyLength = 320;
