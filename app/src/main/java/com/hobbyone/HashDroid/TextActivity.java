@@ -49,6 +49,7 @@ import android.widget.Toast;
 import android.content.SharedPreferences;
 
 
+import java.lang.ref.WeakReference;
 import java.security.KeyStore;
 import java.util.HashSet;
 import java.util.Set;
@@ -339,38 +340,49 @@ public class TextActivity extends Activity implements Runnable {
         Toast.makeText(this, "Invalid entry.", Toast.LENGTH_SHORT).show();
     }
 
-    // This method is called when the computation is over
-    private Handler handler = new Handler() {
+    //static inner class doesn't hold an implicit reference to the outer class
+    private static class MyHandler extends Handler {
+        //Using a weak reference means you won't prevent garbage collection
+        private final WeakReference<TextActivity> parent_ref;
+
+        public MyHandler(TextActivity parent_instance) {
+            parent_ref = new WeakReference<TextActivity>(parent_instance);
+        }
+
         @Override
         public void handleMessage(Message msg) {
-            // Hide the progress dialog
-            if (mProgressDialog != null)
-                mProgressDialog.dismiss();
+            TextActivity parent = parent_ref.get();
+            if (parent != null) {
+                // Hide the progress dialog
+                if (parent.mProgressDialog != null)
+                    parent.mProgressDialog.dismiss();
 
-            Resources res = getResources();
-            String sTextTitle = String.format(res.getString(R.string.Text),
-                    msToHash);
-            String sTextHashTitle;
-            if (!msHash.equals("")) {
-                sTextHashTitle = String.format(res.getString(R.string.Hash), mFormat, msHash);
-                // Show the copy button
-                if (mCopyButton != null)
-                    mCopyButton.setVisibility(View.VISIBLE);
-                if (mCheckBox != null) {
-                    if (mCheckBox.isChecked()) {
-                        add_item(msToHash + " (" + mFormat + ")");
+                Resources res = parent.getResources();
+                String sTextTitle = String.format(res.getString(R.string.Text),
+                        parent.msToHash);
+                String sTextHashTitle;
+                if (!parent.msHash.equals("")) {
+                    sTextHashTitle = String.format(res.getString(R.string.Hash), parent.mFormat, parent.msHash);
+                    // Show the copy button
+                    if (parent.mCopyButton != null)
+                        parent.mCopyButton.setVisibility(View.VISIBLE);
+                    if (parent.mCheckBox != null) {
+                        if (parent.mCheckBox.isChecked()) {
+                            parent.add_item(parent.msToHash + " (" + parent.mFormat + ")");
+                        }
                     }
+                } else {
+                    sTextHashTitle = String.format(
+                            res.getString(R.string.unable_to_calculate), parent.msToHash);
+                    // Hide the copy button
+                    if (parent.mCopyButton != null)
+                        parent.mCopyButton.setVisibility(View.INVISIBLE);
                 }
-            } else {
-                sTextHashTitle = String.format(
-                        res.getString(R.string.unable_to_calculate), msToHash);
-                // Hide the copy button
-                if (mCopyButton != null)
-                    mCopyButton.setVisibility(View.INVISIBLE);
-            }
 
-            if (mResultTV != null)
-                mResultTV.setText(sTextTitle + sTextHashTitle);
+                if (parent.mResultTV != null)
+                    parent.mResultTV.setText(sTextTitle + sTextHashTitle);
+            }
         }
-    };
+    }
+    private final MyHandler handler = new MyHandler(this);
 }
