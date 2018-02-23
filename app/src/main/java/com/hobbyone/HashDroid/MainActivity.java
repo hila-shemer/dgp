@@ -25,7 +25,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -47,7 +46,6 @@ public class MainActivity extends TabActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        Resources res = getResources(); // Resource object to get Drawables
         tabHost = getTabHost(); // The activity TabHost
         TabHost.TabSpec spec; // Reusable TabSpec for each tab
         Intent intent; // Reusable Intent for each tab
