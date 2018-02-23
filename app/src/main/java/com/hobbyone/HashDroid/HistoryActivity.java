@@ -103,9 +103,7 @@ public class HistoryActivity extends Activity {
         ArrayList<String> items = new ArrayList<String>();
         if (hist_items != null && hist_items.size() != 0) {
             SortedSet<String> sorted_items = new TreeSet<String>(hist_items);
-            for (String s : sorted_items) {
-                items.add(s);
-            }
+            items.addAll(sorted_items);
             if (i >= items.size()) {
                 i = 0;
             }
