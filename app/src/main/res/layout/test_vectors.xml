@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+android:layout_width="fill_parent" android:layout_height="wrap_content"
+android:scrollbarSize="12dip">
+<LinearLayout android:padding="8dip" android:orientation="vertical"
+    android:layout_width="fill_parent" android:layout_height="wrap_content"
+    android:id="@+id/test_vectors_layout_root">
+
+    <TextView android:id="@+id/test_result"
+        android:layout_marginBottom="8dip"
+        android:layout_marginTop="8dip"
+        android:text="@string/test_vectors_text"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>
+</ScrollView>

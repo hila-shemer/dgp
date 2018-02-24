@@ -142,6 +142,28 @@ public class MainActivity extends TabActivity {
                                 }
                             }).show();
             break;
+        case R.id.menu_test_vectors:
+            LayoutInflater test_inflater = getLayoutInflater();
+            View TestView = test_inflater.inflate(R.layout.test_vectors,
+                    (ViewGroup) findViewById(R.id.test_vectors_layout_root));
+
+            TextView TestRes = (TextView) TestView.findViewById(R.id.test_result);
+            String res = UtilServices.generate_password("a", "a", "a", "Base58Long");
+            TestRes.setText(res);
+            new AlertDialog.Builder(this)
+                    .setIcon(0)
+                    .setTitle(getString(R.string.label_menu_test_vectors))
+                    .setView(TestView)
+                    .setPositiveButton(getString(R.string.Close_but),
+                            new DialogInterface.OnClickListener() {
+
+                                @Override
+                                public void onClick(DialogInterface dialog,
+                                                    int which) {
+                                    // TODO Auto-generated method stub
+                                }
+                            }).show();
+            break;
         default:
             break;
         }

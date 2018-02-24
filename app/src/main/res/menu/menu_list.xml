@@ -9,5 +9,8 @@
         android:id="@+id/menu_about"
         android:icon="@drawable/ic_menu_about"
         android:title="@string/label_menu_about"/>
+    <item
+        android:id="@+id/menu_test_vectors"
+        android:title="@string/label_menu_test_vectors"/>
 
 </menu>
