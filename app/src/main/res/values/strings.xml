@@ -19,7 +19,7 @@
     <string name="label_menu_help">Help</string>
     <string name="label_menu_test_vectors">Test Vectors</string>
     <string name="version">Version</string>
-    <string name="copyright">Copyright © 2010&#8211;2016 Christophe Bouyer (Hobby One)</string>
+    <string name="copyright">Forked from Hash Droid\nCopyright © 2010&#8211;2016 Christophe Bouyer (Hobby One)\nCopyright © 2017&#8211;2018 DGP Author</string>
     <string name="LicenseTitle">Licensed under the GPLv3</string>
     <string name="License">This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.\nYou should have received a copy of the GNU General Public License
     along with this program. If not, see http://www.gnu.org/licenses/</string>
-    <string name="contact">hobbyone.droid@gmail.com</string>
+    <string name="contact">Hash Droid contact: hobbyone.droid@gmail.com</string>
     <string name="OutputFormatList">Select an output format :</string>
     <string name="Calculating">Calculating&#8230;</string>
     <string-array name="Output_Formats">
