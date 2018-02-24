@@ -21,6 +21,7 @@
                 android:id="@+id/seed_txt"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
+                android:inputType="textVisiblePassword|textMultiLine"
                 android:layout_toLeftOf="@id/ClearButton" />
         </RelativeLayout>
         <RelativeLayout android:orientation="horizontal"
@@ -45,7 +46,9 @@
         <EditText
             android:id="@+id/account_txt"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:inputType="textVisiblePassword"
+            />
 
         <Button android:id="@+id/SaveButton" android:text="@string/setup_but"
             android:layout_width="fill_parent" android:layout_height="wrap_content"/>
