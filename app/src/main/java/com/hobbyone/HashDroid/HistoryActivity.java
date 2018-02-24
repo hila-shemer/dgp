@@ -107,11 +107,12 @@ public class HistoryActivity extends Activity {
     private void delete_item() {
         String s = mSpinner.getSelectedItem().toString();
         SharedPreferences settings = getSharedPreferences(TextActivity.HISTORY_PREFS_NAME, 0);
-        Set<String> hist_items = settings.getStringSet("History" + mAccount, null);
+        String history_key = "History" + mAccount;
+        Set<String> hist_items = settings.getStringSet(history_key, null);
         if (hist_items == null) return;
         Set<String> output = new HashSet<String>(hist_items);
         output.remove(s);
-        settings.edit().putStringSet("History", output).apply();
+        settings.edit().putStringSet(history_key, output).apply();
         update_list();
     }
 
