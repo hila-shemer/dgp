@@ -20,12 +20,15 @@ along with Hash Droid. If not, see <http://www.gnu.org/licenses/>.
 package com.hobbyone.HashDroid;
 
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.app.TabActivity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -35,10 +38,14 @@ import android.view.ViewGroup;
 import android.widget.TabHost;
 import android.widget.TextView;
 
-public class MainActivity extends TabActivity {
+import java.lang.ref.WeakReference;
+
+public class MainActivity extends TabActivity implements Runnable {
 
     private TabHost tabHost = null;
     private String msg_between_tabs = "";
+    private ProgressDialog mProgressDialog = null;
+    private String test_vectors_result = "N/A";
 
     /** Called when the activity is first created. */
     @Override
@@ -143,26 +150,7 @@ public class MainActivity extends TabActivity {
                             }).show();
             break;
         case R.id.menu_test_vectors:
-            LayoutInflater test_inflater = getLayoutInflater();
-            View TestView = test_inflater.inflate(R.layout.test_vectors,
-                    (ViewGroup) findViewById(R.id.test_vectors_layout_root));
-
-            TextView TestRes = (TextView) TestView.findViewById(R.id.test_result);
-            String res = UtilServices.generate_password("a", "a", "a", "Base58Long");
-            TestRes.setText(res);
-            new AlertDialog.Builder(this)
-                    .setIcon(0)
-                    .setTitle(getString(R.string.label_menu_test_vectors))
-                    .setView(TestView)
-                    .setPositiveButton(getString(R.string.Close_but),
-                            new DialogInterface.OnClickListener() {
-
-                                @Override
-                                public void onClick(DialogInterface dialog,
-                                                    int which) {
-                                    // TODO Auto-generated method stub
-                                }
-                            }).show();
+            ComputeTestVectors();
             break;
         default:
             break;
@@ -181,4 +169,64 @@ public class MainActivity extends TabActivity {
         }
         return sRetString;
     }
+
+    private void ComputeTestVectors() {
+        String sCalculating = getString(R.string.Calculating);
+        mProgressDialog = ProgressDialog.show(MainActivity.this, "",
+                sCalculating, true);
+
+        Thread thread = new Thread(this);
+        thread.start();
+    }
+
+    @Override
+    // Call when the thread is started
+    public void run() {
+        test_vectors_result = UtilServices.generate_password("a", "a", "a", "Base58Long");
+        handler.sendEmptyMessage(0);
+    }
+
+    //static inner class doesn't hold an implicit reference to the outer class
+    private static class MyHandler extends Handler {
+        //Using a weak reference means you won't prevent garbage collection
+        private final WeakReference<MainActivity> parent_ref;
+
+        public MyHandler(MainActivity parent_instance) {
+            parent_ref = new WeakReference<MainActivity>(parent_instance);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            MainActivity parent = parent_ref.get();
+            if (parent != null) {
+                // Hide the progress dialog
+                if (parent.mProgressDialog != null)
+                    parent.mProgressDialog.dismiss();
+
+                // Show the result
+                LayoutInflater test_inflater = parent.getLayoutInflater();
+                View TestView = test_inflater.inflate(R.layout.test_vectors,
+                        (ViewGroup) parent.findViewById(R.id.test_vectors_layout_root));
+
+                TextView TestRes = (TextView) TestView.findViewById(R.id.test_result);
+                String res = parent.test_vectors_result;
+                TestRes.setText(res);
+                new AlertDialog.Builder(parent)
+                        .setIcon(0)
+                        .setTitle(parent.getString(R.string.label_menu_test_vectors))
+                        .setView(TestView)
+                        .setPositiveButton(parent.getString(R.string.Close_but),
+                                new DialogInterface.OnClickListener() {
+
+                                    @Override
+                                    public void onClick(DialogInterface dialog,
+                                                        int which) {
+                                        // TODO Auto-generated method stub
+                                    }
+                                }).show();
+            }
+        }
+    }
+    private final MyHandler handler = new MyHandler(this);
+
 }
