@@ -70,7 +70,7 @@ public class TextActivity extends Activity implements Runnable {
     private String[] mOutputFormats;
     private ProgressDialog mProgressDialog = null;
     private String mFormat = "";
-    private String mSeed = "";
+    private String mSeed = "test";
     private String mAccount = "";
     private String mEncSeed = "";
     private String mSeedIV = "";
@@ -148,11 +148,7 @@ public class TextActivity extends Activity implements Runnable {
             public void onClick(View v) {
                 // Perform action on clicks
                 mEditText.setText("");
-                if (mResultTV != null)
-                    mResultTV.setText("");
-                msHash = "";
-                if (mCopyButton != null)
-                    mCopyButton.setVisibility(View.INVISIBLE);
+                clear_result();
             }
         });
 
@@ -194,6 +190,14 @@ public class TextActivity extends Activity implements Runnable {
         mCheckBox.setChecked(false);
     }
 
+    private void clear_result() {
+        if (mResultTV != null)
+            mResultTV.setText("");
+        msHash = "";
+        if (mCopyButton != null)
+            mCopyButton.setVisibility(View.INVISIBLE);
+    }
+
     @Override
     public void onResume() {
         super.onResume();
@@ -206,6 +210,7 @@ public class TextActivity extends Activity implements Runnable {
         if (!s.equals("")) {
             run_history_entry(s);
             needs_generate = true;
+            clear_result();
         }
         check_seed(needs_generate);
     }
@@ -226,6 +231,7 @@ public class TextActivity extends Activity implements Runnable {
             mSeed = "test";
         } else {
             mSeedIV = settings.getString("seed_iv", "");
+            clear_result();
             showAuthenticationScreen();
         }
     }
@@ -255,6 +261,7 @@ public class TextActivity extends Activity implements Runnable {
                 public void onFinish() {
                     mSeed = "cleared";
                     clear_seed_timer = null;
+                    clear_result();
                 }
             }.start();
         } catch (KeyPermanentlyInvalidatedException e) {
@@ -338,6 +345,7 @@ public class TextActivity extends Activity implements Runnable {
             return;
         }
         Toast.makeText(this, "Invalid entry.", Toast.LENGTH_SHORT).show();
+        clear_result();
     }
 
     //static inner class doesn't hold an implicit reference to the outer class
