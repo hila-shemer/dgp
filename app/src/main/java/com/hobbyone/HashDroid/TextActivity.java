@@ -71,6 +71,7 @@ public class TextActivity extends Activity implements Runnable {
     private ProgressDialog mProgressDialog = null;
     private String mFormat = "";
     private String mSeed = "test";
+    private String mFingerprint = "none";
     private String mAccount = "";
     private String mEncSeed = "";
     private String mSeedIV = "";
@@ -313,6 +314,11 @@ public class TextActivity extends Activity implements Runnable {
         if (mSeed.equals("cleared")) {
             msHash = "Error - seed was cleared";
         } else {
+            if (mSeed.equals("test")) {
+                mFingerprint = "test";
+            } else {
+                mFingerprint = UtilServices.generate_fingerprint(mSeed, mAccount);
+            }
             msHash = UtilServices.generate_password(mSeed, mAccount, msToHash, mFormat);
         }
 
@@ -370,7 +376,7 @@ public class TextActivity extends Activity implements Runnable {
                 String sTextTitle = String.format(res.getString(R.string.Text), to_hash);
                 String sTextHashTitle;
                 if (!parent.msHash.equals("")) {
-                    sTextHashTitle = String.format(res.getString(R.string.Hash), parent.msHash);
+                    sTextHashTitle = String.format(res.getString(R.string.Hash), parent.msHash, parent.mFingerprint);
                     // Show the copy button
                     if (parent.mCopyButton != null)
                         parent.mCopyButton.setVisibility(View.VISIBLE);

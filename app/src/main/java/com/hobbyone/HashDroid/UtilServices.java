@@ -38,6 +38,7 @@ exception statement from your version.  */
 package com.hobbyone.HashDroid;
 
 import java.math.BigInteger;
+import java.security.MessageDigest;
 import java.security.spec.KeySpec;
 
 import javax.crypto.SecretKey;
@@ -268,6 +269,17 @@ class UtilServices {
             res = res.concat(word.substring(1));
         }
         return res;
+    }
+
+    public static String generate_fingerprint(String seed, String account) {
+        String seed_with_account = seed + account;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            md.update(seed_with_account.getBytes());
+            return get_xkcd(get_words(bytes_to_int(md.digest()), 4));
+        } catch (Exception e) {
+            return "Error: " + e.getMessage();
+        }
     }
 
     public static String generate_password(String seed, String account, String name, String format)
