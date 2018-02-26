@@ -259,7 +259,7 @@ class UtilServices {
             added++;
             if (added == count) return res;
         }
-        throw new Exception();
+        throw new Exception("Not enough entropy");
     }
 
     private static String get_xkcd(String[] words) {
