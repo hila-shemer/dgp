@@ -1,5 +1,4 @@
 #!/usr/bin/python
-import base64
 import sys
 
 def get_wordlist():
