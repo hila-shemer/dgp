@@ -1,8 +1,6 @@
 #!/usr/bin/python
-from werkzeug.security import pbkdf2_bin, pbkdf2_hex
 import base64
 import os
-import sys
 
 def bytes_to_int(bytes_rep):
     """convert a string of bytes (in big-endian order) to a long integer
