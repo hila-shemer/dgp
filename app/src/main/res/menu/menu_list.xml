@@ -12,5 +12,8 @@
     <item
         android:id="@+id/menu_test_vectors"
         android:title="@string/label_menu_test_vectors"/>
+    <item
+        android:id="@+id/menu_short_test"
+        android:title="@string/label_menu_short_test"/>
 
 </menu>

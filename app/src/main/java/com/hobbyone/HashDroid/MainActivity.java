@@ -46,6 +46,7 @@ public class MainActivity extends TabActivity implements Runnable {
     private String msg_between_tabs = "";
     private ProgressDialog mProgressDialog = null;
     private String test_vectors_result = "N/A";
+    private boolean long_test = false;
 
     /** Called when the activity is first created. */
     @Override
@@ -150,7 +151,10 @@ public class MainActivity extends TabActivity implements Runnable {
                             }).show();
             break;
         case R.id.menu_test_vectors:
-            ComputeTestVectors();
+            ComputeTestVectors(true);
+            break;
+        case R.id.menu_short_test:
+            ComputeTestVectors(false);
             break;
         default:
             break;
@@ -170,7 +174,8 @@ public class MainActivity extends TabActivity implements Runnable {
         return sRetString;
     }
 
-    private void ComputeTestVectors() {
+    private void ComputeTestVectors(boolean run_long_test) {
+        long_test = run_long_test;
         String sCalculating = getString(R.string.Calculating);
         mProgressDialog = ProgressDialog.show(MainActivity.this, "",
                 sCalculating, true);
@@ -205,40 +210,46 @@ public class MainActivity extends TabActivity implements Runnable {
     @Override
     // Call when the thread is started
     public void run() {
+
         test_vectors_result = "";
         run_test_vector("a:aa:alnum: ", "a", "", "aa", "AlNum");
         run_test_vector("\na:aa:base58: ", "a", "", "aa", "Base58");
         run_test_vector("\na:aa:alnumlong: ", "a", "", "aa", "AlNumLong");
-        run_test_vector_all("\nP:S:", "passwordPASSWORDpassword", "", "saltSALTsaltSALTsaltSALTsaltSALTsalt");
-        run_test_vector_all("\npassword:salt:", "pass", "word", "salt");
-        String some_a = "";
-        String some_b = "";
-        for (int i = 0; i < 64; i++) {
-            some_a = some_a.concat("A");
-            some_b = some_b.concat("B");
+        if (long_test) {
+            run_test_vector_all("\nP:S:", "passwordPASSWORDpassword", "", "saltSALTsaltSALTsaltSALTsaltSALTsalt");
+            run_test_vector_all("\npassword:salt:", "pass", "word", "salt");
+            String some_a = "";
+            String some_b = "";
+            for (int i = 0; i < 64; i++) {
+                some_a = some_a.concat("A");
+                some_b = some_b.concat("B");
+            }
+            run_test_vector_some("\nA*64:salt:", some_a, "", "salt");
+            String more_a = some_a.concat("A");
+            run_test_vector_some("\nA*65:salt:", more_a, "", "salt");
+            run_test_vector_some("\nA*64:B*64:", some_a, "", some_b);
+            String more_b = some_b.concat("B");
+            run_test_vector_some("\nA*64:B*65:", some_a, "", more_b);
+            run_test_vector_some("\nA*65:B*64:", more_a, "", some_b);
+            run_test_vector_some("\nA*65:B*65:", more_a, "", more_b);
+
+            run_test_vector_some("\nA*64default:salt:", some_a, "default", "salt");
+            run_test_vector_some("\nA*65default:salt:", more_a, "default", "salt");
+            run_test_vector_some("\nA*64default:B*64:", some_a, "default", some_b);
+            run_test_vector_some("\nA*64default:B*65:", some_a, "default", more_b);
+            run_test_vector_some("\nA*65default:B*64:", more_a, "default", some_b);
+            run_test_vector_some("\nA*65default:B*65:", more_a, "default", more_b);
+
+            run_test_vector_some("\nA*64test:salt:", some_a, "test", "salt");
+            run_test_vector_some("\nA*65test:salt:", more_a, "test", "salt");
+            run_test_vector_some("\nA*64test:B*64:", some_a, "test", some_b);
+            run_test_vector_some("\nA*64test:B*65:", some_a, "test", more_b);
+            run_test_vector_some("\nA*65test:B*64:", more_a, "test", some_b);
+            run_test_vector_some("\nA*65test:B*65:", more_a, "test", more_b);
+        } else {
+            run_test_vector_some("\nP:S:", "passwordPASSWORDpassword", "", "saltSALTsaltSALTsaltSALTsaltSALTsalt");
+            run_test_vector_some("\npassword:salt:", "pass", "word", "salt");
         }
-        run_test_vector_some("\nA*64:salt:", some_a, "", "salt");
-        String more_a = some_a.concat("A");
-        run_test_vector_some("\nA*65:salt:", more_a, "", "salt");
-        run_test_vector_some("\nA*64:B*64:", some_a, "", some_b);
-        String more_b = some_b.concat("B");
-        run_test_vector_some("\nA*64:B*65:", some_a, "", more_b);
-        run_test_vector_some("\nA*65:B*64:", more_a, "", some_b);
-        run_test_vector_some("\nA*65:B*65:", more_a, "", more_b);
-
-        run_test_vector_some("\nA*64default:salt:", some_a, "default", "salt");
-        run_test_vector_some("\nA*65default:salt:", more_a, "default", "salt");
-        run_test_vector_some("\nA*64default:B*64:", some_a, "default", some_b);
-        run_test_vector_some("\nA*64default:B*65:", some_a, "default", more_b);
-        run_test_vector_some("\nA*65default:B*64:", more_a, "default", some_b);
-        run_test_vector_some("\nA*65default:B*65:", more_a, "default", more_b);
-
-        run_test_vector_some("\nA*64test:salt:", some_a, "test", "salt");
-        run_test_vector_some("\nA*65test:salt:", more_a, "test", "salt");
-        run_test_vector_some("\nA*64test:B*64:", some_a, "test", some_b);
-        run_test_vector_some("\nA*64test:B*65:", some_a, "test", more_b);
-        run_test_vector_some("\nA*65test:B*64:", more_a, "test", some_b);
-        run_test_vector_some("\nA*65test:B*65:", more_a, "test", more_b);
 
         handler.sendEmptyMessage(0);
     }

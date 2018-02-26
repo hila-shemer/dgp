@@ -18,6 +18,7 @@
     <string name="label_menu_about">About</string>
     <string name="label_menu_help">Help</string>
     <string name="label_menu_test_vectors">Test Vectors</string>
+    <string name="label_menu_short_test">Short Test</string>
     <string name="version">Version</string>
     <string name="copyright">Forked from Hash Droid\nCopyright © 2010&#8211;2016 Christophe Bouyer (Hobby One)\nCopyright © 2017&#8211;2018 DGP Author</string>
     <string name="LicenseTitle">Licensed under the GPLv3</string>
