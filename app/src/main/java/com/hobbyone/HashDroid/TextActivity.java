@@ -366,22 +366,22 @@ public class TextActivity extends Activity implements Runnable {
                     parent.mProgressDialog.dismiss();
 
                 Resources res = parent.getResources();
-                String sTextTitle = String.format(res.getString(R.string.Text),
-                        parent.msToHash);
+                String to_hash = parent.msToHash + " (" + parent.mFormat + ")";
+                String sTextTitle = String.format(res.getString(R.string.Text), to_hash);
                 String sTextHashTitle;
                 if (!parent.msHash.equals("")) {
-                    sTextHashTitle = String.format(res.getString(R.string.Hash), parent.mFormat, parent.msHash);
+                    sTextHashTitle = String.format(res.getString(R.string.Hash), parent.msHash);
                     // Show the copy button
                     if (parent.mCopyButton != null)
                         parent.mCopyButton.setVisibility(View.VISIBLE);
                     if (parent.mCheckBox != null) {
                         if (parent.mCheckBox.isChecked()) {
-                            parent.add_item(parent.msToHash + " (" + parent.mFormat + ")");
+                            parent.add_item(to_hash);
                         }
                     }
                 } else {
                     sTextHashTitle = String.format(
-                            res.getString(R.string.unable_to_calculate), parent.msToHash);
+                            res.getString(R.string.unable_to_calculate), to_hash);
                     // Hide the copy button
                     if (parent.mCopyButton != null)
                         parent.mCopyButton.setVisibility(View.INVISIBLE);

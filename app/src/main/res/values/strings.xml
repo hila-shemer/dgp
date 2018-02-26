@@ -5,8 +5,8 @@
     <string name="tab_setup">Setup</string>
     <string name="tab_history">History</string>
     <string name="input_txt">Input the text to hash :</string>
-    <string name="Text">Text : %1$s\n</string>
-    <string name="Hash">%1$s output : %2$s</string>
+    <string name="Text">%1$s\n</string>
+    <string name="Hash">%1$s</string>
     <string name="unable_to_calculate">Unable to calculate the checksum of %1$s</string>
     <string name="calculate_but">Calculate</string>
     <string name="clear_but">Clear</string>
