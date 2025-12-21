@@ -2,7 +2,8 @@
 {% block body %}
   {% if session.logged_in %}
     <!-- Password Display Area -->
-    <div id="password-display" class="password-display {% if generated_password %}show{% endif %}">
+    <div id="password-display" class="password-display {% if generated_password %}show{% endif %}" 
+         {% if generated_password %}data-password="{{ generated_password }}" data-service="{{ service_name }}"{% endif %}>
       <div class="password-info" id="password-info">
         {% if service_name %}Password for: {{ service_name }}{% endif %}
       </div>
