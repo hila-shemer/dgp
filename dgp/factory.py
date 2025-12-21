@@ -13,6 +13,7 @@ import os
 from flask import Flask, g
 from werkzeug.utils import find_modules, import_string
 from dgp.blueprints.dgp import init_db
+from dgp.security import SecurityHeaders, HTTPSRedirect
 
 class ReverseProxied(object):
     '''Wrap the application in this middleware and configure the
@@ -55,17 +56,28 @@ class ReverseProxied(object):
 
 def create_app(config=None):
     app = Flask('dgp')
-    app.wsgi_app = ReverseProxied(app.wsgi_app)
 
+    # Default configuration
     app.config.update(dict(
         DATABASE=os.path.join(app.root_path, 'dgp.db'),
         DEBUG=True,
         SECRET_KEY=b'_5#y2L"F4Q8z\n\xec]/',
         USERNAME='admin',
-        PASSWORD='default'
+        PASSWORD='default',
+        # Security settings
+        HTTPS_REDIRECT=os.environ.get('HTTPS_REDIRECT', 'false').lower() == 'true',
+        SESSION_COOKIE_SECURE=os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true',
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
     ))
     app.config.update(config or {})
     app.config.from_envvar('DGP_SETTINGS', silent=True)
+
+    # Apply security middleware
+    # Order matters: ReverseProxied -> HTTPSRedirect -> SecurityHeaders
+    app.wsgi_app = ReverseProxied(app.wsgi_app)
+    app.wsgi_app = HTTPSRedirect(app.wsgi_app, enabled=app.config['HTTPS_REDIRECT'])
+    app.wsgi_app = SecurityHeaders(app.wsgi_app)
 
     register_blueprints(app)
     register_cli(app)
