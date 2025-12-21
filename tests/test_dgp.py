@@ -120,6 +120,7 @@ def test_duplicate_username(client):
     rv = client.post('/register', data=dict(
         username='testuser',  # Already exists from fixture
         password='password123',
-        confirm_password='password123'
+        confirm_password='password123',
+        email='other@example.com'
     ), follow_redirects=True)
     assert b'Username already exists' in rv.data

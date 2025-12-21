@@ -2,7 +2,7 @@
 """
 Security middleware and utilities for DGP
 """
-from flask import request, redirect, make_response
+from flask import request, redirect
 from functools import wraps
 
 
