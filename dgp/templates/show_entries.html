@@ -1,6 +1,27 @@
 {% extends "layout.html" %}
 {% block body %}
   {% if session.logged_in %}
+    <!-- Password Display Area -->
+    <div id="password-display" class="password-display {% if generated_password %}show{% endif %}">
+      <div class="password-info" id="password-info">
+        {% if service_name %}Password for: {{ service_name }}{% endif %}
+      </div>
+      <div class="password-text" id="password-text">
+        {{ generated_password if generated_password else '' }}
+      </div>
+      <button class="copy-button" onclick="copyToClipboard(document.getElementById('password-text').textContent)">
+        📋 Copy to Clipboard
+      </button>
+      <span class="copy-feedback" id="copy-feedback">✓ Copied!</span>
+    </div>
+
+    {% if generated_password %}
+    <script>
+      // Auto-trigger the display on page load if password exists
+      showPassword('{{ generated_password }}', '{{ service_name }}');
+    </script>
+    {% endif %}
+
     <ul class="entries">
     <dt>Choose an entry to generate:
     <form action="{{ url_for('dgp.gen_entry') }}" method="post" class="add-entry">
