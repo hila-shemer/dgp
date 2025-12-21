@@ -148,6 +148,24 @@ function showCopyFeedback() {
 
 // Auto-clear password after 60 seconds
 var passwordClearTimeout;
+
+// Function to clear password from DOM
+function clearPassword() {
+  var display = document.getElementById('password-display');
+  var textEl = document.getElementById('password-text');
+  
+  if (display && textEl) {
+    display.classList.remove('show');
+    textEl.textContent = '';
+  }
+  
+  // Clear any existing timeout
+  if (passwordClearTimeout) {
+    clearTimeout(passwordClearTimeout);
+    passwordClearTimeout = null;
+  }
+}
+
 function showPassword(password, serviceName) {
   var display = document.getElementById('password-display');
   var textEl = document.getElementById('password-text');
@@ -164,12 +182,21 @@ function showPassword(password, serviceName) {
     }
 
     // Auto-clear after 60 seconds
-    passwordClearTimeout = setTimeout(function() {
-      display.classList.remove('show');
-      textEl.textContent = '';
-    }, 60000);
+    passwordClearTimeout = setTimeout(clearPassword, 60000);
   }
 }
+
+// Clear password when user closes tab or navigates away
+window.addEventListener('beforeunload', function() {
+  clearPassword();
+});
+
+// Also clear password when page is hidden (mobile browsers, tab switching)
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) {
+    clearPassword();
+  }
+});
 </script>
 </body>
 </html>
