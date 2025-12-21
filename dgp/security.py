@@ -123,4 +123,7 @@ def get_client_ip():
 
 def get_csp_nonce():
     """Get the CSP nonce for the current request."""
+    # Try Flask's g object first (more reliable), fall back to environ
+    if hasattr(g, 'csp_nonce'):
+        return g.csp_nonce
     return request.environ.get('csp.nonce', '')

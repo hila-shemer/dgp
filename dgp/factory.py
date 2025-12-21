@@ -10,7 +10,7 @@
 """
 
 import os
-from flask import Flask, g
+from flask import Flask, g, request
 from werkzeug.utils import find_modules, import_string
 from dgp.blueprints.dgp import init_db
 from dgp.security import SecurityHeaders, HTTPSRedirect, get_csp_nonce
@@ -78,6 +78,13 @@ def create_app(config=None):
     app.wsgi_app = ReverseProxied(app.wsgi_app)
     app.wsgi_app = HTTPSRedirect(app.wsgi_app, enabled=app.config['HTTPS_REDIRECT'])
     app.wsgi_app = SecurityHeaders(app.wsgi_app)
+
+    # Store nonce in g for more reliable access within Flask context
+    @app.before_request
+    def store_csp_nonce():
+        nonce = request.environ.get('csp.nonce', '')
+        if nonce:
+            g.csp_nonce = nonce
 
     # Make CSP nonce available to all templates
     @app.context_processor
