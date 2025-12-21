@@ -128,13 +128,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Auto-trigger password display if password exists
-  var passwordText = document.getElementById('password-text');
-  var passwordInfo = document.getElementById('password-info');
-  if (passwordText && passwordText.textContent.trim() && 
-      passwordInfo && passwordInfo.textContent.trim()) {
-    var password = passwordText.textContent.trim();
-    var serviceMatch = passwordInfo.textContent.match(/Password for: (.+)/);
-    var serviceName = serviceMatch ? serviceMatch[1] : '';
+  var passwordDisplay = document.getElementById('password-display');
+  if (passwordDisplay) {
+    var password = passwordDisplay.getAttribute('data-password');
+    var serviceName = passwordDisplay.getAttribute('data-service');
     if (password && serviceName) {
       showPassword(password, serviceName);
     }
