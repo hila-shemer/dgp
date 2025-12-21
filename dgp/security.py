@@ -2,18 +2,26 @@
 """
 Security middleware and utilities for DGP
 """
-from flask import request, redirect, make_response
+from flask import request, redirect, make_response, g
 from functools import wraps
+import secrets
 
 
 class SecurityHeaders:
-    """Middleware to add security headers to all responses."""
+    """Middleware to add security headers to all responses with nonce-based CSP."""
 
     def __init__(self, app):
         self.app = app
 
     def __call__(self, environ, start_response):
+        # Generate a nonce for this request
+        nonce = secrets.token_urlsafe(16)
+        environ['csp.nonce'] = nonce
+        
         def custom_start_response(status, headers, exc_info=None):
+            # Get the nonce from environ
+            nonce = environ.get('csp.nonce', '')
+            
             # Add security headers
             security_headers = [
                 # Prevent clickjacking
@@ -24,15 +32,15 @@ class SecurityHeaders:
                 ('X-XSS-Protection', '1; mode=block'),
                 # Referrer policy
                 ('Referrer-Policy', 'strict-origin-when-cross-origin'),
-                # Content Security Policy
+                # Content Security Policy with nonce support
                 ('Content-Security-Policy',
-                 "default-src 'self'; "
-                 "script-src 'self' 'unsafe-inline'; "
-                 "style-src 'self' 'unsafe-inline'; "
-                 "img-src 'self' data:; "
-                 "font-src 'self'; "
-                 "connect-src 'self'; "
-                 "frame-ancestors 'none';"),
+                 f"default-src 'self'; "
+                 f"script-src 'self' 'nonce-{nonce}'; "
+                 f"style-src 'self' 'nonce-{nonce}'; "
+                 f"img-src 'self' data:; "
+                 f"font-src 'self'; "
+                 f"connect-src 'self'; "
+                 f"frame-ancestors 'none';"),
             ]
 
             # Add HSTS header if HTTPS is enabled
@@ -111,3 +119,8 @@ def get_client_ip():
         return request.headers.get('X-Real-IP')
     else:
         return request.remote_addr
+
+
+def get_csp_nonce():
+    """Get the CSP nonce for the current request."""
+    return request.environ.get('csp.nonce', '')

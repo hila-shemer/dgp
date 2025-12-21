@@ -13,7 +13,7 @@ import os
 from flask import Flask, g
 from werkzeug.utils import find_modules, import_string
 from dgp.blueprints.dgp import init_db
-from dgp.security import SecurityHeaders, HTTPSRedirect
+from dgp.security import SecurityHeaders, HTTPSRedirect, get_csp_nonce
 
 class ReverseProxied(object):
     '''Wrap the application in this middleware and configure the
@@ -78,6 +78,11 @@ def create_app(config=None):
     app.wsgi_app = ReverseProxied(app.wsgi_app)
     app.wsgi_app = HTTPSRedirect(app.wsgi_app, enabled=app.config['HTTPS_REDIRECT'])
     app.wsgi_app = SecurityHeaders(app.wsgi_app)
+
+    # Make CSP nonce available to all templates
+    @app.context_processor
+    def inject_csp_nonce():
+        return dict(csp_nonce=get_csp_nonce)
 
     register_blueprints(app)
     register_cli(app)

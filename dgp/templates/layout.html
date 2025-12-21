@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DGP - Deterministically Generated Passwords</title>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-  <style>
+  <style nonce="{{ csp_nonce() }}">
     .password-display {
       background: #f0f0f0;
       border: 2px solid #4CAF50;
@@ -98,7 +98,7 @@
   {% block body %}{% endblock %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function copyToClipboard(text) {
   // Modern clipboard API
   if (navigator.clipboard && navigator.clipboard.writeText) {

@@ -16,7 +16,7 @@
     </div>
 
     {% if generated_password %}
-    <script>
+    <script nonce="{{ csp_nonce() }}">
       // Auto-trigger the display on page load if password exists
       showPassword('{{ generated_password }}', '{{ service_name }}');
     </script>
@@ -42,7 +42,7 @@
     <input type="submit" value="Generate">
     </form>
 
-    <script>
+    <script nonce="{{ csp_nonce() }}">
     function filterServices() {
       var input = document.getElementById('service-search');
       var filter = input.value.toLowerCase();
