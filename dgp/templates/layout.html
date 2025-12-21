@@ -172,6 +172,8 @@ function showPassword(password, serviceName) {
   var infoEl = document.getElementById('password-info');
 
   if (display && textEl && infoEl) {
+    // textContent is safe against XSS (doesn't interpret HTML)
+    // Parameters are already escaped via tojson filter in the template
     textEl.textContent = password;
     infoEl.textContent = 'Password for: ' + serviceName;
     display.classList.add('show');
