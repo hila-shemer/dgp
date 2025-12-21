@@ -68,7 +68,13 @@ def show_entries():
     db = get_db()
     cur = db.execute('select name, type from entries order by id desc')
     entries = cur.fetchall()
-    return render_template('show_entries.html', entries=entries)
+    # Get password from session if it exists (from generate)
+    generated_password = session.pop('generated_password', None)
+    service_name = session.pop('service_name', None)
+    return render_template('show_entries.html',
+                         entries=entries,
+                         generated_password=generated_password,
+                         service_name=service_name)
 
 
 @bp.route('/add', methods=['POST'])
@@ -99,7 +105,9 @@ def get_seed():
 
 def generate(name, entry_type, secret):
     res = engine.generate(get_seed(), name, entry_type, secret)
-    flash('Generated: ' + name + ' ' + res)
+    # Store password in session instead of flashing
+    session['generated_password'] = res
+    session['service_name'] = name
 
 @bp.route('/gen', methods=['POST'])
 def gen_entry():
