@@ -2,7 +2,7 @@
 """
 Security middleware and utilities for DGP
 """
-from flask import request, redirect, make_response
+from flask import request, redirect, make_response, current_app
 from functools import wraps
 
 
@@ -96,7 +96,7 @@ def require_https(f):
         if not request.is_secure and not request.headers.get('X-Forwarded-Proto') == 'https':
             # In development, you might want to allow HTTP
             # Remove this check in production
-            if request.environ.get('FLASK_ENV') != 'development':
+            if not current_app.debug:
                 return redirect(request.url.replace('http://', 'https://'), code=301)
         return f(*args, **kwargs)
     return decorated_function
