@@ -17,7 +17,6 @@ setup(
     include_package_data=True,
     install_requires=[
         'flask',
-        'pycrypto',
     ],
     setup_requires=[
         'pytest-runner',
