@@ -18,7 +18,7 @@
     {% if generated_password %}
     <script>
       // Auto-trigger the display on page load if password exists
-      showPassword('{{ generated_password }}', '{{ service_name }}');
+      showPassword({{ generated_password|tojson }}, {{ service_name|tojson }});
     </script>
     {% endif %}
 
