@@ -76,13 +76,7 @@ This plan outlines a comprehensive expansion of the DGP (Deterministically Gener
   - Display character composition breakdown
   - Show estimated entropy
 
-- [ ] Password History
-  - Track password generation history per service
-  - Show timestamp and format used
-  - Optional: Store password hashes for "has this been generated before?" check
-
 - [ ] Bulk Operations
-  - Generate passwords for multiple services at once
   - Export service list (without passwords)
   - Import service entries from CSV/JSON
 
@@ -90,7 +84,6 @@ This plan outlines a comprehensive expansion of the DGP (Deterministically Gener
 **Priority: HIGH**
 
 - [ ] Enhanced Service Metadata
-  - Add URL/website field with validation
   - Add username/email field
   - Add custom tags/categories
   - Add favorite/pinning functionality
@@ -113,15 +106,7 @@ This plan outlines a comprehensive expansion of the DGP (Deterministically Gener
 
 - [ ] Seed Storage Security
   - Encrypt seed at rest
-  - Support for multiple seeds (personal/work)
   - Seed backup and recovery flow
-  - Seed rotation capability
-
-- [ ] Secret Management
-  - Optional per-service secrets
-  - Master secret (used for all services)
-  - Secret strength validation
-  - Secret change tracking
 
 - [ ] Seed Generation Wizard
   - Interactive seed generation flow
@@ -140,7 +125,6 @@ This plan outlines a comprehensive expansion of the DGP (Deterministically Gener
   - Migrate to Vue.js/React or keep lightweight with Alpine.js
   - Responsive design (mobile-first)
   - Dark mode support
-  - Accessibility (WCAG 2.1 AA compliance)
 
 - [ ] Dashboard
   - Quick stats (# services, last generated, etc.)
