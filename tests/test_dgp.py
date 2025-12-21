@@ -57,8 +57,9 @@ def logout(client):
     return client.get('/logout', follow_redirects=True)
 
 
-def test_empty_db(client):
+def test_empty_db(client, app):
     """Start with a blank database."""
+    login(client, app.config['USERNAME'], app.config['PASSWORD'])
     rv = client.get('/')
     assert b'No entries here so far' in rv.data
 
@@ -83,9 +84,10 @@ def test_messages(client, app):
     login(client, app.config['USERNAME'],
           app.config['PASSWORD'])
     rv = client.post('/add', data=dict(
-        title='<Hello>',
-        text='<strong>HTML</strong> allowed here'
+        name='test-service',
+        type='hex',
+        note='Test note with <strong>HTML</strong>'
     ), follow_redirects=True)
     assert b'No entries here so far' not in rv.data
-    assert b'&lt;Hello&gt;' in rv.data
-    assert b'<strong>HTML</strong> allowed here' in rv.data
+    assert b'test-service' in rv.data
+    assert b'New entry was successfully added' in rv.data

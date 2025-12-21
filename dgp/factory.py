@@ -47,7 +47,7 @@ class ReverseProxied(object):
             environ['wsgi.url_scheme'] = scheme
         server = environ.get('HTTP_X_FORWARDED_SERVER_CUSTOM',environ.get('HTTP_X_FORWARDED_SERVER',''))
         if server:
-            print "set post {}".format(server)
+            print("set post {}".format(server))
             environ['HTTP_HOST'] = server
 
         return self.app(environ, start_response)
