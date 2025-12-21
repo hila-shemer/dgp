@@ -9,22 +9,15 @@
       <div class="password-text" id="password-text">
         {{ generated_password if generated_password else '' }}
       </div>
-      <button class="copy-button" onclick="copyToClipboard(document.getElementById('password-text').textContent)">
+      <button class="copy-button" id="copy-button">
         📋 Copy to Clipboard
       </button>
       <span class="copy-feedback" id="copy-feedback">✓ Copied!</span>
     </div>
 
-    {% if generated_password %}
-    <script>
-      // Auto-trigger the display on page load if password exists
-      showPassword('{{ generated_password }}', '{{ service_name }}');
-    </script>
-    {% endif %}
-
     <ul class="entries">
     <dt>Search services:
-    <input type="text" id="service-search" placeholder="Type to search..." onkeyup="filterServices()">
+    <input type="text" id="service-search" placeholder="Type to search...">
     <span id="service-count"></span>
     <br><br>
 
@@ -42,40 +35,6 @@
     <input type="submit" value="Generate">
     </form>
 
-    <script>
-    function filterServices() {
-      var input = document.getElementById('service-search');
-      var filter = input.value.toLowerCase();
-      var select = document.getElementById('service-select');
-      var options = select.getElementsByTagName('option');
-      var visibleCount = 0;
-
-      for (var i = 0; i < options.length; i++) {
-        var option = options[i];
-        var text = option.textContent || option.innerText;
-
-        if (text.toLowerCase().indexOf(filter) > -1 || option.value === '') {
-          option.style.display = '';
-          if (option.value !== '') visibleCount++;
-        } else {
-          option.style.display = 'none';
-        }
-      }
-
-      // Update count
-      var countEl = document.getElementById('service-count');
-      if (filter) {
-        countEl.textContent = '(showing ' + visibleCount + ' of ' + (options.length - 1) + ' services)';
-      } else {
-        countEl.textContent = '(' + (options.length - 1) + ' services)';
-      }
-    }
-
-    // Initialize count on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      filterServices();
-    });
-    </script>
     <br>
     <dt>Create a new entry:
     <form action="{{ url_for('dgp.add_entry') }}" method="post" class="add-entry">
