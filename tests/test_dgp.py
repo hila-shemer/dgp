@@ -17,14 +17,14 @@ from dgp.blueprints.dgp import init_db
 
 
 @pytest.fixture
-def app(request):
-
+def legacy_app(request):
+    """App fixture configured for legacy authentication mode tests."""
     db_fd, temp_db_location = tempfile.mkstemp()
     config = {
         'DATABASE': temp_db_location,
         'TESTING': True,
         'DB_FD': db_fd,
-        'USERNAME': 'admin',  # Keep for legacy mode tests
+        'USERNAME': 'admin',
         'PASSWORD': 'default'
     }
 
@@ -32,7 +32,37 @@ def app(request):
 
     with app.app_context():
         init_db()
-        # Create a test user
+        yield app
+
+
+@pytest.fixture
+def legacy_client(request, legacy_app):
+    """Client fixture for legacy authentication mode tests."""
+    client = legacy_app.test_client()
+
+    def teardown():
+        os.close(legacy_app.config['DB_FD'])
+        os.unlink(legacy_app.config['DATABASE'])
+    request.addfinalizer(teardown)
+
+    return client
+
+
+@pytest.fixture
+def app(request):
+    """App fixture configured for new user system tests."""
+    db_fd, temp_db_location = tempfile.mkstemp()
+    config = {
+        'DATABASE': temp_db_location,
+        'TESTING': True,
+        'DB_FD': db_fd
+    }
+
+    app = create_app(config=config)
+
+    with app.app_context():
+        init_db()
+        # Create a test user for new user system tests
         from dgp.auth import create_user
         create_user('testuser', 'testpass123', 'test@example.com')
         yield app
@@ -40,7 +70,7 @@ def app(request):
 
 @pytest.fixture
 def client(request, app):
-
+    """Client fixture for new user system tests."""
     client = app.test_client()
 
     def teardown():
@@ -62,33 +92,33 @@ def logout(client):
     return client.get('/logout', follow_redirects=True)
 
 
-def test_empty_db(client, app):
-    """Start with a blank database."""
-    login(client, app.config['USERNAME'], app.config['PASSWORD'])
-    rv = client.get('/')
+def test_empty_db(legacy_client, legacy_app):
+    """Start with a blank database (legacy mode)."""
+    login(legacy_client, legacy_app.config['USERNAME'], legacy_app.config['PASSWORD'])
+    rv = legacy_client.get('/')
     assert b'No entries here so far' in rv.data
 
 
-def test_login_logout(client, app):
-    """Make sure login and logout works"""
-    rv = login(client, app.config['USERNAME'],
-               app.config['PASSWORD'])
-    assert b'You were logged in' in rv.data
-    rv = logout(client)
+def test_login_logout(legacy_client, legacy_app):
+    """Make sure login and logout works (legacy mode)"""
+    rv = login(legacy_client, legacy_app.config['USERNAME'],
+               legacy_app.config['PASSWORD'])
+    assert b'You were logged in (legacy mode)' in rv.data
+    rv = logout(legacy_client)
     assert b'You were logged out' in rv.data
-    rv = login(client,app.config['USERNAME'] + 'x',
-               app.config['PASSWORD'])
+    rv = login(legacy_client, legacy_app.config['USERNAME'] + 'x',
+               legacy_app.config['PASSWORD'])
     assert b'Invalid username or password' in rv.data
-    rv = login(client, app.config['USERNAME'],
-               app.config['PASSWORD'] + 'x')
+    rv = login(legacy_client, legacy_app.config['USERNAME'],
+               legacy_app.config['PASSWORD'] + 'x')
     assert b'Invalid username or password' in rv.data
 
 
-def test_messages(client, app):
-    """Test that messages work"""
-    login(client, app.config['USERNAME'],
-          app.config['PASSWORD'])
-    rv = client.post('/add', data=dict(
+def test_messages(legacy_client, legacy_app):
+    """Test that messages work (legacy mode)"""
+    login(legacy_client, legacy_app.config['USERNAME'],
+          legacy_app.config['PASSWORD'])
+    rv = legacy_client.post('/add', data=dict(
         name='test-service',
         type='hex',
         note='Test note with <strong>HTML</strong>'

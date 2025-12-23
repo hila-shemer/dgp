@@ -2,3 +2,6 @@ dgp.db
 seed
 .eggs/
 build/
+__pycache__/
+*.pyc
+*.egg-info/
