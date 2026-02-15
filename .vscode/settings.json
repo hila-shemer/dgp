@@ -11,5 +11,6 @@
     },
     "cmake.sourceDirectory": "/home/nadav/repos/dgp",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "editor.formatOnSave": false
+    "editor.formatOnSave": false,
+    "java.configuration.updateBuildConfiguration": "interactive"
 }

@@ -172,7 +172,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                 singleLine = true
             )
 
-            LazyColumn(modifier = Modifier.fillWeight(1f)) {
+            LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 items(filteredServices) { service ->
                     ListItem(
                         headlineContent = { Text(service.name) },
@@ -200,7 +200,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                         },
                         modifier = Modifier.clickable { editingService = service }
                     )
-                    HorizontalDivider()
+                    Divider()
                 }
             }
         }
@@ -278,6 +278,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServiceEditDialog(
     service: DgpService?,
@@ -352,7 +353,7 @@ fun SeedSettingsDialog(
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { visible = !visible }) {
-                            Icon(if (visible) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
+                            Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
                         }
                     }
                 )
@@ -367,4 +368,4 @@ fun SeedSettingsDialog(
     )
 }
 
-private fun Modifier.fillWeight(f: Float): Modifier = this.then(Modifier.fillMaxHeight().fillMaxWidth().weight(f))
+
