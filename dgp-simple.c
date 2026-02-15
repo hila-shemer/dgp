@@ -321,7 +321,7 @@ static char *generate(const char *seed, const char *name, const char *entry_type
     strcpy(seed_secret, seed);
     strcat(seed_secret, secret);
     uint8_t bin_data[40];
-    pbkdf2_bin(seed_secret, seed_secret_len, name, strlen(name), 42000, 40, bin_data);
+    pbkdf2_bin((const uint8_t *)seed_secret, seed_secret_len, (const uint8_t *)name, strlen(name), 42000, 40, bin_data);
     char *result = NULL;
 
     if (strcmp(entry_type, "hex") == 0) {
