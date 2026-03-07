@@ -89,30 +89,20 @@ object TestVectors {
 
     data class Triple5(val a: String, val b: String, val c: String, val d: String, val e: String)
 
-    fun run(engine: DgpEngine): TestResult {
-        val lines = mutableListOf<String>()
-        var passed = 0
-        var failed = 0
-
-        for (tv in vectors) {
-            val actual = engine.generate(tv.seed, tv.name, tv.type, tv.account)
-            if (actual == tv.expected) {
-                passed++
-            } else {
-                failed++
-                val seedDisp = if (tv.seed.length > 16) "${tv.seed.take(8)}...(${tv.seed.length})" else tv.seed
-                val nameDisp = if (tv.name.length > 16) "${tv.name.take(8)}...(${tv.name.length})" else tv.name
-                lines.add("FAIL [$seedDisp:${tv.account}:$nameDisp:${tv.type}]")
-                lines.add("  expected: ${tv.expected}")
-                lines.add("  actual:   $actual")
-            }
-        }
-
-        lines.add(0, "$passed passed, $failed failed out of ${vectors.size} tests")
-        return TestResult(passed, failed, lines.joinToString("\n"))
+    fun runOne(engine: DgpEngine, index: Int): SingleTestResult {
+        val tv = vectors[index]
+        val actual = engine.generate(tv.seed, tv.name, tv.type, tv.account)
+        val passed = actual == tv.expected
+        val seedDisp = if (tv.seed.length > 16) "${tv.seed.take(4)}...(${tv.seed.length})" else tv.seed
+        val nameDisp = if (tv.name.length > 16) "${tv.name.take(4)}...(${tv.name.length})" else tv.name
+        val label = "$seedDisp:${tv.account}:$nameDisp:${tv.type}"
+        return SingleTestResult(label, tv.expected, actual, passed)
     }
 
-    data class TestResult(val passed: Int, val failed: Int, val output: String) {
-        val allPassed get() = failed == 0
-    }
+    data class SingleTestResult(
+        val label: String,
+        val expected: String,
+        val actual: String,
+        val passed: Boolean
+    )
 }
