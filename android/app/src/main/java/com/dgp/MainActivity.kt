@@ -25,6 +25,7 @@ import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
+import android.util.Base64
 import java.security.MessageDigest
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
@@ -77,7 +78,7 @@ class MainActivity : FragmentActivity() {
         )
 
         setContent {
-            DgpApp(dgpEngine, encryptedPrefs)
+            DgpApp(dgpEngine, encryptedPrefs, biometricHelper)
         }
     }
 }
@@ -114,7 +115,7 @@ fun serializeServices(services: List<DgpService>): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
+fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometricHelper: BiometricHelper) {
     val context = LocalContext.current as FragmentActivity
     val scope = rememberCoroutineScope()
     val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -170,19 +171,6 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
             .apply()
     }
 
-    fun unlockWithSeed(seed: String) {
-        if (loadServices(seed)) {
-            masterSeed = seed
-            prefs.edit().putString("master_seed", seed).apply()
-            isSeeded = true
-            showSeedPrompt = false
-            seedError = false
-            showAccountPrompt = true
-        } else {
-            seedError = true
-        }
-    }
-
     fun authenticate(onSuccess: () -> Unit) {
         val executor = ContextCompat.getMainExecutor(context)
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
@@ -203,6 +191,92 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
         biometricPrompt.authenticate(promptInfo)
     }
 
+    fun saveSeedWithBiometric(seed: String) {
+        try {
+            val cipher = biometricHelper.getEncryptionCipher()
+            val executor = ContextCompat.getMainExecutor(context)
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Save Seed")
+                .setSubtitle("Authenticate to securely store your seed")
+                .setNegativeButtonText("Skip")
+                .build()
+            val biometricPrompt = BiometricPrompt(context, executor,
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        val authedCipher = result.cryptoObject?.cipher ?: return
+                        val (ciphertext, iv) = biometricHelper.encrypt(authedCipher, seed)
+                        val encoded = Base64.encodeToString(iv, Base64.NO_WRAP) + ":" +
+                                      Base64.encodeToString(ciphertext, Base64.NO_WRAP)
+                        prefs.edit()
+                            .putString("master_seed_encrypted", encoded)
+                            .remove("master_seed")
+                            .apply()
+                    }
+                })
+            biometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
+        } catch (_: Exception) {
+            // Biometric not available or key invalidated — don't save
+        }
+    }
+
+    fun loadSeedWithBiometric(onSuccess: (String) -> Unit) {
+        val encoded = prefs.getString("master_seed_encrypted", null)
+        // Migrate from old plaintext storage
+        val plaintextSeed = prefs.getString("master_seed", null)
+
+        if (encoded != null) {
+            val parts = encoded.split(":")
+            if (parts.size == 2) {
+                try {
+                    val iv = Base64.decode(parts[0], Base64.NO_WRAP)
+                    val ciphertext = Base64.decode(parts[1], Base64.NO_WRAP)
+                    val cipher = biometricHelper.getDecryptionCipher(iv)
+                    val executor = ContextCompat.getMainExecutor(context)
+                    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                        .setTitle("Unlock DGP")
+                        .setSubtitle("Authenticate to access your seed")
+                        .setNegativeButtonText("Enter manually")
+                        .build()
+                    val biometricPrompt = BiometricPrompt(context, executor,
+                        object : BiometricPrompt.AuthenticationCallback() {
+                            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                                val authedCipher = result.cryptoObject?.cipher ?: return
+                                val seed = biometricHelper.decrypt(authedCipher, ciphertext)
+                                onSuccess(seed)
+                            }
+                        })
+                    biometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
+                    return
+                } catch (_: Exception) {
+                    // Key invalidated (e.g. new biometric enrolled) — fall through
+                }
+            }
+        }
+
+        if (plaintextSeed != null && plaintextSeed.isNotEmpty()) {
+            // Old plaintext seed found — authenticate then migrate
+            authenticate {
+                onSuccess(plaintextSeed)
+                saveSeedWithBiometric(plaintextSeed)
+            }
+        }
+    }
+
+    fun unlockWithSeed(seed: String, skipSave: Boolean = false) {
+        if (loadServices(seed)) {
+            masterSeed = seed
+            isSeeded = true
+            showSeedPrompt = false
+            seedError = false
+            showAccountPrompt = true
+            if (!skipSave) {
+                saveSeedWithBiometric(seed)
+            }
+        } else {
+            seedError = true
+        }
+    }
+
     fun scanQr(onResult: (String) -> Unit) {
         val options = GmsBarcodeScannerOptions.Builder()
             .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
@@ -216,12 +290,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
 
     // Try biometric unlock on first launch if seed is saved
     LaunchedEffect(Unit) {
-        val savedSeed = prefs.getString("master_seed", "") ?: ""
-        if (savedSeed.isNotEmpty()) {
-            authenticate {
-                unlockWithSeed(savedSeed)
-            }
-        }
+        loadSeedWithBiometric { seed -> unlockWithSeed(seed, skipSave = true) }
     }
 
     // Seed entry prompt (shown when locked)
@@ -400,10 +469,10 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                         // Re-encrypt services with new seed
                         val json = serializeServices(services)
                         prefs.edit()
-                            .putString("master_seed", newSeed)
                             .putString("services_encrypted", ConfigCrypto.encrypt(json, newSeed))
                             .apply()
                         masterSeed = newSeed
+                        saveSeedWithBiometric(newSeed)
                         showSeedSettings = false
                     },
                     onScanQr = { onResult -> scanQr(onResult) }
