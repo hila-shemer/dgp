@@ -109,7 +109,6 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     val context = LocalContext.current as FragmentActivity
     val scope = rememberCoroutineScope()
     val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-
     // Core state
     var masterSeed by remember { mutableStateOf("") }
     var isSeeded by remember { mutableStateOf(false) }
@@ -540,21 +539,15 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     confirmButton = {
                         Button(onClick = {
                             val clip = android.content.ClipData.newPlainText("DGP Password", generatedPassword)
-                            clipboardManager.setPrimaryClip(clip)
-                            scope.launch {
-                                kotlinx.coroutines.delay(15000)
-                                if (java.util.Objects.equals(
-                                    clipboardManager.primaryClip?.getItemAt(0)?.text,
-                                    generatedPassword
-                                )) {
-                                    clipboardManager.setPrimaryClip(
-                                        android.content.ClipData.newPlainText("", "")
-                                    )
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                clip.description.extras = android.os.PersistableBundle().apply {
+                                    putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
                                 }
                             }
+                            clipboardManager.setPrimaryClip(clip)
                             selectedServiceForGen = null
                         }) {
-                            Text("Copy (15s)")
+                            Text("Copy")
                         }
                     },
                     dismissButton = {
