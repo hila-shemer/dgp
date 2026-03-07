@@ -19,8 +19,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
@@ -67,15 +65,7 @@ class MainActivity : FragmentActivity() {
 
         dgpEngine = DgpEngine(wordList)
 
-        val masterKey = MasterKey.Builder(this)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-
-        encryptedPrefs = EncryptedSharedPreferences.create(
-            this, "dgp_prefs", masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        encryptedPrefs = getSharedPreferences("dgp_prefs", MODE_PRIVATE)
 
         setContent {
             DgpApp(dgpEngine, encryptedPrefs, biometricHelper)
