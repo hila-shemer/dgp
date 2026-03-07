@@ -515,6 +515,7 @@ fun SeedEntryDialog(
     onScanQr: ((String) -> Unit) -> Unit
 ) {
     var seed by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = {},
@@ -525,8 +526,12 @@ fun SeedEntryDialog(
                     value = seed,
                     onValueChange = { seed = it },
                     label = { Text("Master Seed") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true
+                    visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { visible = !visible }) {
+                            Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+                        }
+                    }
                 )
                 if (error) {
                     Spacer(modifier = Modifier.height(4.dp))
