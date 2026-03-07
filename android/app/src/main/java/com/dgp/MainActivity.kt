@@ -47,7 +47,7 @@ class MainActivity : FragmentActivity() {
 
     private val biometricHelper = BiometricHelper()
     private lateinit var dgpEngine: DgpEngine
-    private lateinit var encryptedPrefs: android.content.SharedPreferences
+    private lateinit var prefs: android.content.SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,10 +65,10 @@ class MainActivity : FragmentActivity() {
 
         dgpEngine = DgpEngine(wordList)
 
-        encryptedPrefs = getSharedPreferences("dgp_prefs", MODE_PRIVATE)
+        prefs = getSharedPreferences("dgp_prefs", MODE_PRIVATE)
 
         setContent {
-            DgpApp(dgpEngine, encryptedPrefs, biometricHelper)
+            DgpApp(dgpEngine, prefs, biometricHelper)
         }
     }
 }
