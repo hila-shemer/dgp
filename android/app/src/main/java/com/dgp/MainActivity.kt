@@ -617,6 +617,7 @@ fun AccountPromptDialog(
     onSave: (String) -> Unit
 ) {
     var value by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -626,7 +627,12 @@ fun AccountPromptDialog(
                 value = value,
                 onValueChange = { value = it },
                 label = { Text("Account") },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { visible = !visible }) {
+                        Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+                    }
+                },
                 singleLine = true
             )
         },
