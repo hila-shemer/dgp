@@ -160,6 +160,11 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             .apply()
     }
 
+    fun clearAccount() {
+        account = ""
+        prefs.edit().remove("account_encrypted").apply()
+    }
+
     fun authenticate(onSuccess: () -> Unit) {
         val executor = ContextCompat.getMainExecutor(context)
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
@@ -175,6 +180,9 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
                     onSuccess()
+                }
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    clearAccount()
                 }
             })
         biometricPrompt.authenticate(promptInfo)
@@ -233,6 +241,9 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                                 val seed = biometricHelper.decrypt(authedCipher, ciphertext)
                                 onSuccess(seed)
                             }
+                            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                                clearAccount()
+                            }
                         })
                     biometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
                     return
@@ -257,7 +268,13 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             isSeeded = true
             showSeedPrompt = false
             seedError = false
-            showAccountPrompt = true
+            val encryptedAccount = prefs.getString("account_encrypted", null)
+            val decryptedAccount = encryptedAccount?.let { ConfigCrypto.decrypt(it, seed) }
+            if (!decryptedAccount.isNullOrEmpty()) {
+                account = decryptedAccount
+            } else {
+                showAccountPrompt = true
+            }
             if (!skipSave) {
                 saveSeedWithBiometric(seed)
             }
@@ -275,6 +292,17 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             .addOnSuccessListener { barcode ->
                 barcode.rawValue?.let { onResult(it) }
             }
+    }
+
+    // Clear account on reboot
+    LaunchedEffect(Unit) {
+        val bootTime = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime()
+        val lastBootTime = prefs.getLong("last_boot_time", 0L)
+        // Allow 5s tolerance for timing differences
+        if (lastBootTime == 0L || kotlin.math.abs(bootTime - lastBootTime) > 5000) {
+            clearAccount()
+        }
+        prefs.edit().putLong("last_boot_time", bootTime).apply()
     }
 
     // Try biometric unlock on first launch if seed is saved
@@ -297,6 +325,9 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             onDismiss = { showAccountPrompt = false },
             onSave = { newAccount ->
                 account = newAccount
+                if (masterSeed.isNotEmpty()) {
+                    prefs.edit().putString("account_encrypted", ConfigCrypto.encrypt(newAccount, masterSeed)).apply()
+                }
                 showAccountPrompt = false
             }
         )
@@ -315,7 +346,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     if (isSeeded) {
                         if (account.isNotEmpty()) {
                             IconButton(onClick = {
-                                account = ""
+                                clearAccount()
                                 showAccountPrompt = true
                             }) {
                                 Icon(Icons.Default.Clear, "Clear Account")
