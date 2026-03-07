@@ -24,6 +24,9 @@ import androidx.security.crypto.MasterKey
 import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -282,6 +285,16 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                     prefs.edit().putString("master_seed", newSeed).apply()
                     masterSeed = newSeed
                     showSeedSettings = false
+                },
+                onScanQr = { onResult ->
+                    val options = GmsBarcodeScannerOptions.Builder()
+                        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                        .build()
+                    val scanner = GmsBarcodeScanning.getClient(context, options)
+                    scanner.startScan()
+                        .addOnSuccessListener { barcode ->
+                            barcode.rawValue?.let { onResult(it) }
+                        }
                 }
             )
         }
@@ -472,7 +485,8 @@ fun AccountPromptDialog(
 fun SeedSettingsDialog(
     currentSeed: String,
     onDismiss: () -> Unit,
-    onSave: (String) -> Unit
+    onSave: (String) -> Unit,
+    onScanQr: ((String) -> Unit) -> Unit
 ) {
     var seed by remember { mutableStateOf(currentSeed) }
     var visible by remember { mutableStateOf(false) }
@@ -482,12 +496,12 @@ fun SeedSettingsDialog(
         title = { Text("Master Seed Settings") },
         text = {
             Column {
-                Text("Caution: Changing your master seed will change all generated passwords.", 
+                Text("Caution: Changing your master seed will change all generated passwords.",
                      color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
-                    value = seed, 
-                    onValueChange = { seed = it }, 
+                    value = seed,
+                    onValueChange = { seed = it },
                     label = { Text("Master Seed") },
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
@@ -496,6 +510,15 @@ fun SeedSettingsDialog(
                         }
                     }
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { onScanQr { scanned -> seed = scanned } },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Scan QR Code")
+                }
             }
         },
         confirmButton = {
