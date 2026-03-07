@@ -35,7 +35,6 @@ import java.util.UUID
 data class DgpService(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
-    val account: String = "",
     val type: String = "alnum"
 )
 
@@ -91,7 +90,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
             val arr = JSONArray(servicesJson)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                list.add(DgpService(obj.getString("id"), obj.getString("name"), obj.getString("account"), obj.getString("type")))
+                list.add(DgpService(obj.getString("id"), obj.getString("name"), obj.optString("type", "alnum")))
             }
         } catch (e: Exception) {}
         list.sortedBy { it.name.lowercase() }
@@ -100,6 +99,8 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
     var searchQuery by remember { mutableStateOf("") }
     var isUnlocked by remember { mutableStateOf(false) }
     var masterSeed by remember { mutableStateOf(prefs.getString("master_seed", "") ?: "") }
+    var account by remember { mutableStateOf("") }
+    var showAccountPrompt by remember { mutableStateOf(true) }
     
     // UI States
     var showAddDialog by remember { mutableStateOf(false) }
@@ -111,7 +112,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
     var selectedServiceForGen by remember { mutableStateOf<DgpService?>(null) }
     var generatedPassword by remember { mutableStateOf("") }
 
-    val filteredServices = services.filter { it.name.contains(searchQuery, ignoreCase = true) || it.account.contains(searchQuery, ignoreCase = true) }
+    val filteredServices = services.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
     fun saveServices(newList: List<DgpService>) {
         val arr = JSONArray()
@@ -119,7 +120,6 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
             arr.put(JSONObject().apply {
                 put("id", it.id)
                 put("name", it.name)
-                put("account", it.account)
                 put("type", it.type)
             })
         }
@@ -149,6 +149,14 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
             TopAppBar(
                 title = { Text("DGP") },
                 actions = {
+                    if (account.isNotEmpty()) {
+                        IconButton(onClick = {
+                            account = ""
+                            showAccountPrompt = true
+                        }) {
+                            Icon(Icons.Default.Clear, "Clear Account")
+                        }
+                    }
                     IconButton(onClick = {
                         testResults.clear()
                         showTestVectors = true
@@ -198,7 +206,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                 items(filteredServices) { service ->
                     ListItem(
                         headlineContent = { Text(service.name) },
-                        supportingContent = { if (service.account.isNotEmpty()) Text(service.account) },
+                        supportingContent = { Text(service.type) },
                         trailingContent = {
                             Row {
                                 IconButton(onClick = { editingService = service }) {
@@ -207,12 +215,12 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                                 IconButton(onClick = {
                                     if (isUnlocked) {
                                         selectedServiceForGen = service
-                                        generatedPassword = engine.generate(masterSeed, service.name, service.type, service.account)
+                                        generatedPassword = engine.generate(masterSeed, service.name, service.type, account)
                                     } else {
                                         authenticate {
                                             isUnlocked = true
                                             selectedServiceForGen = service
-                                            generatedPassword = engine.generate(masterSeed, service.name, service.type, service.account)
+                                            generatedPassword = engine.generate(masterSeed, service.name, service.type, account)
                                         }
                                     }
                                 }) {
@@ -232,13 +240,13 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
             ServiceEditDialog(
                 service = editingService,
                 onDismiss = { showAddDialog = false; editingService = null },
-                onSave = { name, account, type ->
+                onSave = { name, type ->
                     val newList = services.toMutableList()
                     if (editingService != null) {
                         newList.removeIf { it.id == editingService!!.id }
-                        newList.add(DgpService(editingService!!.id, name, account, type))
+                        newList.add(DgpService(editingService!!.id, name, type))
                     } else {
-                        newList.add(DgpService(name = name, account = account, type = type))
+                        newList.add(DgpService(name = name, type = type))
                     }
                     saveServices(newList)
                     showAddDialog = false
@@ -262,6 +270,16 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                     prefs.edit().putString("master_seed", newSeed).apply()
                     masterSeed = newSeed
                     showSeedSettings = false
+                }
+            )
+        }
+
+        if (showAccountPrompt) {
+            AccountPromptDialog(
+                onDismiss = { showAccountPrompt = false },
+                onSave = { newAccount ->
+                    account = newAccount
+                    showAccountPrompt = false
                 }
             )
         }
@@ -361,11 +379,10 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
 fun ServiceEditDialog(
     service: DgpService?,
     onDismiss: () -> Unit,
-    onSave: (String, String, String) -> Unit,
+    onSave: (String, String) -> Unit,
     onDelete: () -> Unit
 ) {
     var name by remember { mutableStateOf(service?.name ?: "") }
-    var account by remember { mutableStateOf(service?.account ?: "") }
     var type by remember { mutableStateOf(service?.type ?: "alnum") }
     val types = listOf("alnum", "alnumlong", "hex", "hexlong", "base58", "base58long", "xkcd", "xkcdlong")
 
@@ -375,8 +392,6 @@ fun ServiceEditDialog(
         text = {
             Column {
                 TextField(value = name, onValueChange = { name = it }, label = { Text("Service Name") })
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(value = account, onValueChange = { account = it }, label = { Text("Account/Secret") })
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Password Type:", style = MaterialTheme.typography.labelMedium)
                 types.chunked(2).forEach { row ->
@@ -394,7 +409,7 @@ fun ServiceEditDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { if (name.isNotEmpty()) onSave(name, account, type) }) { Text("Save") }
+            Button(onClick = { if (name.isNotEmpty()) onSave(name, type) }) { Text("Save") }
         },
         dismissButton = {
             Row {
@@ -403,6 +418,37 @@ fun ServiceEditDialog(
                 }
                 TextButton(onClick = onDismiss) { Text("Cancel") }
             }
+        }
+    )
+}
+
+@Composable
+fun AccountPromptDialog(
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var value by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Enter Account") },
+        text = {
+            TextField(
+                value = value,
+                onValueChange = { value = it },
+                label = { Text("Account") },
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (value.isNotEmpty()) onSave(value) },
+                enabled = value.isNotEmpty()
+            ) { Text("OK") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Skip") }
         }
     )
 }
