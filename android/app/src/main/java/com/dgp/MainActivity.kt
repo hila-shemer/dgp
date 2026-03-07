@@ -24,6 +24,7 @@ import androidx.security.crypto.MasterKey
 import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
+import com.dgp.security.ConfigCrypto
 import java.security.MessageDigest
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
@@ -51,7 +52,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         val wordList = mutableListOf<String>()
         try {
             assets.open("english.txt").use { stream ->
@@ -62,7 +63,7 @@ class MainActivity : FragmentActivity() {
         } catch (e: Exception) {
             wordList.addAll(listOf("abandon", "ability", "able", "about", "above"))
         }
-        
+
         dgpEngine = DgpEngine(wordList)
 
         val masterKey = MasterKey.Builder(this)
@@ -81,6 +82,36 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+fun parseServices(json: String): List<DgpService> {
+    val list = mutableListOf<DgpService>()
+    try {
+        val arr = JSONArray(json)
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            list.add(DgpService(
+                obj.getString("id"),
+                obj.getString("name"),
+                obj.optString("type", "alnum"),
+                obj.optString("comment", "")
+            ))
+        }
+    } catch (_: Exception) {}
+    return list.sortedBy { it.name.lowercase() }
+}
+
+fun serializeServices(services: List<DgpService>): String {
+    val arr = JSONArray()
+    services.forEach {
+        arr.put(JSONObject().apply {
+            put("id", it.id)
+            put("name", it.name)
+            put("type", it.type)
+            put("comment", it.comment)
+        })
+    }
+    return arr.toString()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
@@ -88,26 +119,16 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
     val scope = rememberCoroutineScope()
     val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
 
-    var servicesJson by remember { mutableStateOf(prefs.getString("services_list", "[]") ?: "[]") }
-    val services = remember(servicesJson) {
-        val list = mutableListOf<DgpService>()
-        try {
-            val arr = JSONArray(servicesJson)
-            for (i in 0 until arr.length()) {
-                val obj = arr.getJSONObject(i)
-                list.add(DgpService(obj.getString("id"), obj.getString("name"), obj.optString("type", "alnum"), obj.optString("comment", "")))
-            }
-        } catch (e: Exception) {}
-        list.sortedBy { it.name.lowercase() }
-    }
-
-    var searchQuery by remember { mutableStateOf("") }
-    var isUnlocked by remember { mutableStateOf(false) }
-    var masterSeed by remember { mutableStateOf(prefs.getString("master_seed", "") ?: "") }
+    // Core state
+    var masterSeed by remember { mutableStateOf("") }
+    var isSeeded by remember { mutableStateOf(false) }
     var account by remember { mutableStateOf("") }
-    var showAccountPrompt by remember { mutableStateOf(true) }
-    
+    var services by remember { mutableStateOf(listOf<DgpService>()) }
+
     // UI States
+    var showSeedPrompt by remember { mutableStateOf(true) }
+    var showAccountPrompt by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
     var editingService by remember { mutableStateOf<DgpService?>(null) }
     var showSeedSettings by remember { mutableStateOf(false) }
@@ -116,38 +137,116 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
     var testRunning by remember { mutableStateOf(false) }
     var selectedServiceForGen by remember { mutableStateOf<DgpService?>(null) }
     var generatedPassword by remember { mutableStateOf("") }
+    var seedError by remember { mutableStateOf(false) }
 
-    val filteredServices = services.filter { it.name.contains(searchQuery, ignoreCase = true) || it.comment.contains(searchQuery, ignoreCase = true) }
+    fun loadServices(seed: String): Boolean {
+        val encrypted = prefs.getString("services_encrypted", null)
+        if (encrypted == null) {
+            // First run or no data yet — migrate from old unencrypted format
+            val oldJson = prefs.getString("services_list", null)
+            if (oldJson != null) {
+                services = parseServices(oldJson)
+                // Re-save encrypted and remove old key
+                val json = serializeServices(services)
+                prefs.edit()
+                    .putString("services_encrypted", ConfigCrypto.encrypt(json, seed))
+                    .remove("services_list")
+                    .apply()
+            } else {
+                services = emptyList()
+            }
+            return true
+        }
+        val json = ConfigCrypto.decrypt(encrypted, seed) ?: return false
+        services = parseServices(json)
+        return true
+    }
 
     fun saveServices(newList: List<DgpService>) {
-        val arr = JSONArray()
-        newList.forEach {
-            arr.put(JSONObject().apply {
-                put("id", it.id)
-                put("name", it.name)
-                put("type", it.type)
-                put("comment", it.comment)
-            })
+        services = newList.sortedBy { it.name.lowercase() }
+        val json = serializeServices(services)
+        prefs.edit()
+            .putString("services_encrypted", ConfigCrypto.encrypt(json, masterSeed))
+            .apply()
+    }
+
+    fun unlockWithSeed(seed: String) {
+        if (loadServices(seed)) {
+            masterSeed = seed
+            prefs.edit().putString("master_seed", seed).apply()
+            isSeeded = true
+            showSeedPrompt = false
+            seedError = false
+            showAccountPrompt = true
+        } else {
+            seedError = true
         }
-        val json = arr.toString()
-        prefs.edit().putString("services_list", json).apply()
-        servicesJson = json
     }
 
     fun authenticate(onSuccess: () -> Unit) {
         val executor = ContextCompat.getMainExecutor(context)
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Authenticate")
-            .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+            .setAllowedAuthenticators(
+                androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
             .build()
 
-        val biometricPrompt = BiometricPrompt(context, executor, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                super.onAuthenticationSucceeded(result)
-                onSuccess()
-            }
-        })
+        val biometricPrompt = BiometricPrompt(context, executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    onSuccess()
+                }
+            })
         biometricPrompt.authenticate(promptInfo)
+    }
+
+    fun scanQr(onResult: (String) -> Unit) {
+        val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .build()
+        val scanner = GmsBarcodeScanning.getClient(context, options)
+        scanner.startScan()
+            .addOnSuccessListener { barcode ->
+                barcode.rawValue?.let { onResult(it) }
+            }
+    }
+
+    // Try biometric unlock on first launch if seed is saved
+    LaunchedEffect(Unit) {
+        val savedSeed = prefs.getString("master_seed", "") ?: ""
+        if (savedSeed.isNotEmpty()) {
+            authenticate {
+                unlockWithSeed(savedSeed)
+            }
+        }
+    }
+
+    // Seed entry prompt (shown when locked)
+    if (showSeedPrompt && !isSeeded) {
+        SeedEntryDialog(
+            error = seedError,
+            onUnlock = { seed -> unlockWithSeed(seed) },
+            onScanQr = { onResult -> scanQr(onResult) }
+        )
+    }
+
+    // Account prompt (shown after seed unlock)
+    if (showAccountPrompt && isSeeded) {
+        AccountPromptDialog(
+            onDismiss = { showAccountPrompt = false },
+            onSave = { newAccount ->
+                account = newAccount
+                showAccountPrompt = false
+            }
+        )
+    }
+
+    val filteredServices = services.filter {
+        it.name.contains(searchQuery, ignoreCase = true) ||
+        it.comment.contains(searchQuery, ignoreCase = true)
     }
 
     Scaffold(
@@ -155,249 +254,305 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
             TopAppBar(
                 title = { Text("DGP") },
                 actions = {
-                    if (account.isNotEmpty()) {
-                        IconButton(onClick = {
-                            account = ""
-                            showAccountPrompt = true
-                        }) {
-                            Icon(Icons.Default.Clear, "Clear Account")
-                        }
-                    } else {
-                        IconButton(onClick = { showAccountPrompt = true }) {
-                            Icon(Icons.Default.Person, "Set Account")
-                        }
-                    }
-                    IconButton(onClick = {
-                        testResults.clear()
-                        showTestVectors = true
-                        testRunning = true
-                        scope.launch {
-                            for (i in TestVectors.vectors.indices) {
-                                val result = withContext(Dispatchers.Default) {
-                                    TestVectors.runOne(engine, i)
-                                }
-                                testResults.add(result)
+                    if (isSeeded) {
+                        if (account.isNotEmpty()) {
+                            IconButton(onClick = {
+                                account = ""
+                                showAccountPrompt = true
+                            }) {
+                                Icon(Icons.Default.Clear, "Clear Account")
                             }
-                            testRunning = false
+                        } else {
+                            IconButton(onClick = { showAccountPrompt = true }) {
+                                Icon(Icons.Default.Person, "Set Account")
+                            }
                         }
-                    }) {
-                        Icon(Icons.Default.CheckCircle, "Test Vectors")
-                    }
-                    IconButton(onClick = {
-                        authenticate {
-                            showSeedSettings = true
+                        IconButton(onClick = {
+                            testResults.clear()
+                            showTestVectors = true
+                            testRunning = true
+                            scope.launch {
+                                for (i in TestVectors.vectors.indices) {
+                                    val result = withContext(Dispatchers.Default) {
+                                        TestVectors.runOne(engine, i)
+                                    }
+                                    testResults.add(result)
+                                }
+                                testRunning = false
+                            }
+                        }) {
+                            Icon(Icons.Default.CheckCircle, "Test Vectors")
                         }
-                    }) {
-                        Icon(Icons.Default.Settings, "Seed Settings")
-                    }
-                    IconButton(onClick = { isUnlocked = !isUnlocked }) {
-                        Icon(if (isUnlocked) Icons.Default.LockOpen else Icons.Default.Lock, "Lock/Unlock")
+                        IconButton(onClick = {
+                            authenticate { showSeedSettings = true }
+                        }) {
+                            Icon(Icons.Default.Settings, "Seed Settings")
+                        }
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, "Add Service")
+            if (isSeeded) {
+                FloatingActionButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Default.Add, "Add Service")
+                }
             }
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                placeholder = { Text("Search services...") },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
-                singleLine = true
-            )
-
-            LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                items(filteredServices) { service ->
-                    ListItem(
-                        headlineContent = { Text(service.name) },
-                        supportingContent = {
-                            val subtitle = listOfNotNull(
-                                service.type,
-                                service.comment.ifEmpty { null }
-                            ).joinToString(" - ")
-                            Text(subtitle)
-                        },
-                        trailingContent = {
-                            Row {
-                                IconButton(onClick = { editingService = service }) {
-                                    Icon(Icons.Default.Edit, "Edit")
-                                }
-                                IconButton(onClick = {
-                                    if (isUnlocked) {
-                                        selectedServiceForGen = service
-                                        generatedPassword = engine.generate(masterSeed, service.name, service.type, account)
-                                    } else {
-                                        authenticate {
-                                            isUnlocked = true
-                                            selectedServiceForGen = service
-                                            generatedPassword = engine.generate(masterSeed, service.name, service.type, account)
-                                        }
-                                    }
-                                }) {
-                                    Icon(Icons.Default.VpnKey, "Generate")
-                                }
-                            }
-                        },
-                        modifier = Modifier.clickable { editingService = service }
-                    )
-                    Divider()
+        if (!isSeeded) {
+            // Locked screen
+            Column(
+                modifier = Modifier.padding(padding).fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Enter seed to unlock", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = { showSeedPrompt = true }) {
+                    Text("Unlock")
                 }
             }
-        }
+        } else {
+            // Unlocked - show service list
+            Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    placeholder = { Text("Search services...") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    singleLine = true
+                )
 
-        // Dialogs
-        if (showAddDialog || editingService != null) {
-            ServiceEditDialog(
-                service = editingService,
-                onDismiss = { showAddDialog = false; editingService = null },
-                onSave = { name, type, comment ->
-                    val newList = services.toMutableList()
-                    if (editingService != null) {
-                        newList.removeIf { it.id == editingService!!.id }
-                        newList.add(DgpService(editingService!!.id, name, type, comment))
-                    } else {
-                        newList.add(DgpService(name = name, type = type, comment = comment))
-                    }
-                    saveServices(newList)
-                    showAddDialog = false
-                    editingService = null
-                },
-                onDelete = {
-                    if (editingService != null) {
-                        val newList = services.filter { it.id != editingService!!.id }
-                        saveServices(newList)
-                        editingService = null
-                    }
-                }
-            )
-        }
-
-        if (showSeedSettings) {
-            SeedSettingsDialog(
-                currentSeed = masterSeed,
-                onDismiss = { showSeedSettings = false },
-                onSave = { newSeed ->
-                    prefs.edit().putString("master_seed", newSeed).apply()
-                    masterSeed = newSeed
-                    showSeedSettings = false
-                },
-                onScanQr = { onResult ->
-                    val options = GmsBarcodeScannerOptions.Builder()
-                        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-                        .build()
-                    val scanner = GmsBarcodeScanning.getClient(context, options)
-                    scanner.startScan()
-                        .addOnSuccessListener { barcode ->
-                            barcode.rawValue?.let { onResult(it) }
-                        }
-                }
-            )
-        }
-
-        if (showAccountPrompt) {
-            AccountPromptDialog(
-                onDismiss = { showAccountPrompt = false },
-                onSave = { newAccount ->
-                    account = newAccount
-                    showAccountPrompt = false
-                }
-            )
-        }
-
-        if (showTestVectors) {
-            val passed = testResults.count { it.passed }
-            val failed = testResults.count { !it.passed }
-            val total = TestVectors.vectors.size
-            AlertDialog(
-                onDismissRequest = {
-                    showTestVectors = false
-                    testRunning = false
-                },
-                title = {
-                    Text(if (testRunning) "Running... ${testResults.size}/$total"
-                         else "$passed passed, $failed failed / $total")
-                },
-                text = {
-                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
-                        items(testResults.size) { i ->
-                            val r = testResults[i]
-                            Column(modifier = Modifier.padding(vertical = 2.dp)) {
-                                Text(
-                                    text = (if (r.passed) "PASS " else "FAIL ") + r.label,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (r.passed) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.error
-                                )
-                                if (r.passed) {
-                                    Text("  = ${r.actual}",
-                                         style = MaterialTheme.typography.bodySmall)
-                                } else {
-                                    Text("  expected: ${r.expected}",
-                                         style = MaterialTheme.typography.bodySmall)
-                                    Text("  actual:   ${r.actual}",
-                                         style = MaterialTheme.typography.bodySmall,
-                                         color = MaterialTheme.colorScheme.error)
+                LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    items(filteredServices) { service ->
+                        ListItem(
+                            headlineContent = { Text(service.name) },
+                            supportingContent = {
+                                val subtitle = listOfNotNull(
+                                    service.type,
+                                    service.comment.ifEmpty { null }
+                                ).joinToString(" - ")
+                                Text(subtitle)
+                            },
+                            trailingContent = {
+                                Row {
+                                    IconButton(onClick = { editingService = service }) {
+                                        Icon(Icons.Default.Edit, "Edit")
+                                    }
+                                    IconButton(onClick = {
+                                        selectedServiceForGen = service
+                                        generatedPassword = engine.generate(
+                                            masterSeed, service.name, service.type, account
+                                        )
+                                    }) {
+                                        Icon(Icons.Default.VpnKey, "Generate")
+                                    }
                                 }
-                            }
-                            if (i < testResults.size - 1) Divider()
+                            },
+                            modifier = Modifier.clickable { editingService = service }
+                        )
+                        Divider()
+                    }
+                }
+            }
+
+            // Dialogs
+            if (showAddDialog || editingService != null) {
+                ServiceEditDialog(
+                    service = editingService,
+                    onDismiss = { showAddDialog = false; editingService = null },
+                    onSave = { name, type, comment ->
+                        val newList = services.toMutableList()
+                        if (editingService != null) {
+                            newList.removeIf { it.id == editingService!!.id }
+                            newList.add(DgpService(editingService!!.id, name, type, comment))
+                        } else {
+                            newList.add(DgpService(name = name, type = type, comment = comment))
                         }
-                        if (testRunning) {
-                            item {
-                                LinearProgressIndicator(
-                                    progress = testResults.size.toFloat() / total,
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                                )
-                            }
+                        saveServices(newList)
+                        showAddDialog = false
+                        editingService = null
+                    },
+                    onDelete = {
+                        if (editingService != null) {
+                            val newList = services.filter { it.id != editingService!!.id }
+                            saveServices(newList)
+                            editingService = null
                         }
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
+                )
+            }
+
+            if (showSeedSettings) {
+                SeedSettingsDialog(
+                    currentSeed = masterSeed,
+                    onDismiss = { showSeedSettings = false },
+                    onSave = { newSeed ->
+                        // Re-encrypt services with new seed
+                        val json = serializeServices(services)
+                        prefs.edit()
+                            .putString("master_seed", newSeed)
+                            .putString("services_encrypted", ConfigCrypto.encrypt(json, newSeed))
+                            .apply()
+                        masterSeed = newSeed
+                        showSeedSettings = false
+                    },
+                    onScanQr = { onResult -> scanQr(onResult) }
+                )
+            }
+
+            if (showTestVectors) {
+                val passed = testResults.count { it.passed }
+                val failed = testResults.count { !it.passed }
+                val total = TestVectors.vectors.size
+                AlertDialog(
+                    onDismissRequest = {
                         showTestVectors = false
                         testRunning = false
-                    }) { Text("Close") }
-                }
-            )
-        }
-
-        if (selectedServiceForGen != null) {
-            AlertDialog(
-                onDismissRequest = { selectedServiceForGen = null },
-                title = { Text(selectedServiceForGen!!.name) },
-                text = {
-                    Column {
-                        Text("Type: ${selectedServiceForGen!!.type}", style = MaterialTheme.typography.bodySmall)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(generatedPassword, style = MaterialTheme.typography.headlineMedium)
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = {
-                        val clip = android.content.ClipData.newPlainText("DGP Password", generatedPassword)
-                        clipboardManager.setPrimaryClip(clip)
-                        scope.launch {
-                            kotlinx.coroutines.delay(15000)
-                            if (java.util.Objects.equals(clipboardManager.primaryClip?.getItemAt(0)?.text, generatedPassword)) {
-                                clipboardManager.setPrimaryClip(android.content.ClipData.newPlainText("", ""))
+                    },
+                    title = {
+                        Text(if (testRunning) "Running... ${testResults.size}/$total"
+                             else "$passed passed, $failed failed / $total")
+                    },
+                    text = {
+                        LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                            items(testResults.size) { i ->
+                                val r = testResults[i]
+                                Column(modifier = Modifier.padding(vertical = 2.dp)) {
+                                    Text(
+                                        text = (if (r.passed) "PASS " else "FAIL ") + r.label,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (r.passed) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.error
+                                    )
+                                    if (r.passed) {
+                                        Text("  = ${r.actual}",
+                                             style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        Text("  expected: ${r.expected}",
+                                             style = MaterialTheme.typography.bodySmall)
+                                        Text("  actual:   ${r.actual}",
+                                             style = MaterialTheme.typography.bodySmall,
+                                             color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                                if (i < testResults.size - 1) Divider()
+                            }
+                            if (testRunning) {
+                                item {
+                                    LinearProgressIndicator(
+                                        progress = testResults.size.toFloat() / total,
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                                    )
+                                }
                             }
                         }
-                        selectedServiceForGen = null
-                    }) {
-                        Text("Copy (15s)")
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showTestVectors = false
+                            testRunning = false
+                        }) { Text("Close") }
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { selectedServiceForGen = null }) { Text("Close") }
-                }
-            )
+                )
+            }
+
+            if (selectedServiceForGen != null) {
+                AlertDialog(
+                    onDismissRequest = { selectedServiceForGen = null },
+                    title = { Text(selectedServiceForGen!!.name) },
+                    text = {
+                        Column {
+                            Text("Type: ${selectedServiceForGen!!.type}",
+                                 style = MaterialTheme.typography.bodySmall)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(generatedPassword, style = MaterialTheme.typography.headlineMedium)
+                        }
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            val clip = android.content.ClipData.newPlainText("DGP Password", generatedPassword)
+                            clipboardManager.setPrimaryClip(clip)
+                            scope.launch {
+                                kotlinx.coroutines.delay(15000)
+                                if (java.util.Objects.equals(
+                                    clipboardManager.primaryClip?.getItemAt(0)?.text,
+                                    generatedPassword
+                                )) {
+                                    clipboardManager.setPrimaryClip(
+                                        android.content.ClipData.newPlainText("", "")
+                                    )
+                                }
+                            }
+                            selectedServiceForGen = null
+                        }) {
+                            Text("Copy (15s)")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { selectedServiceForGen = null }) { Text("Close") }
+                    }
+                )
+            }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SeedEntryDialog(
+    error: Boolean,
+    onUnlock: (String) -> Unit,
+    onScanQr: ((String) -> Unit) -> Unit
+) {
+    var seed by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("Unlock DGP") },
+        text = {
+            Column {
+                TextField(
+                    value = seed,
+                    onValueChange = { seed = it },
+                    label = { Text("Master Seed") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true
+                )
+                if (error) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Wrong seed — could not decrypt config",
+                         color = MaterialTheme.colorScheme.error,
+                         style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { onScanQr { scanned -> seed = scanned } },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Scan QR Code")
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (seed.isNotEmpty()) onUnlock(seed) },
+                enabled = seed.isNotEmpty()
+            ) { Text("Unlock") }
+        },
+        dismissButton = {}
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -550,5 +705,3 @@ fun SeedSettingsDialog(
         }
     )
 }
-
-
