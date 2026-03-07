@@ -5,6 +5,8 @@ import androidx.activity.compose.setContent
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -22,6 +24,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.dgp.engine.DgpEngine
+import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -102,6 +105,8 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
     var showAddDialog by remember { mutableStateOf(false) }
     var editingService by remember { mutableStateOf<DgpService?>(null) }
     var showSeedSettings by remember { mutableStateOf(false) }
+    var showTestVectors by remember { mutableStateOf(false) }
+    var testVectorOutput by remember { mutableStateOf("") }
     var selectedServiceForGen by remember { mutableStateOf<DgpService?>(null) }
     var generatedPassword by remember { mutableStateOf("") }
 
@@ -143,10 +148,17 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
             TopAppBar(
                 title = { Text("DGP") },
                 actions = {
-                    IconButton(onClick = { 
-                        authenticate { 
-                            showSeedSettings = true 
-                        } 
+                    IconButton(onClick = {
+                        val result = TestVectors.run(engine)
+                        testVectorOutput = result.output
+                        showTestVectors = true
+                    }) {
+                        Icon(Icons.Default.CheckCircle, "Test Vectors")
+                    }
+                    IconButton(onClick = {
+                        authenticate {
+                            showSeedSettings = true
+                        }
                     }) {
                         Icon(Icons.Default.Settings, "Seed Settings")
                     }
@@ -240,6 +252,21 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                     prefs.edit().putString("master_seed", newSeed).apply()
                     masterSeed = newSeed
                     showSeedSettings = false
+                }
+            )
+        }
+
+        if (showTestVectors) {
+            AlertDialog(
+                onDismissRequest = { showTestVectors = false },
+                title = { Text("Test Vectors") },
+                text = {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        Text(testVectorOutput, style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showTestVectors = false }) { Text("Close") }
                 }
             )
         }
