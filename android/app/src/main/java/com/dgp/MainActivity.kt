@@ -35,7 +35,8 @@ import java.util.UUID
 data class DgpService(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
-    val type: String = "alnum"
+    val type: String = "alnum",
+    val comment: String = ""
 )
 
 class MainActivity : FragmentActivity() {
@@ -90,7 +91,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
             val arr = JSONArray(servicesJson)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                list.add(DgpService(obj.getString("id"), obj.getString("name"), obj.optString("type", "alnum")))
+                list.add(DgpService(obj.getString("id"), obj.getString("name"), obj.optString("type", "alnum"), obj.optString("comment", "")))
             }
         } catch (e: Exception) {}
         list.sortedBy { it.name.lowercase() }
@@ -112,7 +113,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
     var selectedServiceForGen by remember { mutableStateOf<DgpService?>(null) }
     var generatedPassword by remember { mutableStateOf("") }
 
-    val filteredServices = services.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    val filteredServices = services.filter { it.name.contains(searchQuery, ignoreCase = true) || it.comment.contains(searchQuery, ignoreCase = true) }
 
     fun saveServices(newList: List<DgpService>) {
         val arr = JSONArray()
@@ -121,6 +122,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                 put("id", it.id)
                 put("name", it.name)
                 put("type", it.type)
+                put("comment", it.comment)
             })
         }
         val json = arr.toString()
@@ -206,7 +208,13 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                 items(filteredServices) { service ->
                     ListItem(
                         headlineContent = { Text(service.name) },
-                        supportingContent = { Text(service.type) },
+                        supportingContent = {
+                            val subtitle = listOfNotNull(
+                                service.type,
+                                service.comment.ifEmpty { null }
+                            ).joinToString(" - ")
+                            Text(subtitle)
+                        },
                         trailingContent = {
                             Row {
                                 IconButton(onClick = { editingService = service }) {
@@ -240,13 +248,13 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
             ServiceEditDialog(
                 service = editingService,
                 onDismiss = { showAddDialog = false; editingService = null },
-                onSave = { name, type ->
+                onSave = { name, type, comment ->
                     val newList = services.toMutableList()
                     if (editingService != null) {
                         newList.removeIf { it.id == editingService!!.id }
-                        newList.add(DgpService(editingService!!.id, name, type))
+                        newList.add(DgpService(editingService!!.id, name, type, comment))
                     } else {
-                        newList.add(DgpService(name = name, type = type))
+                        newList.add(DgpService(name = name, type = type, comment = comment))
                     }
                     saveServices(newList)
                     showAddDialog = false
@@ -379,11 +387,12 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
 fun ServiceEditDialog(
     service: DgpService?,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit,
+    onSave: (String, String, String) -> Unit,
     onDelete: () -> Unit
 ) {
     var name by remember { mutableStateOf(service?.name ?: "") }
     var type by remember { mutableStateOf(service?.type ?: "alnum") }
+    var comment by remember { mutableStateOf(service?.comment ?: "") }
     val types = listOf("alnum", "alnumlong", "hex", "hexlong", "base58", "base58long", "xkcd", "xkcdlong")
 
     AlertDialog(
@@ -392,6 +401,8 @@ fun ServiceEditDialog(
         text = {
             Column {
                 TextField(value = name, onValueChange = { name = it }, label = { Text("Service Name") })
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(value = comment, onValueChange = { comment = it }, label = { Text("Comment") })
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Password Type:", style = MaterialTheme.typography.labelMedium)
                 types.chunked(2).forEach { row ->
@@ -409,7 +420,7 @@ fun ServiceEditDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { if (name.isNotEmpty()) onSave(name, type) }) { Text("Save") }
+            Button(onClick = { if (name.isNotEmpty()) onSave(name, type, comment) }) { Text("Save") }
         },
         dismissButton = {
             Row {
