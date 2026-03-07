@@ -24,6 +24,7 @@ import androidx.security.crypto.MasterKey
 import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
+import java.security.MessageDigest
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
@@ -490,6 +491,13 @@ fun SeedSettingsDialog(
 ) {
     var seed by remember { mutableStateOf(currentSeed) }
     var visible by remember { mutableStateOf(false) }
+    var showFingerprint by remember { mutableStateOf(false) }
+
+    fun seedFingerprint(s: String): String {
+        if (s.isEmpty()) return "(no seed set)"
+        val digest = MessageDigest.getInstance("SHA-256").digest(s.toByteArray())
+        return "SHA-256: " + digest.take(8).joinToString("") { "%02x".format(it) }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -518,6 +526,19 @@ fun SeedSettingsDialog(
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Scan QR Code")
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick = { showFingerprint = !showFingerprint },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Fingerprint, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Seed Fingerprint")
+                }
+                if (showFingerprint) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(seedFingerprint(seed), style = MaterialTheme.typography.bodySmall)
                 }
             }
         },

@@ -11,4 +11,10 @@ if [ ! -f "$SEED_FILE" ]; then
     exit 1
 fi
 
-qrencode -r "$SEED_FILE" -t UTF8 -o -
+# Strip trailing newline so the QR content matches what the app stores
+SEED=$(tr -d '\n' < "$SEED_FILE")
+
+# Show fingerprint (matches the app's seed fingerprint display)
+printf 'SHA-256: %s\n' "$(printf '%s' "$SEED" | sha256sum | cut -c1-16)"
+
+printf '%s' "$SEED" | qrencode -t UTF8 -o -
