@@ -5,8 +5,6 @@ import androidx.activity.compose.setContent
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -26,7 +24,9 @@ import androidx.security.crypto.MasterKey
 import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Scanner
@@ -106,7 +106,8 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
     var editingService by remember { mutableStateOf<DgpService?>(null) }
     var showSeedSettings by remember { mutableStateOf(false) }
     var showTestVectors by remember { mutableStateOf(false) }
-    var testVectorOutput by remember { mutableStateOf("") }
+    val testResults = remember { mutableStateListOf<TestVectors.SingleTestResult>() }
+    var testRunning by remember { mutableStateOf(false) }
     var selectedServiceForGen by remember { mutableStateOf<DgpService?>(null) }
     var generatedPassword by remember { mutableStateOf("") }
 
@@ -149,9 +150,18 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                 title = { Text("DGP") },
                 actions = {
                     IconButton(onClick = {
-                        val result = TestVectors.run(engine)
-                        testVectorOutput = result.output
+                        testResults.clear()
                         showTestVectors = true
+                        testRunning = true
+                        scope.launch {
+                            for (i in TestVectors.vectors.indices) {
+                                val result = withContext(Dispatchers.Default) {
+                                    TestVectors.runOne(engine, i)
+                                }
+                                testResults.add(result)
+                            }
+                            testRunning = false
+                        }
                     }) {
                         Icon(Icons.Default.CheckCircle, "Test Vectors")
                     }
@@ -257,16 +267,57 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
         }
 
         if (showTestVectors) {
+            val passed = testResults.count { it.passed }
+            val failed = testResults.count { !it.passed }
+            val total = TestVectors.vectors.size
             AlertDialog(
-                onDismissRequest = { showTestVectors = false },
-                title = { Text("Test Vectors") },
+                onDismissRequest = {
+                    showTestVectors = false
+                    testRunning = false
+                },
+                title = {
+                    Text(if (testRunning) "Running... ${testResults.size}/$total"
+                         else "$passed passed, $failed failed / $total")
+                },
                 text = {
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        Text(testVectorOutput, style = MaterialTheme.typography.bodySmall)
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                        items(testResults.size) { i ->
+                            val r = testResults[i]
+                            Column(modifier = Modifier.padding(vertical = 2.dp)) {
+                                Text(
+                                    text = (if (r.passed) "PASS " else "FAIL ") + r.label,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (r.passed) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.error
+                                )
+                                if (r.passed) {
+                                    Text("  = ${r.actual}",
+                                         style = MaterialTheme.typography.bodySmall)
+                                } else {
+                                    Text("  expected: ${r.expected}",
+                                         style = MaterialTheme.typography.bodySmall)
+                                    Text("  actual:   ${r.actual}",
+                                         style = MaterialTheme.typography.bodySmall,
+                                         color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                            if (i < testResults.size - 1) Divider()
+                        }
+                        if (testRunning) {
+                            item {
+                                LinearProgressIndicator(
+                                    progress = testResults.size.toFloat() / total,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                                )
+                            }
+                        }
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { showTestVectors = false }) { Text("Close") }
+                    TextButton(onClick = {
+                        showTestVectors = false
+                        testRunning = false
+                    }) { Text("Close") }
                 }
             )
         }
