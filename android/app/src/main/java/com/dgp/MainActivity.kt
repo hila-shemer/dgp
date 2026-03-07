@@ -158,6 +158,10 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences) {
                         }) {
                             Icon(Icons.Default.Clear, "Clear Account")
                         }
+                    } else {
+                        IconButton(onClick = { showAccountPrompt = true }) {
+                            Icon(Icons.Default.Person, "Set Account")
+                        }
                     }
                     IconButton(onClick = {
                         testResults.clear()
