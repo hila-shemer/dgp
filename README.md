@@ -1,54 +1,35 @@
                          / Dgp /
 
-                 Determinstically Generated Passwords
+                 Deterministically Generated Passwords
 
 
     ~ What is Dgp?
 
-      A sqlite powered wrapper for:
-      pbkdf2_hex(seed+secret, service_name, iterations=8192)
-      and other password output formats (base58, xkcd, etc.)
+      An Android password manager that derives passwords deterministically
+      from a seed + account + service name using PBKDF2-HMAC-SHA1 (42,000
+      iterations). The same inputs always produce the same password — no
+      password database is stored or synced.
 
-    ~ How do I use it?
 
-      1. edit the configuration in the factory.py file or
-         export a DGP_SETTINGS environment variable
-         pointing to a configuration file or pass in a
-         dictionary with config values using the create_app
-         function.
+    ~ How does it work?
 
-      2. install the app from the root of the project directory
+      key = PBKDF2(seed + account, service_name, iterations=42000)
 
-         pip install --editable .
+      Output formats: hex, base58, alnum, xkcd wordlist, and long variants.
+      The seed is encrypted at rest using AES-256-GCM via the Android
+      Keystore, protected by biometric authentication.
 
-      3. instruct flask to use the right application
 
-         export FLASK_APP="dgp.factory:create_app()"
+    ~ How do I build it?
 
-      4. initialize the database with this command:
+      Requirements: JDK 21, Android SDK 34
 
-         flask initdb
+      ./gradlew assembleDebug     # debug APK
+      ./gradlew assembleRelease   # release APK
 
-      4b. Write a seed file:
-
-         echo "My seed which I also wrote down somewhere safe" > seed
-
-      5. now you can run dgp:
-
-         flask run
-
-         the application will greet you on
-         http://localhost:5000/
-
-    ~ Other "installation" instructions
-
-         Since the above did not work for me:
-         pip install .
-         export FLASK_APP=standalone.py
-         flask initdb
-         flask run
 
     ~ Is it tested?
 
-      Nope :)
-      Run `python setup.py test` to see the old tests fail.
+      Yes. 50+ test vectors are built into the app and can be run from
+      the settings screen. They validate all output formats and edge cases
+      (including 64-byte seed pre-hashing).
