@@ -1,4 +1,15 @@
-dgp.db
-seed
-.eggs/
+# Local Android SDK path — machine-specific
+local.properties
+
+# Gradle build outputs and caches
 build/
+.gradle/
+
+# Android build artifacts
+*.apk
+*.aab
+*.ap_
+
+# IDE files
+.idea/
+*.iml
