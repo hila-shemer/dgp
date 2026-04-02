@@ -32,11 +32,11 @@ dgp/
 │           └── security/
 │               ├── BiometricHelper.kt      # Android Keystore + biometric encryption
 │               └── ConfigCrypto.kt         # PBKDF2+AES-GCM config encryption
-├── gradle/wrapper/
+├── gradle/wrapper/                         # Gradle wrapper (intentionally checked in)
 ├── build.gradle                            # Root Gradle build script
 ├── settings.gradle                         # rootProject.name = "DGP", includes :app
-├── gradle.properties                       # AndroidX, Jetifier, JVM args, JDK path
-├── local.properties                        # Android SDK path (gitignored)
+├── gradle.properties                       # AndroidX, Jetifier, JVM args, JDK path (checked in)
+├── local.properties                        # Android SDK path (gitignored, machine-specific)
 ├── gradlew / gradlew.bat
 └── CLAUDE.md
 ```
@@ -51,7 +51,7 @@ dgp/
 
 **Requirements:** JDK 21, Android SDK (path set in `local.properties`), Android SDK 34.
 
-The Gradle wrapper is pre-configured. `gradle.properties` sets `org.gradle.java.home=/usr/lib/jvm/java-21-openjdk`.
+The Gradle wrapper (`gradle/wrapper/`) is intentionally checked into version control — standard Android practice that allows any developer to build without installing Gradle separately. `gradle.properties` is also checked in; it configures project-wide settings (AndroidX, Jetifier, JVM memory, JDK path). The only machine-specific file is `local.properties` (Android SDK path), which is gitignored.
 
 ## Architecture
 
@@ -125,7 +125,7 @@ Run from the app UI via the test button in settings.
 
 1. **Never change PBKDF2 parameters** (SHA1, 42000 iterations) — breaks compatibility with all existing stored passwords.
 2. **Test vectors are the source of truth** — any algorithm change must pass all vectors in `TestVectors.kt`.
-3. **No new storage** — passwords are never stored; they're always re-derived from seed + account + service.
+3. **Generated passwords are never stored** — always re-derived on demand from seed + account + service. Other data (service configs, account field) may be stored encrypted.
 4. **Seed security** — seed must remain in memory only while unlocked; always clear on lock/reboot.
 5. **Error handling in crypto** — `ConfigCrypto.decrypt()` returns `null` on failure; callers must handle gracefully.
 
