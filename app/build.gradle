@@ -44,6 +44,14 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
+
+    sourceSets {
+        // Make the BIP-39 word list available to JVM unit tests so DgpEngineTest
+        // can load the real word list without Android Assets infrastructure.
+        test {
+            resources.srcDirs += ['src/main/assets']
+        }
+    }
 }
 
 dependencies {
@@ -58,4 +66,21 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+
+    // ── JVM unit tests ────────────────────────────────────────────────────────
+    testImplementation("junit:junit:4.13.2")
+    // org.json is bundled in Android but not in the JVM; needed by ServiceParsingTest
+    testImplementation("org.json:json:20231013")
+
+    // ── Instrumentation tests (run on emulator / device) ─────────────────────
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("androidx.test:rules:1.5.0")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+
+    // Required for Compose UI test infrastructure (manifest + tooling)
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
