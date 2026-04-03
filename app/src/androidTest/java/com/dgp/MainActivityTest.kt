@@ -74,13 +74,13 @@ class MainActivityTest {
 
     @Test
     fun seedEntryDialog_unlockButton_isDisabledWhenFieldIsEmpty() {
-        composeTestRule.onNodeWithText("Unlock").assertIsNotEnabled()
+        composeTestRule.onNodeWithTag("unlock-button").assertIsNotEnabled()
     }
 
     @Test
     fun seedEntryDialog_unlockButton_isEnabledAfterTyping() {
         composeTestRule.onNodeWithTag("seed-input").performTextInput("s")
-        composeTestRule.onNodeWithText("Unlock").assertIsEnabled()
+        composeTestRule.onNodeWithTag("unlock-button").assertIsEnabled()
     }
 
     @Test
@@ -95,7 +95,7 @@ class MainActivityTest {
      */
     private fun unlockWith(seed: String) {
         composeTestRule.onNodeWithTag("seed-input").performTextInput(seed)
-        composeTestRule.onNodeWithText("Unlock").performClick()
+        composeTestRule.onNodeWithTag("unlock-button").performClick()
         composeTestRule.waitForIdle()
         // The account prompt appears when no encrypted account is stored.
         // Dismiss it so tests can reach the service list.
