@@ -25,7 +25,11 @@ import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
+import android.net.Uri
 import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import java.security.MessageDigest
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
@@ -121,6 +125,30 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     var showExportPinDialog by remember { mutableStateOf(false) }
     var showImportPinDialog by remember { mutableStateOf(false) }
 
+    fun loadImportedJson(json: String) {
+        val imported = parseServices(json)
+        if (imported.isEmpty()) {
+            android.widget.Toast.makeText(context, "No valid services found", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        services = imported
+        prefs.edit()
+            .putString("services_encrypted", ConfigCrypto.encrypt(json, masterSeed))
+            .apply()
+        android.widget.Toast.makeText(context, "Imported ${imported.size} services", android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    val importFileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val json = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+                if (json != null) loadImportedJson(json)
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     fun exportServices(pin: String) {
         scope.launch {
             try {
@@ -128,10 +156,13 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                 val encrypted = withContext(Dispatchers.Default) {
                     ConfigCrypto.encryptExport(json, pin)
                 }
+                val file = java.io.File(context.cacheDir, "dgp-export.enc")
+                file.writeText(encrypted)
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(android.content.Intent.EXTRA_TEXT, encrypted)
-                    putExtra(android.content.Intent.EXTRA_SUBJECT, "DGP Config Export")
+                    type = "application/octet-stream"
+                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 context.startActivity(android.content.Intent.createChooser(intent, "Export DGP Config"))
             } catch (e: Exception) {
@@ -140,7 +171,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         }
     }
 
-    fun importServices(pin: String) {
+    fun importEncryptedServices(pin: String) {
         scope.launch {
             try {
                 val clip = clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()
@@ -155,16 +186,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     android.widget.Toast.makeText(context, "Decryption failed — wrong PIN?", android.widget.Toast.LENGTH_LONG).show()
                     return@launch
                 }
-                val imported = parseServices(json)
-                if (imported.isEmpty()) {
-                    android.widget.Toast.makeText(context, "No valid services found", android.widget.Toast.LENGTH_LONG).show()
-                    return@launch
-                }
-                services = imported
-                prefs.edit()
-                    .putString("services_encrypted", ConfigCrypto.encrypt(json, masterSeed))
-                    .apply()
-                android.widget.Toast.makeText(context, "Imported ${imported.size} services", android.widget.Toast.LENGTH_SHORT).show()
+                loadImportedJson(json)
             } catch (e: Exception) {
                 android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
             }
@@ -547,7 +569,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     onDismiss = { showImportPinDialog = false },
                     onConfirm = { pin ->
                         showImportPinDialog = false
-                        importServices(pin)
+                        importEncryptedServices(pin)
                     }
                 )
             }
@@ -595,7 +617,8 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     },
                     onScanQr = { onResult -> scanQr(onResult) },
                     onExport = { showExportPinDialog = true },
-                    onImport = { showImportPinDialog = true }
+                    onImportEncrypted = { showImportPinDialog = true },
+                    onImportJson = { importFileLauncher.launch(arrayOf("application/json", "*/*")) }
                 )
             }
 
@@ -846,7 +869,8 @@ fun SeedSettingsDialog(
     onSave: (String) -> Unit,
     onScanQr: ((String) -> Unit) -> Unit,
     onExport: () -> Unit,
-    onImport: () -> Unit
+    onImportEncrypted: () -> Unit,
+    onImportJson: () -> Unit
 ) {
     var seed by remember { mutableStateOf(currentSeed) }
     var visible by remember { mutableStateOf(false) }
@@ -904,13 +928,16 @@ fun SeedSettingsDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Service Config", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(4.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onExport, modifier = Modifier.weight(1f)) {
-                        Text("Export")
-                    }
-                    OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) {
-                        Text("Import")
-                    }
+                OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
+                    Text("Export (encrypted)")
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedButton(onClick = onImportEncrypted, modifier = Modifier.fillMaxWidth()) {
+                    Text("Import (encrypted, from clipboard)")
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedButton(onClick = onImportJson, modifier = Modifier.fillMaxWidth()) {
+                    Text("Import (plaintext JSON file)")
                 }
             }
         },
