@@ -22,20 +22,25 @@ class BiometricHelper {
     }
 
     private fun generateKeyIfMissing() {
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        if (!keyStore.containsAlias(KEY_ALIAS)) {
-            val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
-            val spec = KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setUserAuthenticationRequired(true) // Requires Biometric/PIN
-                .setInvalidatedByBiometricEnrollment(true) // Security best practice
-                .build()
-            keyGenerator.init(spec)
-            keyGenerator.generateKey()
+        try {
+            val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+            if (!keyStore.containsAlias(KEY_ALIAS)) {
+                val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+                val spec = KeyGenParameterSpec.Builder(
+                    KEY_ALIAS,
+                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+                )
+                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .setUserAuthenticationRequired(true) // Requires Biometric/PIN
+                    .setInvalidatedByBiometricEnrollment(true) // Security best practice
+                    .build()
+                keyGenerator.init(spec)
+                keyGenerator.generateKey()
+            }
+        } catch (_: Exception) {
+            // Key cannot be created when no biometric or screen lock is enrolled.
+            // Biometric save/load will be unavailable; manual seed entry still works.
         }
     }
 

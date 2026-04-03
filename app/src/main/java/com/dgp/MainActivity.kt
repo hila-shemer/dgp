@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -609,6 +611,7 @@ fun SeedEntryDialog(
                     value = seed,
                     onValueChange = { seed = it },
                     label = { Text("Master Seed") },
+                    modifier = Modifier.semantics { testTag = "seed-input" },
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = { visible = !visible }) {
@@ -636,7 +639,8 @@ fun SeedEntryDialog(
         confirmButton = {
             Button(
                 onClick = { if (seed.isNotEmpty()) onUnlock(seed) },
-                enabled = seed.isNotEmpty()
+                enabled = seed.isNotEmpty(),
+                modifier = Modifier.semantics { testTag = "unlock-button" }
             ) { Text("Unlock") }
         },
         dismissButton = {}
@@ -661,7 +665,8 @@ fun ServiceEditDialog(
         title = { Text(if (service == null) "Add Service" else "Edit Service") },
         text = {
             Column {
-                TextField(value = name, onValueChange = { name = it }, label = { Text("Service Name") })
+                TextField(value = name, onValueChange = { name = it }, label = { Text("Service Name") },
+                    modifier = Modifier.semantics { testTag = "service-name-input" })
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(value = comment, onValueChange = { comment = it }, label = { Text("Comment") })
                 Spacer(modifier = Modifier.height(8.dp))
