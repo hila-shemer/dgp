@@ -27,8 +27,6 @@ import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
 import android.net.Uri
 import android.util.Base64
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import java.security.MessageDigest
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -55,6 +53,28 @@ class MainActivity : FragmentActivity() {
     private lateinit var dgpEngine: DgpEngine
     private lateinit var prefs: android.content.SharedPreferences
 
+    var importFileCallback: ((android.net.Uri?) -> Unit)? = null
+
+    fun launchFilePicker(callback: (android.net.Uri?) -> Unit) {
+        importFileCallback = callback
+        val intent = android.content.Intent(android.content.Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*"
+            addCategory(android.content.Intent.CATEGORY_OPENABLE)
+        }
+        @Suppress("DEPRECATION")
+        startActivityForResult(intent, REQUEST_IMPORT_FILE)
+    }
+
+    @Deprecated("Workaround: FragmentActivity rejects ActivityResultRegistry request codes (>= 0x10000)")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_IMPORT_FILE) {
+            importFileCallback?.invoke(if (resultCode == RESULT_OK) data?.data else null)
+            importFileCallback = null
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -76,6 +96,10 @@ class MainActivity : FragmentActivity() {
         setContent {
             DgpApp(dgpEngine, prefs, biometricHelper)
         }
+    }
+
+    companion object {
+        private const val REQUEST_IMPORT_FILE = 42
     }
 }
 
@@ -138,13 +162,16 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         android.widget.Toast.makeText(context, "Imported ${imported.size} services", android.widget.Toast.LENGTH_SHORT).show()
     }
 
-    val importFileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) {
-            try {
-                val json = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
-                if (json != null) loadImportedJson(json)
-            } catch (e: Exception) {
-                android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+    val mainActivity = context as MainActivity
+    fun launchImportFilePicker() {
+        mainActivity.launchFilePicker { uri ->
+            if (uri != null) {
+                try {
+                    val json = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+                    if (json != null) loadImportedJson(json)
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -618,7 +645,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     onScanQr = { onResult -> scanQr(onResult) },
                     onExport = { showExportPinDialog = true },
                     onImportEncrypted = { showImportPinDialog = true },
-                    onImportJson = { importFileLauncher.launch(arrayOf("application/json", "*/*")) }
+                    onImportJson = { launchImportFilePicker() }
                 )
             }
 
