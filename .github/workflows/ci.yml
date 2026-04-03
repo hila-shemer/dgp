@@ -38,7 +38,10 @@ jobs:
           restore-keys: gradle-
 
       - name: Run unit tests
-        run: ./gradlew :app:test --no-daemon
+        # Pass the JDK path that actions/setup-java installed, overriding the
+        # org.gradle.java.home=/usr/lib/jvm/java-21-openjdk in gradle.properties
+        # which is a machine-specific path that may not exist on CI runners.
+        run: ./gradlew :app:test --no-daemon -Dorg.gradle.java.home=$JAVA_HOME
 
       # Upload the HTML test report so you can inspect failures in the
       # GitHub Actions UI under the "Artifacts" section of the run.
@@ -99,7 +102,7 @@ jobs:
           target: default
           profile: Nexus 6
           # Pre-build the APKs before the emulator starts to reduce boot-idle time.
-          script: ./gradlew :app:connectedDebugAndroidTest --no-daemon
+          script: ./gradlew :app:connectedDebugAndroidTest --no-daemon -Dorg.gradle.java.home=$JAVA_HOME
 
       - name: Upload instrumentation test report
         if: always()

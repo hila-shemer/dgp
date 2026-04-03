@@ -194,8 +194,8 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
 
-        // Clear and retype the name
-        composeTestRule.onNodeWithTag("service-name-input").performTextInput("NewName")
+        // Replace the pre-filled name entirely (performTextInput appends; performTextReplacement replaces)
+        composeTestRule.onNodeWithTag("service-name-input").performTextReplacement("NewName")
         composeTestRule.onNodeWithText("Save").performClick()
         composeTestRule.waitForIdle()
 
