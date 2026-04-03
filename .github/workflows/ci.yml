@@ -1,0 +1,112 @@
+name: CI
+
+# Run on every push and on pull requests targeting main.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ── Job 1: JVM unit tests ────────────────────────────────────────────────────
+  # Runs DgpEngineTest and ServiceParsingTest.
+  # No emulator needed — pure JVM, completes in ~2 minutes.
+  unit-tests:
+    name: JVM Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      # Cache Gradle's download cache and build cache between runs.
+      # This saves ~1-2 minutes on subsequent runs.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
+      - name: Run unit tests
+        # Pass the JDK path that actions/setup-java installed, overriding the
+        # org.gradle.java.home=/usr/lib/jvm/java-21-openjdk in gradle.properties
+        # which is a machine-specific path that may not exist on CI runners.
+        run: ./gradlew :app:test --no-daemon -Dorg.gradle.java.home=$JAVA_HOME
+
+      # Upload the HTML test report so you can inspect failures in the
+      # GitHub Actions UI under the "Artifacts" section of the run.
+      - name: Upload unit test report
+        if: always()   # upload even when tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/testDebugUnitTest/
+
+  # ── Job 2: Instrumentation tests ────────────────────────────────────────────
+  # Runs ConfigCryptoInstrumentedTest, BiometricHelperInstrumentedTest,
+  # and MainActivityTest (Compose UI) on a real Android emulator inside CI.
+  # Takes ~15-20 minutes due to AVD boot time.
+  instrumentation-tests:
+    name: Instrumentation Tests (Emulator)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
+      # Enable KVM hardware acceleration for the Android emulator.
+      # Without this the emulator runs in software mode and is extremely slow.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # reactivecircus/android-emulator-runner boots an AVD, runs your Gradle
+      # command against it, then tears the AVD down — all in one step.
+      #
+      # api-level 30 = Android 11 (good balance of compatibility and speed).
+      # arch x86_64   = required for KVM acceleration on GitHub's x86-64 VMs.
+      # target default (AOSP) = no Google Play Services needed for our tests.
+      - name: Run instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          profile: Nexus 6
+          # Pre-build the APKs before the emulator starts to reduce boot-idle time.
+          script: ./gradlew :app:connectedDebugAndroidTest --no-daemon -Dorg.gradle.java.home=$JAVA_HOME
+
+      - name: Upload instrumentation test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumentation-test-report
+          path: app/build/reports/androidTests/connected/
