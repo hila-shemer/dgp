@@ -117,6 +117,60 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     var account by remember { mutableStateOf("") }
     var services by remember { mutableStateOf(listOf<DgpService>()) }
 
+    // Config export/import
+    var showExportPinDialog by remember { mutableStateOf(false) }
+    var showImportPinDialog by remember { mutableStateOf(false) }
+
+    fun exportServices(pin: String) {
+        scope.launch {
+            try {
+                val json = serializeServices(services)
+                val encrypted = withContext(Dispatchers.Default) {
+                    ConfigCrypto.encryptExport(json, pin)
+                }
+                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT, encrypted)
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, "DGP Config Export")
+                }
+                context.startActivity(android.content.Intent.createChooser(intent, "Export DGP Config"))
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Export failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    fun importServices(pin: String) {
+        scope.launch {
+            try {
+                val clip = clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()
+                if (clip.isNullOrEmpty()) {
+                    android.widget.Toast.makeText(context, "Clipboard is empty", android.widget.Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                val json = withContext(Dispatchers.Default) {
+                    ConfigCrypto.decryptExport(clip, pin)
+                }
+                if (json == null) {
+                    android.widget.Toast.makeText(context, "Decryption failed — wrong PIN?", android.widget.Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                val imported = parseServices(json)
+                if (imported.isEmpty()) {
+                    android.widget.Toast.makeText(context, "No valid services found", android.widget.Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                services = imported
+                prefs.edit()
+                    .putString("services_encrypted", ConfigCrypto.encrypt(json, masterSeed))
+                    .apply()
+                android.widget.Toast.makeText(context, "Imported ${imported.size} services", android.widget.Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     // UI States
     var showSeedPrompt by remember { mutableStateOf(true) }
     var showAccountPrompt by remember { mutableStateOf(false) }
@@ -317,7 +371,15 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         SeedEntryDialog(
             error = seedError,
             onUnlock = { seed -> unlockWithSeed(seed) },
-            onScanQr = { onResult -> scanQr(onResult) }
+            onScanQr = { onResult -> scanQr(onResult) },
+            onResetConfig = {
+                prefs.edit()
+                    .remove("services_encrypted")
+                    .remove("account_encrypted")
+                    .apply()
+                seedError = false
+                android.widget.Toast.makeText(context, "Config cleared", android.widget.Toast.LENGTH_SHORT).show()
+            }
         )
     }
 
@@ -410,6 +472,16 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                 OutlinedButton(onClick = { showSeedPrompt = true }) {
                     Text("Unlock")
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = {
+                    prefs.edit()
+                        .remove("services_encrypted")
+                        .remove("account_encrypted")
+                        .apply()
+                    android.widget.Toast.makeText(context, "Config cleared", android.widget.Toast.LENGTH_SHORT).show()
+                }) {
+                    Text("Reset Config", color = MaterialTheme.colorScheme.error)
+                }
             }
         } else {
             // Unlocked - show service list
@@ -456,6 +528,30 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                 }
             }
 
+            if (showExportPinDialog) {
+                PinDialog(
+                    title = "Export PIN",
+                    subtitle = "Encrypt config with a PIN for sharing",
+                    onDismiss = { showExportPinDialog = false },
+                    onConfirm = { pin ->
+                        showExportPinDialog = false
+                        exportServices(pin)
+                    }
+                )
+            }
+
+            if (showImportPinDialog) {
+                PinDialog(
+                    title = "Import PIN",
+                    subtitle = "Copy encrypted config to clipboard first",
+                    onDismiss = { showImportPinDialog = false },
+                    onConfirm = { pin ->
+                        showImportPinDialog = false
+                        importServices(pin)
+                    }
+                )
+            }
+
             // Dialogs
             if (showAddDialog || editingService != null) {
                 ServiceEditDialog(
@@ -497,7 +593,9 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                         saveSeedWithBiometric(newSeed)
                         showSeedSettings = false
                     },
-                    onScanQr = { onResult -> scanQr(onResult) }
+                    onScanQr = { onResult -> scanQr(onResult) },
+                    onExport = { showExportPinDialog = true },
+                    onImport = { showImportPinDialog = true }
                 )
             }
 
@@ -597,7 +695,8 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
 fun SeedEntryDialog(
     error: Boolean,
     onUnlock: (String) -> Unit,
-    onScanQr: ((String) -> Unit) -> Unit
+    onScanQr: ((String) -> Unit) -> Unit,
+    onResetConfig: () -> Unit = {}
 ) {
     var seed by remember { mutableStateOf("") }
     var visible by remember { mutableStateOf(false) }
@@ -643,7 +742,11 @@ fun SeedEntryDialog(
                 modifier = Modifier.semantics { testTag = "unlock-button" }
             ) { Text("Unlock") }
         },
-        dismissButton = {}
+        dismissButton = {
+            TextButton(onClick = onResetConfig) {
+                Text("Reset Config", color = MaterialTheme.colorScheme.error)
+            }
+        }
     )
 }
 
@@ -741,7 +844,9 @@ fun SeedSettingsDialog(
     currentSeed: String,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
-    onScanQr: ((String) -> Unit) -> Unit
+    onScanQr: ((String) -> Unit) -> Unit,
+    onExport: () -> Unit,
+    onImport: () -> Unit
 ) {
     var seed by remember { mutableStateOf(currentSeed) }
     var visible by remember { mutableStateOf(false) }
@@ -794,10 +899,63 @@ fun SeedSettingsDialog(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(seedFingerprint(seed), style = MaterialTheme.typography.bodySmall)
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Service Config", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onExport, modifier = Modifier.weight(1f)) {
+                        Text("Export")
+                    }
+                    OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) {
+                        Text("Import")
+                    }
+                }
             }
         },
         confirmButton = {
             Button(onClick = { onSave(seed) }) { Text("Update Seed") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+fun PinDialog(
+    title: String,
+    subtitle: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var pin by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(subtitle, style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = pin,
+                    onValueChange = { pin = it },
+                    label = { Text("PIN") },
+                    visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { visible = !visible }) {
+                            Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+                        }
+                    },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(pin) }, enabled = pin.isNotEmpty()) { Text("OK") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
