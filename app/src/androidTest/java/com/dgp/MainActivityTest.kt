@@ -194,8 +194,10 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
 
-        // Replace the pre-filled name entirely (performTextInput appends; performTextReplacement replaces)
-        composeTestRule.onNodeWithTag("service-name-input").performTextReplacement("NewName")
+        // Clear the pre-filled name then type the new one.
+        // (performTextReplacement requires ui-test 1.7+; BOM 2023.10.01 provides 1.5.4)
+        composeTestRule.onNodeWithTag("service-name-input").performTextClearance()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("NewName")
         composeTestRule.onNodeWithText("Save").performClick()
         composeTestRule.waitForIdle()
 
