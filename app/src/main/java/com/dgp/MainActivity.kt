@@ -639,7 +639,8 @@ fun SeedEntryDialog(
         confirmButton = {
             Button(
                 onClick = { if (seed.isNotEmpty()) onUnlock(seed) },
-                enabled = seed.isNotEmpty()
+                enabled = seed.isNotEmpty(),
+                modifier = Modifier.semantics { testTag = "unlock-button" }
             ) { Text("Unlock") }
         },
         dismissButton = {}
