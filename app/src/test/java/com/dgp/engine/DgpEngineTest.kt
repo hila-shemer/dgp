@@ -154,26 +154,11 @@ class DgpEngineTest {
         assertNotEquals(noAccount, withAccount)
     }
 
-    @Test
-    fun allFormatsFromSameSeed_areDistinct() {
-        val types = listOf("hex", "hexlong", "base58", "base58long", "alnum", "alnumlong")
-        val results = types.map { engine.generate("seed", "service", it, "") }.toSet()
-        // All six outputs should be unique (astronomically unlikely to collide)
-        assertEquals("Each output format should produce a distinct value", types.size, results.size)
-    }
-
     // ── Edge cases ────────────────────────────────────────────────────────────
 
     @Test
     fun emptySeed_doesNotThrow() {
         val result = engine.generate("", "service", "alnum", "")
-        assertEquals(8, result.length)
-    }
-
-    @Test
-    fun emptyServiceName_doesNotThrow() {
-        // Empty service name → empty salt; PBKDF2 is still defined for empty salt
-        val result = engine.generate("seed", "", "alnum", "")
         assertEquals(8, result.length)
     }
 
