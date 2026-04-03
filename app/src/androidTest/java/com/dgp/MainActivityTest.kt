@@ -1,6 +1,7 @@
 package com.dgp
 
 import android.content.Context
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -10,7 +11,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Before
@@ -194,10 +197,11 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
 
-        // Clear the pre-filled name then type the new one.
-        // (performTextReplacement requires ui-test 1.7+; BOM 2023.10.01 provides 1.5.4)
-        composeTestRule.onNodeWithTag("service-name-input").performTextClearance()
-        composeTestRule.onNodeWithTag("service-name-input").performTextInput("NewName")
+        // Directly set the field value, replacing the pre-filled name.
+        // performTextInput appends; performTextClearance/Replacement require ui-test 1.7+
+        // (BOM 2023.10.01 provides 1.5.4). SetText is available in all versions.
+        composeTestRule.onNodeWithTag("service-name-input")
+            .performSemanticsAction(SemanticsActions.SetText) { it(AnnotatedString("NewName")) }
         composeTestRule.onNodeWithText("Save").performClick()
         composeTestRule.waitForIdle()
 
