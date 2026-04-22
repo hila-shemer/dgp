@@ -47,7 +47,8 @@ data class DgpService(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
     val type: String = "alnum",
-    val comment: String = ""
+    val comment: String = "",
+    val archived: Boolean = false
 )
 
 class MainActivity : FragmentActivity() {
@@ -116,7 +117,8 @@ fun parseServices(json: String): List<DgpService> {
                 obj.getString("id"),
                 obj.getString("name"),
                 obj.optString("type", "alnum"),
-                obj.optString("comment", "")
+                obj.optString("comment", ""),
+                obj.optBoolean("archived", false)
             ))
         }
     } catch (_: Exception) {}
@@ -131,6 +133,7 @@ fun serializeServices(services: List<DgpService>): String {
             put("name", it.name)
             put("type", it.type)
             put("comment", it.comment)
+            put("archived", it.archived)
         })
     }
     return arr.toString()
@@ -236,6 +239,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     var selectedServiceForGen by remember { mutableStateOf<DgpService?>(null) }
     var generatedPassword by remember { mutableStateOf("") }
     var seedError by remember { mutableStateOf(false) }
+    var showArchived by remember { mutableStateOf(false) }
 
     fun loadServices(seed: String): Boolean {
         val encrypted = prefs.getString("services_encrypted", null)
@@ -449,15 +453,16 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         )
     }
 
-    val filteredServices = services.filter {
-        it.name.contains(searchQuery, ignoreCase = true) ||
-        it.comment.contains(searchQuery, ignoreCase = true)
+    val visibleServices = services.filter {
+        it.archived == showArchived &&
+        (it.name.contains(searchQuery, ignoreCase = true) ||
+         it.comment.contains(searchQuery, ignoreCase = true))
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("DGP") },
+                title = { Text(if (showArchived) "DGP — Archive" else "DGP") },
                 actions = {
                     if (isSeeded) {
                         if (account.isNotEmpty()) {
@@ -488,6 +493,14 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                         }) {
                             Icon(Icons.Default.CheckCircle, "Test Vectors")
                         }
+                        IconButton(onClick = { showArchived = !showArchived }) {
+                            Icon(
+                                Icons.Default.Archive,
+                                if (showArchived) "Show Active" else "Show Archived",
+                                tint = if (showArchived) MaterialTheme.colorScheme.primary
+                                       else LocalContentColor.current
+                            )
+                        }
                         IconButton(onClick = {
                             authenticate { showSeedSettings = true }
                         }) {
@@ -498,7 +511,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             )
         },
         floatingActionButton = {
-            if (isSeeded) {
+            if (isSeeded && !showArchived) {
                 FloatingActionButton(onClick = { showAddDialog = true }) {
                     Icon(Icons.Default.Add, "Add Service")
                 }
@@ -549,14 +562,21 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
 
                 val lazyListState = rememberLazyListState()
                 val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-                    val newList = services.toMutableList().apply {
-                        add(to.index, removeAt(from.index))
+                    if (searchQuery.isNotEmpty()) return@rememberReorderableLazyListState
+                    val movedId = visibleServices.getOrNull(from.index)?.id ?: return@rememberReorderableLazyListState
+                    val targetId = visibleServices.getOrNull(to.index)?.id ?: return@rememberReorderableLazyListState
+                    val srcIdx = services.indexOfFirst { it.id == movedId }
+                    val tgtIdx = services.indexOfFirst { it.id == targetId }
+                    if (srcIdx >= 0 && tgtIdx >= 0) {
+                        val newList = services.toMutableList().apply {
+                            add(tgtIdx, removeAt(srcIdx))
+                        }
+                        saveServices(newList)
                     }
-                    saveServices(newList)
                 }
 
                 LazyColumn(state = lazyListState, modifier = Modifier.fillMaxWidth().weight(1f)) {
-                    items(filteredServices, key = { it.id }) { service ->
+                    items(visibleServices, key = { it.id }) { service ->
                         ReorderableItem(reorderableState, key = service.id) { _ ->
                             Column {
                                 ListItem(
@@ -599,7 +619,12 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                                             }
                                         }
                                     },
-                                    modifier = Modifier.clickable { editingService = service }
+                                    modifier = Modifier.clickable {
+                                        selectedServiceForGen = service
+                                        generatedPassword = engine.generate(
+                                            masterSeed, service.name, service.type, account
+                                        )
+                                    }
                                 )
                                 Divider()
                             }
@@ -642,7 +667,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                         if (editingService != null) {
                             val idx = newList.indexOfFirst { it.id == editingService!!.id }
                             if (idx >= 0) {
-                                newList[idx] = DgpService(editingService!!.id, name, type, comment)
+                                newList[idx] = editingService!!.copy(name = name, type = type, comment = comment)
                             }
                         } else {
                             newList.add(DgpService(name = name, type = type, comment = comment))
@@ -654,6 +679,15 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     onDelete = {
                         if (editingService != null) {
                             val newList = services.filter { it.id != editingService!!.id }
+                            saveServices(newList)
+                            editingService = null
+                        }
+                    },
+                    onArchiveToggle = {
+                        if (editingService != null) {
+                            val newList = services.map {
+                                if (it.id == editingService!!.id) it.copy(archived = !it.archived) else it
+                            }
                             saveServices(newList)
                             editingService = null
                         }
@@ -839,7 +873,8 @@ fun ServiceEditDialog(
     service: DgpService?,
     onDismiss: () -> Unit,
     onSave: (String, String, String) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onArchiveToggle: () -> Unit
 ) {
     var name by remember { mutableStateOf(service?.name ?: "") }
     var type by remember { mutableStateOf(service?.type ?: "alnum") }
@@ -878,6 +913,9 @@ fun ServiceEditDialog(
         dismissButton = {
             Row {
                 if (service != null) {
+                    TextButton(onClick = onArchiveToggle) {
+                        Text(if (service.archived) "Unarchive" else "Archive")
+                    }
                     TextButton(onClick = onDelete) { Text("Delete", color = MaterialTheme.colorScheme.error) }
                 }
                 TextButton(onClick = onDismiss) { Text("Cancel") }
