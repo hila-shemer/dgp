@@ -36,8 +36,25 @@ class DgpEngine(private val wordList: List<String>) {
             "base58long" -> getBase58(binData).take(12)
             "xkcd" -> getXkcd(binData, 4)
             "xkcdlong" -> getXkcd(binData, 6)
+            // 32-byte AES-256 key material, hex-encoded. Used by vault entries
+            // to encrypt/decrypt user-supplied secrets; never shown to users.
+            "aeskey" -> binToHex(binData.sliceArray(0 until 32))
             else -> "unknown type"
         }
+    }
+
+    /**
+     * Derive a 32-byte AES-256 key from the same (seed + secret, name) PBKDF2
+     * parameters used for password generation. Convenience wrapper around the
+     * "aeskey" entry type that returns raw bytes instead of hex.
+     */
+    fun deriveAesKey(seed: String, name: String, secret: String, iterations: Int = 42000): ByteArray {
+        val seedSecret = seed + secret
+        val salt = name.toByteArray()
+        val keySpec: KeySpec = PBEKeySpec(seedSecret.toCharArray(), salt, iterations, 40 * 8)
+        val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+        val binData = factory.generateSecret(keySpec).encoded
+        return binData.sliceArray(0 until 32)
     }
 
     private fun binToHex(data: ByteArray): String {
