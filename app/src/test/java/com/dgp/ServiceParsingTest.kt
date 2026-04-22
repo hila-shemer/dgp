@@ -160,4 +160,40 @@ class ServiceParsingTest {
         val parsed = parseServices(serializeServices(emptyList()))
         assertTrue(parsed.isEmpty())
     }
+
+    // ── Archived field ────────────────────────────────────────────────────────
+
+    @Test
+    fun parseServices_missingArchivedField_defaultsToFalse() {
+        // Configs written before the archive feature don't have this field.
+        val json = """[{"id":"1","name":"GitHub","type":"alnum","comment":""}]"""
+        val services = parseServices(json)
+        assertEquals(false, services[0].archived)
+    }
+
+    @Test
+    fun parseServices_archivedTrue_isParsed() {
+        val json = """[{"id":"1","name":"GitHub","type":"alnum","comment":"","archived":true}]"""
+        val services = parseServices(json)
+        assertEquals(true, services[0].archived)
+    }
+
+    @Test
+    fun serializeServices_includesArchivedField() {
+        val service = DgpService("1", "GitHub", "alnum", "", archived = true)
+        val json = serializeServices(listOf(service))
+        assertTrue("archived field should appear in JSON", json.contains("\"archived\""))
+        assertTrue("archived value true should appear in JSON", json.contains("true"))
+    }
+
+    @Test
+    fun roundTrip_archivedFlagPreserved_forBothValues() {
+        val original = listOf(
+            DgpService("1", "Active", "alnum", "", archived = false),
+            DgpService("2", "Archived", "alnum", "", archived = true)
+        )
+        val parsed = parseServices(serializeServices(original))
+        assertEquals(false, parsed[0].archived)
+        assertEquals(true, parsed[1].archived)
+    }
 }
