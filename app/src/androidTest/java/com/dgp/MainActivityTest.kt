@@ -404,6 +404,166 @@ class MainActivityTest {
         assertEquals(0, composeTestRule.onAllNodesWithContentDescription("Reorder").fetchSemanticsNodes().size)
     }
 
+    // ── Tap behavior: row tap generates, edit icon edits ─────────────────────
+
+    @Test
+    fun tapRow_opensGeneratePasswordDialog() {
+        unlockWith("testseedTapGen")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("TapMe")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+
+        // Tap the row (via the headline text) — should open generate dialog, not edit
+        composeTestRule.onNodeWithText("TapMe").performClick()
+        composeTestRule.waitForIdle()
+
+        // Copy button is unique to the generate dialog
+        composeTestRule.onNodeWithText("Copy").assertIsDisplayed()
+    }
+
+    @Test
+    fun tapRow_doesNotOpenEditDialog() {
+        unlockWith("testseedTapNoEdit")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("NotEdit")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("NotEdit").performClick()
+        composeTestRule.waitForIdle()
+
+        // The edit dialog title would be "Edit Service" — must not be visible
+        composeTestRule.onNodeWithText("Edit Service").assertDoesNotExist()
+    }
+
+    @Test
+    fun editIcon_stillOpensEditDialog() {
+        unlockWith("testseedEditIcon")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("EditMe")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Edit Service").assertIsDisplayed()
+    }
+
+    // ── Archive ───────────────────────────────────────────────────────────────
+
+    @Test
+    fun archive_removesServiceFromMainList() {
+        unlockWith("testseedArchive1")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("ArchiveMe")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Archive").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("ArchiveMe").assertDoesNotExist()
+    }
+
+    @Test
+    fun archiveToggle_revealsArchivedServiceAndUpdatesTitle() {
+        unlockWith("testseedArchive2")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("InTheArchive")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Archive").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Show Archived").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("InTheArchive").assertIsDisplayed()
+        composeTestRule.onNodeWithText("DGP — Archive").assertIsDisplayed()
+    }
+
+    @Test
+    fun archiveView_hidesAddServiceFab() {
+        unlockWith("testseedArchive3")
+        composeTestRule.onNodeWithContentDescription("Show Archived").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(0,
+            composeTestRule.onAllNodesWithContentDescription("Add Service").fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun unarchive_movesServiceBackToActive() {
+        unlockWith("testseedArchive4")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("Boomerang")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Archive").performClick()
+        composeTestRule.waitForIdle()
+
+        // Switch to archive view, then unarchive
+        composeTestRule.onNodeWithContentDescription("Show Archived").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Unarchive").performClick()
+        composeTestRule.waitForIdle()
+
+        // Back to active view — service should be there
+        composeTestRule.onNodeWithContentDescription("Show Active").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Boomerang").assertIsDisplayed()
+    }
+
+    @Test
+    fun editArchivedService_preservesArchivedFlag() {
+        // Regression: the previous DgpService(...) constructor in the save path
+        // omitted `archived`, which silently un-archived a service when edited.
+        unlockWith("testseedArchive5")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("StayArchived")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Archive").performClick()
+        composeTestRule.waitForIdle()
+
+        // In archive view, edit (rename) the archived service
+        composeTestRule.onNodeWithContentDescription("Show Archived").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input")
+            .performSemanticsAction(SemanticsActions.SetText) { it(AnnotatedString("RenamedArchived")) }
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+
+        // Renamed service still present in archive view
+        composeTestRule.onNodeWithText("RenamedArchived").assertIsDisplayed()
+
+        // And NOT in active view
+        composeTestRule.onNodeWithContentDescription("Show Active").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("RenamedArchived").assertDoesNotExist()
+    }
+
     // ── Edit preserves position (regression: old code moved edited item to end) ─
 
     @Test
