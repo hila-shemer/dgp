@@ -38,6 +38,14 @@ CI (`.github/workflows/ci.yml`) runs both: JVM on every push, instrumentation on
 
 Eight output formats share the same 40-byte key: `hex`/`hexlong`, `base58`/`base58long`, `alnum`/`alnumlong` (base58 window with at least one upper+lower+digit), `xkcd`/`xkcdlong` (4 or 6 BIP-39 words indexed via BigInteger). Base58 alphabet: `123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz`.
 
+A ninth entry type `aeskey` returns the first 32 bytes of the PBKDF2 output as a hex-encoded 64-char string. It is never shown to the user — it exists as key material for **vault entries** (see below). `DgpEngine.deriveAesKey(seed, name, secret)` is a convenience wrapper that returns the raw 32-byte `ByteArray`.
+
+### Vault entries
+
+`DgpService` has an optional `encryptedSecret: String?` holding `Base64(IV ‖ AES-256-GCM ciphertext)`. Only set for entries with `type == "vault"`. The encryption key is derived via `DgpEngine.deriveAesKey(seed, service.name, account)` — same inputs as password gen, so renaming a vault service or changing the account/seed invalidates its secret. Editing a vault entry pre-decrypts the blob with the **current** name+account so the user sees the existing plaintext; saving always re-encrypts with the (possibly new) name/account, which naturally handles rename. `ConfigCrypto.encryptWithRawKey` / `decryptWithRawKey` do AES-GCM with a caller-supplied 32-byte key (no PBKDF2 upstream).
+
+Vault entries are the **only** user-chosen secret material the app stores. They exist for legacy/externally-assigned passwords and OTP seeds that aren't deterministically derivable. See invariant #3 below.
+
 ### Security — `app/src/main/java/com/dgp/security/`
 
 **BiometricHelper.kt** — seed encryption at rest. AES-256-GCM via Android Keystore, key requires biometric auth and is invalidated on new enrollment. Stores IV (12 B) ‖ ciphertext. Falls back gracefully on older devices.
@@ -49,7 +57,7 @@ Eight output formats share the same 40-byte key: `hex`/`hexlong`, `base58`/`base
 
 ### UI — `app/src/main/java/com/dgp/MainActivity.kt` (~1.1k lines)
 
-Jetpack Compose + Material3. `MainActivity` extends `FragmentActivity` (required by `BiometricPrompt`). States: locked (seed entry / biometric unlock) → unlocked (service list, search, manual drag-reorder via `sh.calvin.reorderable`, archive toggle) → tap a service to generate → password display with clipboard copy. Settings cover seed change, QR export/import, and the test-vector runner.
+Jetpack Compose + Material3. `MainActivity` extends `FragmentActivity` (required by `BiometricPrompt`). States: locked (seed entry / biometric unlock) → unlocked (service list, search, manual drag-reorder via `sh.calvin.reorderable`, archive toggle) → tap a service to generate → password display with clipboard copy. Settings cover seed change, PIN-encrypted config export (share-sheet) / import (from clipboard), plaintext-JSON file import, QR-code scanning (used to fill the seed field), and the test-vector runner.
 
 Clipboard copy sets `ClipDescription.EXTRA_IS_SENSITIVE = true` (Android 13+). The account field is persisted encrypted with the seed and cleared on reboot and on biometric failure.
 
@@ -67,5 +75,5 @@ Clipboard copy sets `ClipDescription.EXTRA_IS_SENSITIVE = true` (Android 13+). T
 
 1. **Never change the password-generation PBKDF2 parameters** (SHA1, 42,000 iterations, 40-byte key, `seed+account` as key material, service name as salt). Any change breaks every password anyone has ever derived.
 2. **Test vectors are the source of truth** — any algorithm change must keep `TestVectors.kt` / `DgpEngineTest` green.
-3. **Generated passwords are never stored** — always re-derived on demand. Only service configs and the encrypted account field are persisted.
+3. **Generated passwords are never stored** — always re-derived on demand. Only service configs, the encrypted account field, and (for `vault` entries) an encrypted user-supplied secret are persisted. Vault entries are the sole exception to "nothing secret is stored"; losing the config therefore loses those secrets.
 4. **Seed lives in memory only while unlocked** — clear on lock and on reboot.
