@@ -229,4 +229,52 @@ class DgpEngineTest {
         assertEquals("StemDialSureHenAlbumDonor",
             engine.generate("pass", "salt", "xkcdlong", "word"))
     }
+
+    // ── aeskey entry type ─────────────────────────────────────────────────────
+
+    @Test
+    fun aeskey_returns64HexCharacters() {
+        val result = engine.generate("seed", "service", "aeskey", "account")
+        assertEquals(64, result.length)
+        assertTrue("aeskey must be lowercase hex", result.all { it in '0'..'9' || it in 'a'..'f' })
+    }
+
+    @Test
+    fun aeskey_isDeterministic() {
+        val a = engine.generate("seed", "service", "aeskey", "account")
+        val b = engine.generate("seed", "service", "aeskey", "account")
+        assertEquals(a, b)
+    }
+
+    @Test
+    fun aeskey_firstBytesMatchHexlong() {
+        // aeskey takes the first 32 bytes of the same PBKDF2 stream that
+        // hex/hexlong take their first 4/8 bytes from. The first 16 hex chars
+        // of aeskey must therefore equal the hexlong output for the same inputs.
+        val aes = engine.generate("pass", "salt", "aeskey", "word")
+        val hexlong = engine.generate("pass", "salt", "hexlong", "word")
+        assertEquals("842b8a866ef6f789", hexlong)
+        assertEquals(hexlong, aes.substring(0, 16))
+    }
+
+    @Test
+    fun aeskey_differsAcrossSeedServiceAccount() {
+        val base = engine.generate("seed", "service", "aeskey", "account")
+        assertNotEquals(base, engine.generate("other", "service", "aeskey", "account"))
+        assertNotEquals(base, engine.generate("seed", "other", "aeskey", "account"))
+        assertNotEquals(base, engine.generate("seed", "service", "aeskey", "other"))
+    }
+
+    @Test
+    fun deriveAesKey_returns32Bytes() {
+        val bytes = engine.deriveAesKey("seed", "service", "account")
+        assertEquals(32, bytes.size)
+    }
+
+    @Test
+    fun deriveAesKey_matchesAeskeyHex() {
+        val bytes = engine.deriveAesKey("pass", "salt", "word")
+        val hex = bytes.joinToString("") { "%02x".format(it) }
+        assertEquals(engine.generate("pass", "salt", "aeskey", "word"), hex)
+    }
 }
