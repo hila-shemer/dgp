@@ -37,14 +37,14 @@ class ServiceParsingTest {
     }
 
     @Test
-    fun parseServices_isSortedCaseInsensitively() {
+    fun parseServices_preservesInsertionOrder() {
         val json = """[
             {"id":"1","name":"zoom","type":"alnum","comment":""},
             {"id":"2","name":"Apple","type":"alnum","comment":""},
             {"id":"3","name":"microsoft","type":"alnum","comment":""}
         ]"""
         val names = parseServices(json).map { it.name }
-        assertEquals(listOf("Apple", "microsoft", "zoom"), names)
+        assertEquals(listOf("zoom", "Apple", "microsoft"), names)
     }
 
     @Test
@@ -132,14 +132,12 @@ class ServiceParsingTest {
             DgpService("id-3", "AWS", "base58long", "")
         )
         val parsed = parseServices(serializeServices(original))
-        // parseServices sorts by name; re-sort original the same way for comparison
-        val expected = original.sortedBy { it.name.lowercase() }
-        assertEquals(expected.size, parsed.size)
-        for (i in expected.indices) {
-            assertEquals(expected[i].id, parsed[i].id)
-            assertEquals(expected[i].name, parsed[i].name)
-            assertEquals(expected[i].type, parsed[i].type)
-            assertEquals(expected[i].comment, parsed[i].comment)
+        assertEquals(original.size, parsed.size)
+        for (i in original.indices) {
+            assertEquals(original[i].id, parsed[i].id)
+            assertEquals(original[i].name, parsed[i].name)
+            assertEquals(original[i].type, parsed[i].type)
+            assertEquals(original[i].comment, parsed[i].comment)
         }
     }
 
