@@ -17,3 +17,5 @@ build/
 seed
 
 plan.md
+patches/
+.notes/
