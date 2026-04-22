@@ -196,4 +196,55 @@ class ServiceParsingTest {
         assertEquals(false, parsed[0].archived)
         assertEquals(true, parsed[1].archived)
     }
+
+    // ── encryptedSecret field (vault entries) ─────────────────────────────────
+
+    @Test
+    fun parseServices_missingEncryptedSecretField_defaultsToNull() {
+        val json = """[{"id":"1","name":"GitHub","type":"alnum","comment":""}]"""
+        val services = parseServices(json)
+        assertEquals(null, services[0].encryptedSecret)
+    }
+
+    @Test
+    fun parseServices_encryptedSecretPresent_isParsed() {
+        val json = """[{"id":"1","name":"x","type":"vault","comment":"","encryptedSecret":"blob123"}]"""
+        val services = parseServices(json)
+        assertEquals("blob123", services[0].encryptedSecret)
+    }
+
+    @Test
+    fun parseServices_encryptedSecretExplicitNull_treatedAsNull() {
+        val json = """[{"id":"1","name":"x","type":"alnum","comment":"","encryptedSecret":null}]"""
+        val services = parseServices(json)
+        assertEquals(null, services[0].encryptedSecret)
+    }
+
+    @Test
+    fun serializeServices_omitsEncryptedSecretWhenNull() {
+        // Non-vault entries shouldn't carry a null field in JSON.
+        val service = DgpService("1", "GitHub", "alnum", "")
+        val json = serializeServices(listOf(service))
+        assertTrue("null encryptedSecret should not appear",
+            !json.contains("encryptedSecret"))
+    }
+
+    @Test
+    fun serializeServices_includesEncryptedSecretWhenPresent() {
+        val service = DgpService("1", "x", "vault", "", encryptedSecret = "blob")
+        val json = serializeServices(listOf(service))
+        assertTrue(json.contains("\"encryptedSecret\""))
+        assertTrue(json.contains("blob"))
+    }
+
+    @Test
+    fun roundTrip_encryptedSecretPreserved() {
+        val original = listOf(
+            DgpService("1", "plain", "alnum", ""),
+            DgpService("2", "vaulted", "vault", "", encryptedSecret = "ciphertext-base64")
+        )
+        val parsed = parseServices(serializeServices(original))
+        assertEquals(null, parsed[0].encryptedSecret)
+        assertEquals("ciphertext-base64", parsed[1].encryptedSecret)
+    }
 }

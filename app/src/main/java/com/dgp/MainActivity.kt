@@ -48,7 +48,10 @@ data class DgpService(
     val name: String,
     val type: String = "alnum",
     val comment: String = "",
-    val archived: Boolean = false
+    val archived: Boolean = false,
+    // Base64(IV ‖ AES-256-GCM ciphertext). Only set for "vault" entries.
+    // Key derivation: DgpEngine.deriveAesKey(seed, name, account).
+    val encryptedSecret: String? = null
 )
 
 class MainActivity : FragmentActivity() {
@@ -118,7 +121,9 @@ fun parseServices(json: String): List<DgpService> {
                 obj.getString("name"),
                 obj.optString("type", "alnum"),
                 obj.optString("comment", ""),
-                obj.optBoolean("archived", false)
+                obj.optBoolean("archived", false),
+                if (obj.has("encryptedSecret") && !obj.isNull("encryptedSecret"))
+                    obj.getString("encryptedSecret") else null
             ))
         }
     } catch (_: Exception) {}
@@ -134,6 +139,7 @@ fun serializeServices(services: List<DgpService>): String {
             put("type", it.type)
             put("comment", it.comment)
             put("archived", it.archived)
+            if (it.encryptedSecret != null) put("encryptedSecret", it.encryptedSecret)
         })
     }
     return arr.toString()
@@ -395,6 +401,15 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         }
     }
 
+    fun generateForService(service: DgpService): String {
+        if (service.type != "vault") {
+            return engine.generate(masterSeed, service.name, service.type, account)
+        }
+        val blob = service.encryptedSecret ?: return "(no secret stored)"
+        val key = engine.deriveAesKey(masterSeed, service.name, account)
+        return ConfigCrypto.decryptWithRawKey(blob, key) ?: "(decryption failed)"
+    }
+
     fun scanQr(onResult: (String) -> Unit) {
         val options = GmsBarcodeScannerOptions.Builder()
             .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
@@ -611,9 +626,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                                             }
                                             IconButton(onClick = {
                                                 selectedServiceForGen = service
-                                                generatedPassword = engine.generate(
-                                                    masterSeed, service.name, service.type, account
-                                                )
+                                                generatedPassword = generateForService(service)
                                             }) {
                                                 Icon(Icons.Default.VpnKey, "Generate")
                                             }
@@ -621,9 +634,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                                     },
                                     modifier = Modifier.clickable {
                                         selectedServiceForGen = service
-                                        generatedPassword = engine.generate(
-                                            masterSeed, service.name, service.type, account
-                                        )
+                                        generatedPassword = generateForService(service)
                                     }
                                 )
                                 Divider()
@@ -659,34 +670,56 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
 
             // Dialogs
             if (showAddDialog || editingService != null) {
+                // Pre-decrypt existing vault secret so the user can edit it.
+                // Failure → empty field + a warning shown in the dialog.
+                val editing = editingService
+                val existingBlob = editing?.encryptedSecret
+                val (initialSecret, decryptFailed) = if (editing?.type == "vault" && existingBlob != null) {
+                    val key = engine.deriveAesKey(masterSeed, editing.name, account)
+                    val decrypted = ConfigCrypto.decryptWithRawKey(existingBlob, key)
+                    if (decrypted != null) decrypted to false else "" to true
+                } else "" to false
+
                 ServiceEditDialog(
-                    service = editingService,
+                    service = editing,
+                    initialVaultSecret = initialSecret,
+                    vaultDecryptFailed = decryptFailed,
                     onDismiss = { showAddDialog = false; editingService = null },
-                    onSave = { name, type, comment ->
+                    onSave = { name, type, comment, vaultSecret ->
+                        val encryptedSecret = if (type == "vault" && !vaultSecret.isNullOrEmpty()) {
+                            val key = engine.deriveAesKey(masterSeed, name, account)
+                            ConfigCrypto.encryptWithRawKey(vaultSecret, key)
+                        } else null
                         val newList = services.toMutableList()
-                        if (editingService != null) {
-                            val idx = newList.indexOfFirst { it.id == editingService!!.id }
+                        if (editing != null) {
+                            val idx = newList.indexOfFirst { it.id == editing.id }
                             if (idx >= 0) {
-                                newList[idx] = editingService!!.copy(name = name, type = type, comment = comment)
+                                newList[idx] = editing.copy(
+                                    name = name, type = type, comment = comment,
+                                    encryptedSecret = encryptedSecret
+                                )
                             }
                         } else {
-                            newList.add(DgpService(name = name, type = type, comment = comment))
+                            newList.add(DgpService(
+                                name = name, type = type, comment = comment,
+                                encryptedSecret = encryptedSecret
+                            ))
                         }
                         saveServices(newList)
                         showAddDialog = false
                         editingService = null
                     },
                     onDelete = {
-                        if (editingService != null) {
-                            val newList = services.filter { it.id != editingService!!.id }
+                        if (editing != null) {
+                            val newList = services.filter { it.id != editing.id }
                             saveServices(newList)
                             editingService = null
                         }
                     },
                     onArchiveToggle = {
-                        if (editingService != null) {
+                        if (editing != null) {
                             val newList = services.map {
-                                if (it.id == editingService!!.id) it.copy(archived = !it.archived) else it
+                                if (it.id == editing.id) it.copy(archived = !it.archived) else it
                             }
                             saveServices(newList)
                             editingService = null
@@ -871,15 +904,22 @@ fun SeedEntryDialog(
 @Composable
 fun ServiceEditDialog(
     service: DgpService?,
+    initialVaultSecret: String,
+    vaultDecryptFailed: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String, String) -> Unit,
+    onSave: (name: String, type: String, comment: String, vaultSecret: String?) -> Unit,
     onDelete: () -> Unit,
     onArchiveToggle: () -> Unit
 ) {
     var name by remember { mutableStateOf(service?.name ?: "") }
     var type by remember { mutableStateOf(service?.type ?: "alnum") }
     var comment by remember { mutableStateOf(service?.comment ?: "") }
-    val types = listOf("alnum", "alnumlong", "hex", "hexlong", "base58", "base58long", "xkcd", "xkcdlong")
+    var vaultSecret by remember { mutableStateOf(initialVaultSecret) }
+    var vaultVisible by remember { mutableStateOf(false) }
+    val types = listOf(
+        "alnum", "alnumlong", "hex", "hexlong",
+        "base58", "base58long", "xkcd", "xkcdlong", "vault"
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -905,10 +945,44 @@ fun ServiceEditDialog(
                         }
                     }
                 }
+                if (type == "vault") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Stores an encrypted secret (legacy passwords, OTP seeds) " +
+                        "tied to this seed + account + service name.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (vaultDecryptFailed) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Existing secret could not be decrypted — saving will overwrite it.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    TextField(
+                        value = vaultSecret,
+                        onValueChange = { vaultSecret = it },
+                        label = { Text("Secret") },
+                        modifier = Modifier.semantics { testTag = "vault-secret-input" },
+                        visualTransformation = if (vaultVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { vaultVisible = !vaultVisible }) {
+                                Icon(if (vaultVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+                            }
+                        }
+                    )
+                }
             }
         },
         confirmButton = {
-            Button(onClick = { if (name.isNotEmpty()) onSave(name, type, comment) }) { Text("Save") }
+            Button(onClick = {
+                if (name.isNotEmpty()) {
+                    val secretOut = if (type == "vault") vaultSecret else null
+                    onSave(name, type, comment, secretOut)
+                }
+            }) { Text("Save") }
         },
         dismissButton = {
             Row {
@@ -986,7 +1060,8 @@ fun SeedSettingsDialog(
         title = { Text("Master Seed Settings") },
         text = {
             Column {
-                Text("Caution: Changing your master seed will change all generated passwords.",
+                Text("Caution: Changing your master seed will change all generated passwords " +
+                     "and make vault-stored secrets unreadable.",
                      color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
