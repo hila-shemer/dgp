@@ -49,6 +49,37 @@ object ConfigCrypto {
         }
     }
 
+    /**
+     * Encrypt with a caller-supplied 32-byte key. Used for vault entries where
+     * the key is already derived via DgpEngine.deriveAesKey (PBKDF2 happens
+     * upstream — don't run it again here).
+     */
+    fun encryptWithRawKey(plaintext: String, keyBytes: ByteArray): String {
+        require(keyBytes.size == 32) { "vault key must be 32 bytes" }
+        val key = SecretKeySpec(keyBytes, "AES")
+        val iv = ByteArray(GCM_IV_LENGTH).also { SecureRandom().nextBytes(it) }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_LENGTH, iv))
+        val ciphertext = cipher.doFinal(plaintext.toByteArray())
+        return Base64.encodeToString(iv + ciphertext, Base64.NO_WRAP)
+    }
+
+    fun decryptWithRawKey(encoded: String, keyBytes: ByteArray): String? {
+        if (keyBytes.size != 32) return null
+        return try {
+            val combined = Base64.decode(encoded, Base64.NO_WRAP)
+            if (combined.size < GCM_IV_LENGTH) return null
+            val iv = combined.sliceArray(0 until GCM_IV_LENGTH)
+            val ciphertext = combined.sliceArray(GCM_IV_LENGTH until combined.size)
+            val key = SecretKeySpec(keyBytes, "AES")
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_LENGTH, iv))
+            String(cipher.doFinal(ciphertext))
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun encryptExport(plaintext: String, pin: String): String {
         val key = deriveKey(pin, EXPORT_SALT, EXPORT_ITERATIONS)
         val iv = ByteArray(GCM_IV_LENGTH).also { SecureRandom().nextBytes(it) }
