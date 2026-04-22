@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -37,6 +38,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.Scanner
 import java.util.UUID
 
@@ -117,7 +120,7 @@ fun parseServices(json: String): List<DgpService> {
             ))
         }
     } catch (_: Exception) {}
-    return list.sortedBy { it.name.lowercase() }
+    return list
 }
 
 fun serializeServices(services: List<DgpService>): String {
@@ -258,7 +261,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     }
 
     fun saveServices(newList: List<DgpService>) {
-        services = newList.sortedBy { it.name.lowercase() }
+        services = newList
         val json = serializeServices(services)
         prefs.edit()
             .putString("services_encrypted", ConfigCrypto.encrypt(json, masterSeed))
@@ -544,35 +547,63 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     singleLine = true
                 )
 
-                LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                    items(filteredServices) { service ->
-                        ListItem(
-                            headlineContent = { Text(service.name) },
-                            supportingContent = {
-                                val subtitle = listOfNotNull(
-                                    service.type,
-                                    service.comment.ifEmpty { null }
-                                ).joinToString(" - ")
-                                Text(subtitle)
-                            },
-                            trailingContent = {
-                                Row {
-                                    IconButton(onClick = { editingService = service }) {
-                                        Icon(Icons.Default.Edit, "Edit")
-                                    }
-                                    IconButton(onClick = {
-                                        selectedServiceForGen = service
-                                        generatedPassword = engine.generate(
-                                            masterSeed, service.name, service.type, account
-                                        )
-                                    }) {
-                                        Icon(Icons.Default.VpnKey, "Generate")
-                                    }
-                                }
-                            },
-                            modifier = Modifier.clickable { editingService = service }
-                        )
-                        Divider()
+                val lazyListState = rememberLazyListState()
+                val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+                    val newList = services.toMutableList().apply {
+                        add(to.index, removeAt(from.index))
+                    }
+                    saveServices(newList)
+                }
+
+                LazyColumn(state = lazyListState, modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    items(filteredServices, key = { it.id }) { service ->
+                        ReorderableItem(reorderableState, key = service.id) { _ ->
+                            Column {
+                                ListItem(
+                                    headlineContent = { Text(service.name) },
+                                    supportingContent = if (service.comment.isNotEmpty()) {
+                                        { Text(service.comment) }
+                                    } else null,
+                                    leadingContent = if (searchQuery.isEmpty()) {
+                                        {
+                                            Icon(
+                                                Icons.Default.DragHandle,
+                                                contentDescription = "Reorder",
+                                                modifier = Modifier.draggableHandle()
+                                            )
+                                        }
+                                    } else null,
+                                    trailingContent = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Surface(
+                                                shape = MaterialTheme.shapes.small,
+                                                color = MaterialTheme.colorScheme.secondaryContainer
+                                            ) {
+                                                Text(
+                                                    service.type,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                            IconButton(onClick = { editingService = service }) {
+                                                Icon(Icons.Default.Edit, "Edit")
+                                            }
+                                            IconButton(onClick = {
+                                                selectedServiceForGen = service
+                                                generatedPassword = engine.generate(
+                                                    masterSeed, service.name, service.type, account
+                                                )
+                                            }) {
+                                                Icon(Icons.Default.VpnKey, "Generate")
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.clickable { editingService = service }
+                                )
+                                Divider()
+                            }
+                        }
                     }
                 }
             }
@@ -609,8 +640,10 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     onSave = { name, type, comment ->
                         val newList = services.toMutableList()
                         if (editingService != null) {
-                            newList.removeIf { it.id == editingService!!.id }
-                            newList.add(DgpService(editingService!!.id, name, type, comment))
+                            val idx = newList.indexOfFirst { it.id == editingService!!.id }
+                            if (idx >= 0) {
+                                newList[idx] = DgpService(editingService!!.id, name, type, comment)
+                            }
                         } else {
                             newList.add(DgpService(name = name, type = type, comment = comment))
                         }
@@ -821,7 +854,8 @@ fun ServiceEditDialog(
                 TextField(value = name, onValueChange = { name = it }, label = { Text("Service Name") },
                     modifier = Modifier.semantics { testTag = "service-name-input" })
                 Spacer(modifier = Modifier.height(8.dp))
-                TextField(value = comment, onValueChange = { comment = it }, label = { Text("Comment") })
+                TextField(value = comment, onValueChange = { comment = it }, label = { Text("Comment") },
+                    modifier = Modifier.semantics { testTag = "service-comment-input" })
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Password Type:", style = MaterialTheme.typography.labelMedium)
                 types.chunked(2).forEach { row ->
