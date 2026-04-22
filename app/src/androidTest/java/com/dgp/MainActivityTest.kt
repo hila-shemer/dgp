@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -16,9 +17,13 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import org.junit.runner.RunWith
 
 /**
@@ -49,7 +54,26 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class MainActivityTest {
 
-    @get:Rule
+    /**
+     * Wakes the device and dismisses the keyguard before each test.
+     *
+     * Cuttlefish (and most emulators) come up with the lockscreen dreaming, which causes the
+     * activity to launch behind the keyguard — Compose content never attaches and every test
+     * fails with "No compose hierarchies found in the app". Runs at `order = 0` so it fires
+     * before `createAndroidComposeRule` (order = 1) launches the activity.
+     */
+    @get:Rule(order = 0)
+    val keyguardDismissRule = object : TestWatcher() {
+        override fun starting(description: Description) {
+            val uiAuto = InstrumentationRegistry.getInstrumentation().uiAutomation
+            uiAuto.executeShellCommand("input keyevent KEYCODE_WAKEUP").close()
+            uiAuto.executeShellCommand("wm dismiss-keyguard").close()
+            // Give the dismissal a moment to propagate before the activity launches.
+            Thread.sleep(200)
+        }
+    }
+
+    @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
     @Before
@@ -319,5 +343,97 @@ class MainActivityTest {
         // The Copy button is unique to the dialog; the service name appears in both
         // the list and the dialog title so we don't assert on it directly.
         composeTestRule.onNodeWithText("Copy").assertIsDisplayed()
+    }
+
+    // ── Row content: comment subtitle + type chip ─────────────────────────────
+
+    @Test
+    fun addService_withComment_commentShowsAsSubtitle() {
+        unlockWith("testseedO")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("Bank")
+        composeTestRule.onNodeWithTag("service-comment-input").performTextInput("work account")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Bank").assertIsDisplayed()
+        composeTestRule.onNodeWithText("work account").assertIsDisplayed()
+    }
+
+    @Test
+    fun addService_typeChipIsDisplayedInRow() {
+        unlockWith("testseedP")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("TypeChipSvc")
+        // Default type is alnum — the Save button dismisses the dialog, then
+        // the only "alnum" text remaining is the chip in the row.
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("alnum").assertIsDisplayed()
+    }
+
+    // ── Drag handle visibility ────────────────────────────────────────────────
+
+    @Test
+    fun dragHandle_visibleWhenSearchIsEmpty() {
+        unlockWith("testseedQ")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("DragMe")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Reorder").assertIsDisplayed()
+    }
+
+    @Test
+    fun dragHandle_hiddenWhileSearching() {
+        unlockWith("testseedR")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("Searchable")
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+
+        // Handle is there initially
+        composeTestRule.onNodeWithContentDescription("Reorder").assertIsDisplayed()
+
+        // Typing in search hides it (service still matches so the row stays visible)
+        composeTestRule.onNodeWithText("Search services...").performTextInput("Search")
+        composeTestRule.waitForIdle()
+        assertEquals(0, composeTestRule.onAllNodesWithContentDescription("Reorder").fetchSemanticsNodes().size)
+    }
+
+    // ── Edit preserves position (regression: old code moved edited item to end) ─
+
+    @Test
+    fun editService_preservesPositionInList() {
+        unlockWith("testseedS")
+
+        fun addService(name: String) {
+            composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithTag("service-name-input").performTextInput(name)
+            composeTestRule.onNodeWithText("Save").performClick()
+            composeTestRule.waitForIdle()
+        }
+        addService("Alpha")
+        addService("Bravo")
+        addService("Charlie")
+
+        // Edit the middle service (display index 1) — rename to BravoEdited
+        composeTestRule.onAllNodesWithContentDescription("Edit")[1].performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input")
+            .performSemanticsAction(SemanticsActions.SetText) { it(AnnotatedString("BravoEdited")) }
+        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.waitForIdle()
+
+        // Alpha stays above, Charlie stays below — edited item did not jump to end
+        val alphaY = composeTestRule.onNodeWithText("Alpha").fetchSemanticsNode().positionInRoot.y
+        val bravoY = composeTestRule.onNodeWithText("BravoEdited").fetchSemanticsNode().positionInRoot.y
+        val charlieY = composeTestRule.onNodeWithText("Charlie").fetchSemanticsNode().positionInRoot.y
+        assertTrue("Expected Alpha<BravoEdited<Charlie by Y, got A=$alphaY B=$bravoY C=$charlieY",
+                   alphaY < bravoY && bravoY < charlieY)
     }
 }
