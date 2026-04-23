@@ -22,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
@@ -76,7 +75,6 @@ fun ServicesScreen(
     onLock: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenSettings: () -> Unit,
-    onRunTestVectors: () -> Unit,
     copyToast: CopyToastState,
     onToastDismiss: () -> Unit,
     onToastUndo: () -> Unit,
@@ -118,18 +116,10 @@ fun ServicesScreen(
         ) {
             Text(text = "/dgp/", style = type.pathCrumb, color = editorial.inkMuted)
             Spacer(Modifier.weight(1f))
-            // Temporary: phase 8 moves these to a settings screen
             IconButton(onClick = onOpenSettings) {
                 Icon(
                     Icons.Rounded.Settings,
-                    contentDescription = "Seed Settings",
-                    tint = editorial.inkMuted,
-                )
-            }
-            IconButton(onClick = onRunTestVectors) {
-                Icon(
-                    Icons.Rounded.CheckCircle,
-                    contentDescription = "Test Vectors",
+                    contentDescription = "Settings",
                     tint = editorial.inkMuted,
                 )
             }
@@ -346,7 +336,6 @@ private fun ServicesScreenLightPreview() {
             onLock = {},
             onOpenAccount = {},
             onOpenSettings = {},
-            onRunTestVectors = {},
             copyToast = CopyToastState.Idle,
             onToastDismiss = {},
             onToastUndo = {},
@@ -389,7 +378,6 @@ private fun ServicesScreenDarkPreview() {
             onLock = {},
             onOpenAccount = {},
             onOpenSettings = {},
-            onRunTestVectors = {},
             copyToast = CopyToastState.Idle,
             onToastDismiss = {},
             onToastUndo = {},

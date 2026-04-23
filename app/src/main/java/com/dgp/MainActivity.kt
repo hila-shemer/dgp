@@ -29,8 +29,11 @@ import com.dgp.ui.ListFilter
 import com.dgp.ui.ReorderScreen
 import com.dgp.ui.RevealSheet
 import com.dgp.ui.ServicesScreen
+import com.dgp.ui.SettingsScreen
 import com.dgp.ui.components.CopyToastState
 import com.dgp.ui.theme.EditorialTheme
+import com.dgp.ui.theme.LocalCompactRows
+import com.dgp.ui.theme.ThemeMode
 import com.dgp.ui.UnlockScreen
 import android.net.Uri
 import android.util.Base64
@@ -39,7 +42,10 @@ import java.security.MessageDigest
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import androidx.compose.runtime.CompositionLocalProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -107,9 +113,7 @@ class MainActivity : FragmentActivity() {
         prefs = getSharedPreferences("dgp_prefs", MODE_PRIVATE)
 
         setContent {
-            EditorialTheme {
-                DgpApp(dgpEngine, prefs, biometricHelper)
-            }
+            DgpApp(dgpEngine, prefs, biometricHelper)
         }
     }
 
@@ -160,6 +164,63 @@ fun serializeServices(services: List<DgpService>): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometricHelper: BiometricHelper) {
+    // Settings prefs state — must be outside EditorialTheme so themeMode is available for the wrapper
+    var clipboardTimeoutSec by remember { mutableIntStateOf(prefs.getInt("clipboard_timeout_sec", 30)) }
+    var clearOnLock by remember { mutableStateOf(prefs.getBoolean("clear_on_lock", true)) }
+    var compactRows by remember { mutableStateOf(prefs.getBoolean("compact_rows", false)) }
+    var themeMode by remember {
+        mutableStateOf(
+            when (prefs.getString("theme_mode", "auto")) {
+                "light" -> ThemeMode.Light
+                "dark" -> ThemeMode.Dark
+                else -> ThemeMode.Auto
+            }
+        )
+    }
+
+    EditorialTheme(mode = themeMode) {
+    CompositionLocalProvider(LocalCompactRows provides compactRows) {
+    DgpAppContent(engine, prefs, biometricHelper,
+        clipboardTimeoutSec, onClipboardTimeoutChange = { sec ->
+            clipboardTimeoutSec = sec
+            prefs.edit().putInt("clipboard_timeout_sec", sec).apply()
+        },
+        clearOnLock, onClearOnLockChange = { v ->
+            clearOnLock = v
+            prefs.edit().putBoolean("clear_on_lock", v).apply()
+        },
+        themeMode, onThemeModeChange = { mode ->
+            themeMode = mode
+            prefs.edit().putString("theme_mode", when (mode) {
+                ThemeMode.Auto -> "auto"
+                ThemeMode.Light -> "light"
+                ThemeMode.Dark -> "dark"
+            }).apply()
+        },
+        compactRows, onCompactRowsChange = { v ->
+            compactRows = v
+            prefs.edit().putBoolean("compact_rows", v).apply()
+        },
+    )
+    } // CompositionLocalProvider
+    } // EditorialTheme
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DgpAppContent(
+    engine: DgpEngine,
+    prefs: android.content.SharedPreferences,
+    biometricHelper: BiometricHelper,
+    clipboardTimeoutSec: Int,
+    onClipboardTimeoutChange: (Int) -> Unit,
+    clearOnLock: Boolean,
+    onClearOnLockChange: (Boolean) -> Unit,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    compactRows: Boolean,
+    onCompactRowsChange: (Boolean) -> Unit,
+) {
     val context = LocalContext.current as FragmentActivity
     val scope = rememberCoroutineScope()
     val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -251,6 +312,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     var showAddDialog by remember { mutableStateOf(false) }
     var editingService by remember { mutableStateOf<DgpService?>(null) }
     var showSeedSettings by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     var showTestVectors by remember { mutableStateOf(false) }
     val testResults = remember { mutableStateListOf<TestVectors.SingleTestResult>() }
     var testRunning by remember { mutableStateOf(false) }
@@ -259,6 +321,35 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     var activeFilter by remember { mutableStateOf<ListFilter>(ListFilter.All) }
     var copyToast by remember { mutableStateOf<CopyToastState>(CopyToastState.Idle) }
     var reordering by remember { mutableStateOf(false) }
+
+    var clipboardClearJob by remember { mutableStateOf<Job?>(null) }
+
+    fun copyPasswordToClipboard(password: String) {
+        val clip = android.content.ClipData.newPlainText("DGP Password", password)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            clip.description.extras = android.os.PersistableBundle().apply {
+                putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
+            }
+        }
+        clipboardManager.setPrimaryClip(clip)
+        clipboardClearJob?.cancel()
+        val timeoutSec = clipboardTimeoutSec
+        if (timeoutSec > 0) {
+            clipboardClearJob = scope.launch {
+                delay(timeoutSec * 1000L)
+                val current = clipboardManager.primaryClip
+                if (current?.getItemAt(0)?.text?.toString() == password) {
+                    if (android.os.Build.VERSION.SDK_INT >= 28) {
+                        clipboardManager.clearPrimaryClip()
+                    } else {
+                        clipboardManager.setPrimaryClip(
+                            android.content.ClipData.newPlainText("", "")
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     fun loadServices(seed: String): Boolean {
         val encrypted = prefs.getString("services_encrypted", null)
@@ -468,7 +559,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                 android.widget.Toast.makeText(context, "Config cleared", android.widget.Toast.LENGTH_SHORT).show()
             },
         )
-        return@DgpApp
+        return@DgpAppContent
     }
 
     // Reorder screen — full-screen, takes the entire composition slot
@@ -481,7 +572,69 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             },
             onCancel = { reordering = false },
         )
-        return@DgpApp
+        return@DgpAppContent
+    }
+
+    // Settings screen — full-screen, takes the entire composition slot
+    if (showSettings && isSeeded) {
+        SettingsScreen(
+            clipboardTimeoutSec = clipboardTimeoutSec,
+            onClipboardTimeoutChange = onClipboardTimeoutChange,
+            clearOnLock = clearOnLock,
+            onClearOnLockChange = onClearOnLockChange,
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
+            compactRows = compactRows,
+            onCompactRowsChange = onCompactRowsChange,
+            seedFingerprint = remember(masterSeed) {
+                if (masterSeed.isEmpty()) "(no seed set)"
+                else {
+                    val digest = java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(masterSeed.toByteArray())
+                    "SHA-256: " + digest.take(8).joinToString("") { "%02x".format(it) }
+                }
+            },
+            onChangeSeed = { authenticate { showSeedSettings = true } },
+            onRunTestVectors = {
+                showSettings = false
+                testResults.clear()
+                showTestVectors = true
+                testRunning = true
+                scope.launch {
+                    for (i in TestVectors.vectors.indices) {
+                        val result = withContext(Dispatchers.Default) {
+                            TestVectors.runOne(engine, i)
+                        }
+                        testResults.add(result)
+                    }
+                    testRunning = false
+                }
+            },
+            onExportConfig = { showExportPinDialog = true },
+            onImportEncrypted = { showImportPinDialog = true },
+            onImportPlaintext = { launchImportFilePicker() },
+            onEnterReorder = {
+                showSettings = false
+                reordering = true
+            },
+            onClearAll = {
+                saveServices(emptyList())
+            },
+            onLockAndQuit = {
+                if (clearOnLock) {
+                    clipboardClearJob?.cancel()
+                    if (android.os.Build.VERSION.SDK_INT >= 28) {
+                        clipboardManager.clearPrimaryClip()
+                    }
+                }
+                masterSeed = ""
+                isSeeded = false
+                account = ""
+                (context as? android.app.Activity)?.finishAndRemoveTask()
+            },
+            onBack = { showSettings = false },
+        )
+        return@DgpAppContent
     }
 
     // Account prompt (shown after seed unlock)
@@ -507,13 +660,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         onFilterChange = { activeFilter = it },
         onTapRow = { svc ->
             val password = generateForService(svc)
-            val clip = android.content.ClipData.newPlainText("DGP Password", password)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                clip.description.extras = android.os.PersistableBundle().apply {
-                    putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
-                }
-            }
-            clipboardManager.setPrimaryClip(clip)
+            copyPasswordToClipboard(password)
             copyToast = CopyToastState.Visible(svc.name)
         },
         onChevronTap = { svc -> revealingService = svc },
@@ -526,6 +673,12 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             }
         },
         onLock = {
+            if (clearOnLock) {
+                clipboardClearJob?.cancel()
+                if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    clipboardManager.clearPrimaryClip()
+                }
+            }
             masterSeed = ""
             isSeeded = false
             account = ""
@@ -535,21 +688,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             if (account.isNotEmpty()) clearAccount()
             showAccountPrompt = true
         },
-        onOpenSettings = { authenticate { showSeedSettings = true } },
-        onRunTestVectors = {
-            testResults.clear()
-            showTestVectors = true
-            testRunning = true
-            scope.launch {
-                for (i in TestVectors.vectors.indices) {
-                    val result = withContext(Dispatchers.Default) {
-                        TestVectors.runOne(engine, i)
-                    }
-                    testResults.add(result)
-                }
-                testRunning = false
-            }
-        },
+        onOpenSettings = { showSettings = true },
         copyToast = copyToast,
         onToastDismiss = { copyToast = CopyToastState.Idle },
         onToastUndo = { copyToast = CopyToastState.Idle },
@@ -694,13 +833,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             passwordProvider = { generateForService(svc) },
             onCopy = {
                 val password = generateForService(svc)
-                val clip = android.content.ClipData.newPlainText("DGP Password", password)
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    clip.description.extras = android.os.PersistableBundle().apply {
-                        putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
-                    }
-                }
-                clipboardManager.setPrimaryClip(clip)
+                copyPasswordToClipboard(password)
                 copyToast = CopyToastState.Visible(svc.name)
                 revealingService = null
             },

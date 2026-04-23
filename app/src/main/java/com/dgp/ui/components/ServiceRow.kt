@@ -41,10 +41,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dgp.DgpService
 import com.dgp.ui.theme.EditorialTheme
+import com.dgp.ui.theme.LocalCompactRows
 import com.dgp.ui.theme.ThemeMode
 import com.dgp.ui.theme.editorial
 import com.dgp.ui.theme.editorialType
@@ -63,6 +65,7 @@ fun ServiceRow(
 ) {
     val editorial = MaterialTheme.editorial
     val type = MaterialTheme.editorialType
+    val compact = LocalCompactRows.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val rowBg by animateColorAsState(
@@ -79,7 +82,7 @@ fun ServiceRow(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(if (compact) 48.dp else 64.dp)
             .background(rowBg)
             .combinedClickable(
                 interactionSource = interactionSource,
@@ -138,7 +141,7 @@ fun ServiceRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                if (service.comment.isNotBlank()) {
+                if (service.comment.isNotBlank() && !compact) {
                     Text(
                         text = service.comment,
                         style = type.serviceSubtitle,
@@ -231,6 +234,29 @@ private fun ServiceRowDarkPreview() {
                 service = DgpService(name = "old-bank", type = "vault", comment = "legacy — do not rotate", archived = true),
                 onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
             )
+        }
+    }
+}
+
+@Preview(name = "Compact", showBackground = true, backgroundColor = 0xFFF5F3EE)
+@Composable
+private fun ServiceRowCompactPreview() {
+    EditorialTheme(mode = ThemeMode.Light) {
+        CompositionLocalProvider(LocalCompactRows provides true) {
+            Column {
+                ServiceRow(
+                    service = DgpService(name = "github", type = "hexlong", comment = "work@ex.com"),
+                    onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
+                )
+                ServiceRow(
+                    service = DgpService(name = "mastodon.social", type = "xkcd", comment = "", pinned = true),
+                    onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
+                )
+                ServiceRow(
+                    service = DgpService(name = "old-bank", type = "vault", comment = "legacy — do not rotate"),
+                    onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
+                )
+            }
         }
     }
 }
