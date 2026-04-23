@@ -1,6 +1,7 @@
 package com.dgp
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -246,5 +247,63 @@ class ServiceParsingTest {
         val parsed = parseServices(serializeServices(original))
         assertEquals(null, parsed[0].encryptedSecret)
         assertEquals("ciphertext-base64", parsed[1].encryptedSecret)
+    }
+
+    // ── pinned field ──────────────────────────────────────────────────────────
+
+    @Test
+    fun parseServices_missingPinnedField_defaultsToFalse() {
+        val json = """[{"id":"1","name":"GitHub","type":"alnum","comment":""}]"""
+        val services = parseServices(json)
+        assertFalse(services[0].pinned)
+    }
+
+    @Test
+    fun parseServices_pinnedTrue_isParsed() {
+        val json = """[{"id":"1","name":"GitHub","type":"alnum","comment":"","pinned":true}]"""
+        val services = parseServices(json)
+        assertTrue(services[0].pinned)
+    }
+
+    // ── tags field ────────────────────────────────────────────────────────────
+
+    @Test
+    fun parseServices_missingTagsField_defaultsToEmptyList() {
+        val json = """[{"id":"1","name":"GitHub","type":"alnum","comment":""}]"""
+        val services = parseServices(json)
+        assertTrue(services[0].tags.isEmpty())
+    }
+
+    @Test
+    fun parseServices_tagsArray_isParsed() {
+        val json = """[{"id":"1","name":"GitHub","type":"alnum","comment":"","tags":["work","ops"]}]"""
+        val services = parseServices(json)
+        assertEquals(listOf("work", "ops"), services[0].tags)
+    }
+
+    @Test
+    fun roundTrip_pinnedAndTagsPreserved() {
+        val original = listOf(
+            DgpService("1", "GitHub", "alnum", "", pinned = true, tags = listOf("work", "ops")),
+            DgpService("2", "Gmail", "alnum", "", pinned = false, tags = emptyList())
+        )
+        val parsed = parseServices(serializeServices(original))
+        assertTrue(parsed[0].pinned)
+        assertEquals(listOf("work", "ops"), parsed[0].tags)
+        assertFalse(parsed[1].pinned)
+        assertTrue(parsed[1].tags.isEmpty())
+    }
+
+    // ── Legacy config compatibility ───────────────────────────────────────────
+
+    @Test
+    fun parseServices_legacyConfig_opensWithDefaults() {
+        // Minimal legacy JSON: only id, name, type, comment — no archived, pinned, tags.
+        val json = """[{"id":"legacy-1","name":"OldService","type":"hex","comment":"old"}]"""
+        val services = parseServices(json)
+        assertEquals(1, services.size)
+        assertFalse(services[0].archived)
+        assertFalse(services[0].pinned)
+        assertTrue(services[0].tags.isEmpty())
     }
 }
