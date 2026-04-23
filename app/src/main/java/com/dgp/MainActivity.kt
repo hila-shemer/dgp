@@ -689,6 +689,8 @@ fun DgpAppContent(
             showAccountPrompt = true
         },
         onOpenSettings = { showSettings = true },
+        themeMode = themeMode,
+        onThemeModeChange = onThemeModeChange,
         copyToast = copyToast,
         onToastDismiss = { copyToast = CopyToastState.Idle },
         onToastUndo = { copyToast = CopyToastState.Idle },

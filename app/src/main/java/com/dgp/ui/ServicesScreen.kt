@@ -47,6 +47,7 @@ import com.dgp.ui.components.EditorialInputField
 import com.dgp.ui.components.PrimaryButton
 import com.dgp.ui.components.ServiceRow
 import com.dgp.ui.components.TagPill
+import com.dgp.ui.components.ThemeSwitchPill
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.ThemeMode
 import com.dgp.ui.theme.editorial
@@ -75,6 +76,8 @@ fun ServicesScreen(
     onLock: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenSettings: () -> Unit,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
     copyToast: CopyToastState,
     onToastDismiss: () -> Unit,
     onToastUndo: () -> Unit,
@@ -116,6 +119,11 @@ fun ServicesScreen(
         ) {
             Text(text = "/dgp/", style = type.pathCrumb, color = editorial.inkMuted)
             Spacer(Modifier.weight(1f))
+            ThemeSwitchPill(
+                mode = themeMode,
+                onModeChange = onThemeModeChange,
+            )
+            Spacer(Modifier.width(8.dp))
             IconButton(onClick = onOpenSettings) {
                 Icon(
                     Icons.Rounded.Settings,
@@ -336,6 +344,8 @@ private fun ServicesScreenLightPreview() {
             onLock = {},
             onOpenAccount = {},
             onOpenSettings = {},
+            themeMode = ThemeMode.Auto,
+            onThemeModeChange = {},
             copyToast = CopyToastState.Idle,
             onToastDismiss = {},
             onToastUndo = {},
@@ -378,6 +388,8 @@ private fun ServicesScreenDarkPreview() {
             onLock = {},
             onOpenAccount = {},
             onOpenSettings = {},
+            themeMode = ThemeMode.Auto,
+            onThemeModeChange = {},
             copyToast = CopyToastState.Idle,
             onToastDismiss = {},
             onToastUndo = {},
