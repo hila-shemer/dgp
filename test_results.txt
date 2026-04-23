@@ -55,7 +55,7 @@
 > Task :app:testReleaseUnitTest UP-TO-DATE
 > Task :app:test UP-TO-DATE
 
-BUILD SUCCESSFUL in 419ms
+BUILD SUCCESSFUL in 468ms
 46 actionable tasks: 1 executed, 45 up-to-date
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
@@ -100,5 +100,5 @@ BUILD SUCCESSFUL in 419ms
 > Task :app:createDebugApkListingFileRedirect UP-TO-DATE
 > Task :app:assembleDebug UP-TO-DATE
 
-BUILD SUCCESSFUL in 378ms
+BUILD SUCCESSFUL in 405ms
 35 actionable tasks: 1 executed, 34 up-to-date
