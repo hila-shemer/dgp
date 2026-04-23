@@ -36,37 +36,35 @@
 > Task :app:preReleaseUnitTestBuild UP-TO-DATE
 > Task :app:javaPreCompileReleaseUnitTest UP-TO-DATE
 
+> Task :app:compileDebugKotlin
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:681:55 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:685:29 'LinearProgressIndicator(Float, Modifier = ..., Color = ..., Color = ..., StrokeCap = ...): Unit' is deprecated. Use the overload that takes `progress` as a lambda
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:931:17 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
+w: file:///app/app/src/main/java/com/dgp/ui/ServicesScreen.kt:213:78 No cast needed
+
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:bundleDebugClassesToCompileJar
+
 > Task :app:compileReleaseKotlin
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:677:55 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:681:29 'LinearProgressIndicator(Float, Modifier = ..., Color = ..., Color = ..., StrokeCap = ...): Unit' is deprecated. Use the overload that takes `progress` as a lambda
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:929:17 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
-w: file:///app/app/src/main/java/com/dgp/ui/ServicesScreen.kt:72:5 Parameter 'onChevronTap' is never used
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:681:55 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:685:29 'LinearProgressIndicator(Float, Modifier = ..., Color = ..., Color = ..., StrokeCap = ...): Unit' is deprecated. Use the overload that takes `progress` as a lambda
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:931:17 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
 w: file:///app/app/src/main/java/com/dgp/ui/ServicesScreen.kt:213:78 No cast needed
 
 > Task :app:compileReleaseJavaWithJavac NO-SOURCE
 > Task :app:processReleaseJavaRes
-
-> Task :app:compileDebugKotlin
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:677:55 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:681:29 'LinearProgressIndicator(Float, Modifier = ..., Color = ..., Color = ..., StrokeCap = ...): Unit' is deprecated. Use the overload that takes `progress` as a lambda
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:929:17 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
-w: file:///app/app/src/main/java/com/dgp/ui/ServicesScreen.kt:72:5 Parameter 'onChevronTap' is never used
-w: file:///app/app/src/main/java/com/dgp/ui/ServicesScreen.kt:213:78 No cast needed
-
-> Task :app:compileDebugJavaWithJavac NO-SOURCE
 > Task :app:bundleReleaseClassesToRuntimeJar
-> Task :app:processDebugJavaRes
 > Task :app:bundleReleaseClassesToCompileJar
-> Task :app:bundleDebugClassesToCompileJar
-> Task :app:bundleDebugClassesToRuntimeJar
-> Task :app:compileReleaseUnitTestKotlin
-> Task :app:compileReleaseUnitTestJavaWithJavac NO-SOURCE
-> Task :app:processReleaseUnitTestJavaRes UP-TO-DATE
 > Task :app:compileDebugUnitTestKotlin
-> Task :app:testReleaseUnitTest
 > Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
 > Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:compileReleaseUnitTestKotlin
 > Task :app:testDebugUnitTest
+> Task :app:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :app:testReleaseUnitTest
 > Task :app:test
 
 BUILD SUCCESSFUL in 5s
@@ -114,5 +112,5 @@ BUILD SUCCESSFUL in 5s
 > Task :app:createDebugApkListingFileRedirect UP-TO-DATE
 > Task :app:assembleDebug
 
-BUILD SUCCESSFUL in 724ms
+BUILD SUCCESSFUL in 665ms
 35 actionable tasks: 5 executed, 30 up-to-date

@@ -249,6 +249,7 @@ fun ServicesScreen(
                     ServiceRow(
                         service = svc,
                         onTap = { onTapRow(svc) },
+                        onChevronTap = { onChevronTap(svc) },
                         onLongPress = { onLongPressRow(svc) },
                         onSwipeLeft = {},
                         onSwipeRight = {},

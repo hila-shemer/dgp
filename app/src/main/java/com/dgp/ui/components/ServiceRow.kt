@@ -5,6 +5,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -54,6 +55,7 @@ import com.dgp.ui.theme.stripFor
 fun ServiceRow(
     service: DgpService,
     onTap: () -> Unit,
+    onChevronTap: () -> Unit,
     onLongPress: () -> Unit,
     onSwipeLeft: () -> Unit,   // copy
     onSwipeRight: () -> Unit,  // reveal pin/edit/archive row actions
@@ -163,12 +165,23 @@ fun ServiceRow(
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = editorial.inkFaint,
-                )
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onChevronTap,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = "Reveal",
+                        modifier = Modifier.size(24.dp),
+                        tint = editorial.inkFaint,
+                    )
+                }
             }
         }
 
@@ -187,15 +200,15 @@ private fun ServiceRowLightPreview() {
         Column {
             ServiceRow(
                 service = DgpService(name = "github", type = "hexlong", comment = "work@ex.com"),
-                onTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
+                onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
             )
             ServiceRow(
                 service = DgpService(name = "mastodon.social", type = "xkcd", comment = "", pinned = true),
-                onTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
+                onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
             )
             ServiceRow(
                 service = DgpService(name = "old-bank", type = "vault", comment = "legacy — do not rotate", archived = true),
-                onTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
+                onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
             )
         }
     }
@@ -208,15 +221,15 @@ private fun ServiceRowDarkPreview() {
         Column {
             ServiceRow(
                 service = DgpService(name = "github", type = "hexlong", comment = "work@ex.com"),
-                onTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
+                onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
             )
             ServiceRow(
                 service = DgpService(name = "mastodon.social", type = "xkcd", comment = "", pinned = true),
-                onTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
+                onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
             )
             ServiceRow(
                 service = DgpService(name = "old-bank", type = "vault", comment = "legacy — do not rotate", archived = true),
-                onTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
+                onTap = {}, onChevronTap = {}, onLongPress = {}, onSwipeLeft = {}, onSwipeRight = {},
             )
         }
     }
