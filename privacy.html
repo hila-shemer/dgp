@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - Dgp</title>
+    <title>Privacy Policy - DGP</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -30,10 +30,10 @@
         <h1>Privacy Policy</h1>
         <p>Last Updated: 23rd April 2026</p>
 
-        <p><strong>Dgp</strong> is a deterministically generated password manager. This privacy policy explains how the application handles data.</p>
+        <p><strong>DGP</strong> is a deterministically generated password manager. This privacy policy explains how the application handles data.</p>
 
         <h2>1. Data Collection</h2>
-        <p>Dgp does not collect, store, or transmit any personal data. Private data (passwords' seed and metadata) is stored locally on your device. All password generation occurs locally on your device in real-time. Vault entries are stored encrypted using a seed-derived AES key.</p>
+        <p>DGP does not collect, store, or transmit any personal data. Private data (passwords' seed and metadata) is stored locally on your device. All password generation occurs locally on your device in real-time. Vault entries are stored encrypted using a seed-derived AES key.</p>
 
         <h2>2. Data Storage and Encryption</h2>
         <p>The "seed" used for generation is stored locally on your device. It is encrypted at rest using the <strong>Android Keystore system (AES-256-GCM)</strong>. This data never leaves your device and is not synced to any cloud services.</p>
@@ -42,6 +42,7 @@
         <ul>
             <li><strong>Biometric/Fingerprint:</strong> Used exclusively to unlock the Android Keystore and decrypt your local seed. Your biometric data is handled by the Android operating system and is never accessible to the app.</li>
             <li><strong>Internet:</strong> The app itself does not open network connections. The QR-scanning feature delegates to Google Play Services, which may download scanner components from Google on first use.</li>
+            <li><strong>Camera:</strong> QR scanning is provided by Google Play Services; no camera permission is requested by this app.</li>
         </ul>
 
         <h2>4. Third-Party Sharing</h2>
