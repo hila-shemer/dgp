@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -33,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -79,6 +81,7 @@ fun ServicesScreen(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     copyToast: CopyToastState,
+    flashedServiceId: String? = null,
     onToastDismiss: () -> Unit,
     onToastUndo: () -> Unit,
     modifier: Modifier = Modifier,
@@ -224,7 +227,13 @@ fun ServicesScreen(
         )
 
         // 5. Service list
-        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+        val listState = rememberLazyListState()
+        LaunchedEffect(flashedServiceId, filtered) {
+            val id = flashedServiceId ?: return@LaunchedEffect
+            val index = filtered.indexOfFirst { it.id == id }
+            if (index >= 0) listState.animateScrollToItem(index)
+        }
+        LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().weight(1f)) {
             if (filtered.isEmpty()) {
                 item {
                     val emptyText = when {
@@ -251,6 +260,7 @@ fun ServicesScreen(
                         onLongPress = { onLongPressRow(svc) },
                         onSwipeLeft = {},
                         onSwipeRight = {},
+                        flashed = (svc.id == flashedServiceId),
                     )
                 }
             }

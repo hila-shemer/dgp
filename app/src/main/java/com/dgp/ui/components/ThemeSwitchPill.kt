@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.dgp.ui.theme.EditorialMotion
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.LocalIsDarkTheme
 import com.dgp.ui.theme.ThemeMode
@@ -54,7 +55,10 @@ fun ThemeSwitchPill(
     val activeIndex = segments.indexOfFirst { it.first == mode }.coerceAtLeast(0)
     val offsetX by animateDpAsState(
         targetValue = (activeIndex * 32).dp,
-        animationSpec = spring(stiffness = 220f, dampingRatio = 0.65f),
+        animationSpec = spring(
+            stiffness = EditorialMotion.springStiffness,
+            dampingRatio = EditorialMotion.springDamping,
+        ),
         label = "theme-pill-highlight",
     )
     val highlightFill = if (isDark) editorial.paper else editorial.ink.copy(alpha = 0.08f)

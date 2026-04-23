@@ -12,9 +12,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -31,6 +35,7 @@ import com.dgp.ui.RevealSheet
 import com.dgp.ui.ServicesScreen
 import com.dgp.ui.SettingsScreen
 import com.dgp.ui.components.CopyToastState
+import com.dgp.ui.theme.EditorialMotion
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.LocalCompactRows
 import com.dgp.ui.theme.ThemeMode
@@ -113,7 +118,17 @@ class MainActivity : FragmentActivity() {
         prefs = getSharedPreferences("dgp_prefs", MODE_PRIVATE)
 
         setContent {
-            DgpApp(dgpEngine, prefs, biometricHelper)
+            val configuration = LocalConfiguration.current
+            val baseDensity = LocalDensity.current
+            val clampedDensity = remember(configuration.fontScale, baseDensity) {
+                Density(
+                    density = baseDensity.density,
+                    fontScale = minOf(configuration.fontScale, 1.3f),
+                )
+            }
+            CompositionLocalProvider(LocalDensity provides clampedDensity) {
+                DgpApp(dgpEngine, prefs, biometricHelper)
+            }
         }
     }
 
@@ -321,6 +336,14 @@ fun DgpAppContent(
     var activeFilter by remember { mutableStateOf<ListFilter>(ListFilter.All) }
     var copyToast by remember { mutableStateOf<CopyToastState>(CopyToastState.Idle) }
     var reordering by remember { mutableStateOf(false) }
+    var flashedServiceId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(flashedServiceId) {
+        if (flashedServiceId != null) {
+            delay(EditorialMotion.saveFlashMs.toLong())
+            flashedServiceId = null
+        }
+    }
 
     var clipboardClearJob by remember { mutableStateOf<Job?>(null) }
 
@@ -692,6 +715,7 @@ fun DgpAppContent(
         themeMode = themeMode,
         onThemeModeChange = onThemeModeChange,
         copyToast = copyToast,
+        flashedServiceId = flashedServiceId,
         onToastDismiss = { copyToast = CopyToastState.Idle },
         onToastUndo = { copyToast = CopyToastState.Idle },
     )
@@ -736,6 +760,7 @@ fun DgpAppContent(
                     newList.add(updated)
                 }
                 saveServices(newList)
+                flashedServiceId = updated.id
                 showAddDialog = false
                 editingService = null
             },
@@ -873,8 +898,13 @@ fun AccountPromptDialog(
                 label = { Text("Account") },
                 visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    IconButton(onClick = { visible = !visible }) {
-                        Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+                    IconButton(
+                        onClick = { visible = !visible },
+                        modifier = Modifier.semantics {
+                            contentDescription = if (visible) "Hide password" else "Show password"
+                        },
+                    ) {
+                        Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, contentDescription = null)
                     }
                 },
                 singleLine = true
@@ -927,8 +957,13 @@ fun SeedSettingsDialog(
                     label = { Text("Master Seed") },
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        IconButton(onClick = { visible = !visible }) {
-                            Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+                        IconButton(
+                            onClick = { visible = !visible },
+                            modifier = Modifier.semantics {
+                                contentDescription = if (visible) "Hide password" else "Show password"
+                            },
+                        ) {
+                            Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, contentDescription = null)
                         }
                     }
                 )
@@ -1004,8 +1039,13 @@ fun PinDialog(
                     label = { Text("PIN") },
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        IconButton(onClick = { visible = !visible }) {
-                            Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+                        IconButton(
+                            onClick = { visible = !visible },
+                            modifier = Modifier.semantics {
+                                contentDescription = if (visible) "Hide password" else "Show password"
+                            },
+                        ) {
+                            Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, contentDescription = null)
                         }
                     },
                     singleLine = true
