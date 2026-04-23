@@ -49,9 +49,11 @@ data class DgpService(
     val type: String = "alnum",
     val comment: String = "",
     val archived: Boolean = false,
+    val pinned: Boolean = false,
+    val tags: List<String> = emptyList(),
     // Base64(IV ‖ AES-256-GCM ciphertext). Only set for "vault" entries.
     // Key derivation: DgpEngine.deriveAesKey(seed, name, account).
-    val encryptedSecret: String? = null
+    val encryptedSecret: String? = null,
 )
 
 class MainActivity : FragmentActivity() {
@@ -122,6 +124,8 @@ fun parseServices(json: String): List<DgpService> {
                 obj.optString("type", "alnum"),
                 obj.optString("comment", ""),
                 obj.optBoolean("archived", false),
+                obj.optBoolean("pinned", false),
+                obj.optJSONArray("tags")?.let { ja -> (0 until ja.length()).map(ja::getString) } ?: emptyList(),
                 if (obj.has("encryptedSecret") && !obj.isNull("encryptedSecret"))
                     obj.getString("encryptedSecret") else null
             ))
@@ -139,6 +143,8 @@ fun serializeServices(services: List<DgpService>): String {
             put("type", it.type)
             put("comment", it.comment)
             put("archived", it.archived)
+            put("pinned", it.pinned)
+            if (it.tags.isNotEmpty()) put("tags", JSONArray(it.tags))
             if (it.encryptedSecret != null) put("encryptedSecret", it.encryptedSecret)
         })
     }
