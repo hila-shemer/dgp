@@ -78,6 +78,16 @@ private fun RevealSheetContent(
             }
         }
 
+        if (service.comment.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = service.comment,
+                style = type.serviceSubtitle,
+                color = editorial.inkMuted,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
         Spacer(Modifier.height(12.dp))
 
         var revealed by remember { mutableStateOf(false) }
