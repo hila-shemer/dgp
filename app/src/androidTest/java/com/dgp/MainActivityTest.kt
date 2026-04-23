@@ -20,6 +20,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestWatcher
@@ -136,7 +137,7 @@ class MainActivityTest {
     @Test
     fun unlock_withValidSeed_showsAppBar() {
         unlockWith("testseedA")
-        composeTestRule.onNodeWithText("DGP").assertIsDisplayed()
+        composeTestRule.onNodeWithText("/dgp/").assertIsDisplayed()
     }
 
     @Test
@@ -375,6 +376,7 @@ class MainActivityTest {
 
     // ── Drag handle visibility ────────────────────────────────────────────────
 
+    @Ignore("reorder moved to Phase 7 dedicated screen")
     @Test
     fun dragHandle_visibleWhenSearchIsEmpty() {
         unlockWith("testseedQ")
@@ -386,6 +388,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Reorder").assertIsDisplayed()
     }
 
+    @Ignore("reorder moved to Phase 7 dedicated screen")
     @Test
     fun dragHandle_hiddenWhileSearching() {
         unlockWith("testseedR")
@@ -486,17 +489,16 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("Archive").performClick()
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithContentDescription("Show Archived").performClick()
+        composeTestRule.onNodeWithText("--archived").performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("InTheArchive").assertIsDisplayed()
-        composeTestRule.onNodeWithText("DGP — Archive").assertIsDisplayed()
     }
 
     @Test
     fun archiveView_hidesAddServiceFab() {
         unlockWith("testseedArchive3")
-        composeTestRule.onNodeWithContentDescription("Show Archived").performClick()
+        composeTestRule.onNodeWithText("--archived").performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(0,
@@ -517,7 +519,7 @@ class MainActivityTest {
         composeTestRule.waitForIdle()
 
         // Switch to archive view, then unarchive
-        composeTestRule.onNodeWithContentDescription("Show Archived").performClick()
+        composeTestRule.onNodeWithText("--archived").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
@@ -525,7 +527,7 @@ class MainActivityTest {
         composeTestRule.waitForIdle()
 
         // Back to active view — service should be there
-        composeTestRule.onNodeWithContentDescription("Show Active").performClick()
+        composeTestRule.onNodeWithText("--all").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Boomerang").assertIsDisplayed()
     }
@@ -546,7 +548,7 @@ class MainActivityTest {
         composeTestRule.waitForIdle()
 
         // In archive view, edit (rename) the archived service
-        composeTestRule.onNodeWithContentDescription("Show Archived").performClick()
+        composeTestRule.onNodeWithText("--archived").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
@@ -559,7 +561,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("RenamedArchived").assertIsDisplayed()
 
         // And NOT in active view
-        composeTestRule.onNodeWithContentDescription("Show Active").performClick()
+        composeTestRule.onNodeWithText("--all").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("RenamedArchived").assertDoesNotExist()
     }
