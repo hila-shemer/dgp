@@ -415,7 +415,12 @@ fun EditEntryScreen(
                             color = editorial.ink,
                             modifier = Modifier.weight(1f),
                         )
-                        IconButton(onClick = { previewVisible = !previewVisible }) {
+                        IconButton(
+                            onClick = { previewVisible = !previewVisible },
+                            modifier = Modifier.semantics {
+                                contentDescription = if (previewVisible) "Hide preview" else "Show preview"
+                            },
+                        ) {
                             Icon(
                                 imageVector = if (previewVisible) Icons.Filled.VisibilityOff
                                               else Icons.Filled.Visibility,
@@ -454,7 +459,12 @@ fun EditEntryScreen(
                         visualTransformation = if (vaultVisible) VisualTransformation.None
                                                else PasswordVisualTransformation(),
                         trailingIcon = {
-                            IconButton(onClick = { vaultVisible = !vaultVisible }) {
+                            IconButton(
+                                onClick = { vaultVisible = !vaultVisible },
+                                modifier = Modifier.semantics {
+                                    contentDescription = if (vaultVisible) "Hide secret" else "Show secret"
+                                },
+                            ) {
                                 Icon(
                                     imageVector = if (vaultVisible) Icons.Filled.VisibilityOff
                                                   else Icons.Filled.Visibility,
