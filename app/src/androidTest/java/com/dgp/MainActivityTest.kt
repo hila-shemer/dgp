@@ -157,7 +157,7 @@ class MainActivityTest {
     @Test
     fun unlock_withValidSeed_showsSettingsButton() {
         unlockWith("testseedD")
-        composeTestRule.onNodeWithContentDescription("Seed Settings").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Settings").assertIsDisplayed()
     }
 
     // ── Service CRUD ──────────────────────────────────────────────────────────
@@ -292,36 +292,36 @@ class MainActivityTest {
         }
     }
 
-    // ── Seed settings ─────────────────────────────────────────────────────────
+    // ── Settings screen ───────────────────────────────────────────────────────
 
     @Test
-    fun seedSettings_dialog_isReachableViaSettingsButton() {
+    fun settingsScreen_isReachableViaSettingsButton() {
         unlockWith("testseedK")
-        // The settings button requires authentication first (biometric/PIN).
-        // On a test emulator without a screen lock the authenticate() call will
-        // immediately invoke onSuccess via the device credential flow.
-        // If the emulator has no lock screen, the BiometricPrompt may error —
-        // we only assert the button is accessible, not that the dialog opens.
-        composeTestRule.onNodeWithContentDescription("Seed Settings").assertIsDisplayed()
-    }
-
-    // ── Test vectors button ───────────────────────────────────────────────────
-
-    @Test
-    fun testVectors_button_isVisibleAfterUnlock() {
-        unlockWith("testseedL")
-        composeTestRule.onNodeWithContentDescription("Test Vectors").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("/dgp/settings").assertIsDisplayed()
     }
 
     @Test
     fun testVectors_dialog_opensAndShowsResults() {
         unlockWith("testseedM")
-        composeTestRule.onNodeWithContentDescription("Test Vectors").performClick()
-        // The dialog title shows "Running..." initially
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
         composeTestRule.waitForIdle()
-        // After completion the title shows "X passed, Y failed / Z"
-        // Either state is acceptable; just verify the dialog is open
+        composeTestRule.onNodeWithContentDescription("Run Test Vectors")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Close").assertIsDisplayed()
+    }
+
+    @Test
+    fun settingsScreen_close_returnsToList() {
+        unlockWith("testseedSettings1")
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Close Settings").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("/dgp/").assertIsDisplayed()
     }
 
     // ── Password generation ───────────────────────────────────────────────────
