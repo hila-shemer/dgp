@@ -154,6 +154,9 @@ fun UnlockScreen(
             modifier = Modifier
                 .offset { IntOffset(shakeX.value.roundToInt(), 0) }
                 .semantics { testTag = "seed-input" },
+            // Allow multi-line so a pasted / QR-scanned seed containing newlines
+            // is visible and editable instead of silently mangled.
+            singleLine = false,
             visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
             leadingIcon = {
                 Text(

@@ -43,7 +43,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dgp.ui.components.TagPill
-import com.dgp.ui.components.ThemeSwitchPill
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.ThemeMode
 import com.dgp.ui.theme.editorial
@@ -55,8 +54,6 @@ fun SettingsScreen(
     onClipboardTimeoutChange: (Int) -> Unit,
     clearOnLock: Boolean,
     onClearOnLockChange: (Boolean) -> Unit,
-    themeMode: ThemeMode,
-    onThemeModeChange: (ThemeMode) -> Unit,
     compactRows: Boolean,
     onCompactRowsChange: (Boolean) -> Unit,
     seedFingerprint: String,
@@ -65,7 +62,6 @@ fun SettingsScreen(
     onExportConfig: () -> Unit,
     onImportEncrypted: () -> Unit,
     onImportPlaintext: () -> Unit,
-    onEnterReorder: () -> Unit,
     onClearAll: () -> Unit,
     onLockAndQuit: () -> Unit,
     onBack: () -> Unit,
@@ -241,25 +237,6 @@ fun SettingsScreen(
             // ## appearance
             SectionHeader("appearance", t, editorial)
             SectionCard(editorial) {
-                // theme chips
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "theme",
-                        style = t.body,
-                        color = editorial.ink,
-                        modifier = Modifier.weight(1f),
-                    )
-                    ThemeSwitchPill(
-                        mode = themeMode,
-                        onModeChange = onThemeModeChange,
-                    )
-                }
-                HorizontalDivider(color = editorial.rule, thickness = 1.dp)
                 SettingsRow(
                     label = "compact rows",
                     trailing = {
@@ -276,8 +253,6 @@ fun SettingsScreen(
                         )
                     },
                 )
-                HorizontalDivider(color = editorial.rule, thickness = 1.dp)
-                SettingsRow(label = "reorder entries", onClick = onEnterReorder)
             }
 
             Spacer(Modifier.height(20.dp))
@@ -426,8 +401,6 @@ private fun SettingsScreenPreview() {
             onClipboardTimeoutChange = {},
             clearOnLock = true,
             onClearOnLockChange = {},
-            themeMode = ThemeMode.Auto,
-            onThemeModeChange = {},
             compactRows = false,
             onCompactRowsChange = {},
             seedFingerprint = "SHA-256: 1a2b3c4d5e6f7890",
@@ -436,7 +409,6 @@ private fun SettingsScreenPreview() {
             onExportConfig = {},
             onImportEncrypted = {},
             onImportPlaintext = {},
-            onEnterReorder = {},
             onClearAll = {},
             onLockAndQuit = {},
             onBack = {},
