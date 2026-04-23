@@ -37,24 +37,22 @@
 > Task :app:javaPreCompileReleaseUnitTest UP-TO-DATE
 
 > Task :app:compileDebugKotlin
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:681:55 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:685:29 'LinearProgressIndicator(Float, Modifier = ..., Color = ..., Color = ..., StrokeCap = ...): Unit' is deprecated. Use the overload that takes `progress` as a lambda
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:931:17 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
-w: file:///app/app/src/main/java/com/dgp/ui/ServicesScreen.kt:213:78 No cast needed
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:655:55 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:659:29 'LinearProgressIndicator(Float, Modifier = ..., Color = ..., Color = ..., StrokeCap = ...): Unit' is deprecated. Use the overload that takes `progress` as a lambda
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:808:17 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
 
 > Task :app:compileDebugJavaWithJavac NO-SOURCE
-> Task :app:processDebugJavaRes
-> Task :app:bundleDebugClassesToRuntimeJar
-> Task :app:bundleDebugClassesToCompileJar
 
 > Task :app:compileReleaseKotlin
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:681:55 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:685:29 'LinearProgressIndicator(Float, Modifier = ..., Color = ..., Color = ..., StrokeCap = ...): Unit' is deprecated. Use the overload that takes `progress` as a lambda
-w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:931:17 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
-w: file:///app/app/src/main/java/com/dgp/ui/ServicesScreen.kt:213:78 No cast needed
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:655:55 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:659:29 'LinearProgressIndicator(Float, Modifier = ..., Color = ..., Color = ..., StrokeCap = ...): Unit' is deprecated. Use the overload that takes `progress` as a lambda
+w: file:///app/app/src/main/java/com/dgp/MainActivity.kt:808:17 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
 
+> Task :app:processDebugJavaRes
 > Task :app:compileReleaseJavaWithJavac NO-SOURCE
 > Task :app:processReleaseJavaRes
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:bundleDebugClassesToRuntimeJar
 > Task :app:bundleReleaseClassesToRuntimeJar
 > Task :app:bundleReleaseClassesToCompileJar
 > Task :app:compileDebugUnitTestKotlin
@@ -67,7 +65,7 @@ w: file:///app/app/src/main/java/com/dgp/ui/ServicesScreen.kt:213:78 No cast nee
 > Task :app:testReleaseUnitTest
 > Task :app:test
 
-BUILD SUCCESSFUL in 5s
+BUILD SUCCESSFUL in 10s
 46 actionable tasks: 13 executed, 33 up-to-date
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
@@ -112,5 +110,5 @@ BUILD SUCCESSFUL in 5s
 > Task :app:createDebugApkListingFileRedirect UP-TO-DATE
 > Task :app:assembleDebug
 
-BUILD SUCCESSFUL in 665ms
+BUILD SUCCESSFUL in 1s
 35 actionable tasks: 5 executed, 30 up-to-date
