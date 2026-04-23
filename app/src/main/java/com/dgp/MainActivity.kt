@@ -3,11 +3,9 @@ package com.dgp
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.biometric.BiometricPrompt
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -26,6 +24,9 @@ import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
+import com.dgp.ui.ListFilter
+import com.dgp.ui.ServicesScreen
+import com.dgp.ui.components.CopyToastState
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.UnlockScreen
 import android.net.Uri
@@ -40,8 +41,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.Scanner
 import java.util.UUID
 
@@ -255,7 +254,8 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     var selectedServiceForGen by remember { mutableStateOf<DgpService?>(null) }
     var generatedPassword by remember { mutableStateOf("") }
     var seedError by remember { mutableStateOf(false) }
-    var showArchived by remember { mutableStateOf(false) }
+    var activeFilter by remember { mutableStateOf<ListFilter>(ListFilter.All) }
+    var copyToast by remember { mutableStateOf<CopyToastState>(CopyToastState.Idle) }
 
     fun loadServices(seed: String): Boolean {
         val encrypted = prefs.getString("services_encrypted", null)
@@ -482,375 +482,249 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         )
     }
 
-    val visibleServices = services.filter {
-        it.archived == showArchived &&
-        (it.name.contains(searchQuery, ignoreCase = true) ||
-         it.comment.contains(searchQuery, ignoreCase = true))
+    ServicesScreen(
+        services = services,
+        account = account,
+        searchQuery = searchQuery,
+        onSearchChange = { searchQuery = it },
+        activeFilter = activeFilter,
+        onFilterChange = { activeFilter = it },
+        onTapRow = { svc ->
+            selectedServiceForGen = svc
+            generatedPassword = generateForService(svc)
+        },
+        onChevronTap = { svc ->
+            selectedServiceForGen = svc
+            generatedPassword = generateForService(svc)
+        },
+        onLongPressRow = { /* Phase 7 */ },
+        onAdd = { showAddDialog = true },
+        onScan = {
+            scanQr { _ ->
+                editingService = null
+                showAddDialog = true
+            }
+        },
+        onLock = {
+            masterSeed = ""
+            isSeeded = false
+            account = ""
+            showSeedPrompt = true
+        },
+        onOpenAccount = {
+            if (account.isNotEmpty()) clearAccount()
+            showAccountPrompt = true
+        },
+        onOpenSettings = { authenticate { showSeedSettings = true } },
+        onRunTestVectors = {
+            testResults.clear()
+            showTestVectors = true
+            testRunning = true
+            scope.launch {
+                for (i in TestVectors.vectors.indices) {
+                    val result = withContext(Dispatchers.Default) {
+                        TestVectors.runOne(engine, i)
+                    }
+                    testResults.add(result)
+                }
+                testRunning = false
+            }
+        },
+        copyToast = copyToast,
+        onToastDismiss = { copyToast = CopyToastState.Idle },
+        onToastUndo = { copyToast = CopyToastState.Idle },
+    )
+
+    if (showExportPinDialog) {
+        PinDialog(
+            title = "Export PIN",
+            subtitle = "Encrypt config with a PIN for sharing",
+            onDismiss = { showExportPinDialog = false },
+            onConfirm = { pin ->
+                showExportPinDialog = false
+                exportServices(pin)
+            }
+        )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (showArchived) "DGP — Archive" else "DGP") },
-                actions = {
-                    if (isSeeded) {
-                        if (account.isNotEmpty()) {
-                            IconButton(onClick = {
-                                clearAccount()
-                                showAccountPrompt = true
-                            }) {
-                                Icon(Icons.Default.Clear, "Clear Account")
-                            }
-                        } else {
-                            IconButton(onClick = { showAccountPrompt = true }) {
-                                Icon(Icons.Default.Person, "Set Account")
+    if (showImportPinDialog) {
+        PinDialog(
+            title = "Import PIN",
+            subtitle = "Copy encrypted config to clipboard first",
+            onDismiss = { showImportPinDialog = false },
+            onConfirm = { pin ->
+                showImportPinDialog = false
+                importEncryptedServices(pin)
+            }
+        )
+    }
+
+    if (showAddDialog || editingService != null) {
+        // Pre-decrypt existing vault secret so the user can edit it.
+        // Failure → empty field + a warning shown in the dialog.
+        val editing = editingService
+        val existingBlob = editing?.encryptedSecret
+        val (initialSecret, decryptFailed) = if (editing?.type == "vault" && existingBlob != null) {
+            val key = engine.deriveAesKey(masterSeed, editing.name, account)
+            val decrypted = ConfigCrypto.decryptWithRawKey(existingBlob, key)
+            if (decrypted != null) decrypted to false else "" to true
+        } else "" to false
+
+        ServiceEditDialog(
+            service = editing,
+            initialVaultSecret = initialSecret,
+            vaultDecryptFailed = decryptFailed,
+            onDismiss = { showAddDialog = false; editingService = null },
+            onSave = { name, type, comment, vaultSecret ->
+                val encryptedSecret = if (type == "vault" && !vaultSecret.isNullOrEmpty()) {
+                    val key = engine.deriveAesKey(masterSeed, name, account)
+                    ConfigCrypto.encryptWithRawKey(vaultSecret, key)
+                } else null
+                val newList = services.toMutableList()
+                if (editing != null) {
+                    val idx = newList.indexOfFirst { it.id == editing.id }
+                    if (idx >= 0) {
+                        newList[idx] = editing.copy(
+                            name = name, type = type, comment = comment,
+                            encryptedSecret = encryptedSecret
+                        )
+                    }
+                } else {
+                    newList.add(DgpService(
+                        name = name, type = type, comment = comment,
+                        encryptedSecret = encryptedSecret
+                    ))
+                }
+                saveServices(newList)
+                showAddDialog = false
+                editingService = null
+            },
+            onDelete = {
+                if (editing != null) {
+                    val newList = services.filter { it.id != editing.id }
+                    saveServices(newList)
+                    editingService = null
+                }
+            },
+            onArchiveToggle = {
+                if (editing != null) {
+                    val newList = services.map {
+                        if (it.id == editing.id) it.copy(archived = !it.archived) else it
+                    }
+                    saveServices(newList)
+                    editingService = null
+                }
+            }
+        )
+    }
+
+    if (showSeedSettings) {
+        SeedSettingsDialog(
+            currentSeed = masterSeed,
+            onDismiss = { showSeedSettings = false },
+            onSave = { newSeed ->
+                // Re-encrypt services with new seed
+                val json = serializeServices(services)
+                prefs.edit()
+                    .putString("services_encrypted", ConfigCrypto.encrypt(json, newSeed))
+                    .apply()
+                masterSeed = newSeed
+                saveSeedWithBiometric(newSeed)
+                showSeedSettings = false
+            },
+            onScanQr = { onResult -> scanQr(onResult) },
+            onExport = { showExportPinDialog = true },
+            onImportEncrypted = { showImportPinDialog = true },
+            onImportJson = { launchImportFilePicker() }
+        )
+    }
+
+    if (showTestVectors) {
+        val passed = testResults.count { it.passed }
+        val failed = testResults.count { !it.passed }
+        val total = TestVectors.vectors.size
+        AlertDialog(
+            onDismissRequest = {
+                showTestVectors = false
+                testRunning = false
+            },
+            title = {
+                Text(if (testRunning) "Running... ${testResults.size}/$total"
+                     else "$passed passed, $failed failed / $total")
+            },
+            text = {
+                LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                    items(testResults.size) { i ->
+                        val r = testResults[i]
+                        Column(modifier = Modifier.padding(vertical = 2.dp)) {
+                            Text(
+                                text = (if (r.passed) "PASS " else "FAIL ") + r.label,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (r.passed) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.error
+                            )
+                            if (r.passed) {
+                                Text("  = ${r.actual}",
+                                     style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                Text("  expected: ${r.expected}",
+                                     style = MaterialTheme.typography.bodySmall)
+                                Text("  actual:   ${r.actual}",
+                                     style = MaterialTheme.typography.bodySmall,
+                                     color = MaterialTheme.colorScheme.error)
                             }
                         }
-                        IconButton(onClick = {
-                            testResults.clear()
-                            showTestVectors = true
-                            testRunning = true
-                            scope.launch {
-                                for (i in TestVectors.vectors.indices) {
-                                    val result = withContext(Dispatchers.Default) {
-                                        TestVectors.runOne(engine, i)
-                                    }
-                                    testResults.add(result)
-                                }
-                                testRunning = false
-                            }
-                        }) {
-                            Icon(Icons.Default.CheckCircle, "Test Vectors")
-                        }
-                        IconButton(onClick = { showArchived = !showArchived }) {
-                            Icon(
-                                Icons.Default.Archive,
-                                if (showArchived) "Show Active" else "Show Archived",
-                                tint = if (showArchived) MaterialTheme.colorScheme.primary
-                                       else LocalContentColor.current
+                        if (i < testResults.size - 1) Divider()
+                    }
+                    if (testRunning) {
+                        item {
+                            LinearProgressIndicator(
+                                progress = testResults.size.toFloat() / total,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                             )
                         }
-                        IconButton(onClick = {
-                            authenticate { showSeedSettings = true }
-                        }) {
-                            Icon(Icons.Default.Settings, "Seed Settings")
-                        }
                     }
                 }
-            )
-        },
-        floatingActionButton = {
-            if (isSeeded && !showArchived) {
-                FloatingActionButton(onClick = { showAddDialog = true }) {
-                    Icon(Icons.Default.Add, "Add Service")
-                }
-            }
-        }
-    ) { padding ->
-        if (!isSeeded) {
-            // Locked screen
-            Column(
-                modifier = Modifier.padding(padding).fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Enter seed to unlock", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = { showSeedPrompt = true }) {
-                    Text("Unlock")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
+            },
+            confirmButton = {
                 TextButton(onClick = {
-                    prefs.edit()
-                        .remove("services_encrypted")
-                        .remove("account_encrypted")
-                        .apply()
-                    android.widget.Toast.makeText(context, "Config cleared", android.widget.Toast.LENGTH_SHORT).show()
+                    showTestVectors = false
+                    testRunning = false
+                }) { Text("Close") }
+            }
+        )
+    }
+
+    if (selectedServiceForGen != null) {
+        AlertDialog(
+            onDismissRequest = { selectedServiceForGen = null },
+            title = { Text(selectedServiceForGen!!.name) },
+            text = {
+                Column {
+                    Text("Type: ${selectedServiceForGen!!.type}",
+                         style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(generatedPassword, style = MaterialTheme.typography.headlineMedium)
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val clip = android.content.ClipData.newPlainText("DGP Password", generatedPassword)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        clip.description.extras = android.os.PersistableBundle().apply {
+                            putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
+                        }
+                    }
+                    clipboardManager.setPrimaryClip(clip)
+                    selectedServiceForGen = null
                 }) {
-                    Text("Reset Config", color = MaterialTheme.colorScheme.error)
+                    Text("Copy")
                 }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedServiceForGen = null }) { Text("Close") }
             }
-        } else {
-            // Unlocked - show service list
-            Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    placeholder = { Text("Search services...") },
-                    leadingIcon = { Icon(Icons.Default.Search, null) },
-                    singleLine = true
-                )
-
-                val lazyListState = rememberLazyListState()
-                val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-                    if (searchQuery.isNotEmpty()) return@rememberReorderableLazyListState
-                    val movedId = visibleServices.getOrNull(from.index)?.id ?: return@rememberReorderableLazyListState
-                    val targetId = visibleServices.getOrNull(to.index)?.id ?: return@rememberReorderableLazyListState
-                    val srcIdx = services.indexOfFirst { it.id == movedId }
-                    val tgtIdx = services.indexOfFirst { it.id == targetId }
-                    if (srcIdx >= 0 && tgtIdx >= 0) {
-                        val newList = services.toMutableList().apply {
-                            add(tgtIdx, removeAt(srcIdx))
-                        }
-                        saveServices(newList)
-                    }
-                }
-
-                LazyColumn(state = lazyListState, modifier = Modifier.fillMaxWidth().weight(1f)) {
-                    items(visibleServices, key = { it.id }) { service ->
-                        ReorderableItem(reorderableState, key = service.id) { _ ->
-                            Column {
-                                ListItem(
-                                    headlineContent = { Text(service.name) },
-                                    supportingContent = if (service.comment.isNotEmpty()) {
-                                        { Text(service.comment) }
-                                    } else null,
-                                    leadingContent = if (searchQuery.isEmpty()) {
-                                        {
-                                            Icon(
-                                                Icons.Default.DragHandle,
-                                                contentDescription = "Reorder",
-                                                modifier = Modifier.draggableHandle()
-                                            )
-                                        }
-                                    } else null,
-                                    trailingContent = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Surface(
-                                                shape = MaterialTheme.shapes.small,
-                                                color = MaterialTheme.colorScheme.secondaryContainer
-                                            ) {
-                                                Text(
-                                                    service.type,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                            IconButton(onClick = { editingService = service }) {
-                                                Icon(Icons.Default.Edit, "Edit")
-                                            }
-                                            IconButton(onClick = {
-                                                selectedServiceForGen = service
-                                                generatedPassword = generateForService(service)
-                                            }) {
-                                                Icon(Icons.Default.VpnKey, "Generate")
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.clickable {
-                                        selectedServiceForGen = service
-                                        generatedPassword = generateForService(service)
-                                    }
-                                )
-                                Divider()
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (showExportPinDialog) {
-                PinDialog(
-                    title = "Export PIN",
-                    subtitle = "Encrypt config with a PIN for sharing",
-                    onDismiss = { showExportPinDialog = false },
-                    onConfirm = { pin ->
-                        showExportPinDialog = false
-                        exportServices(pin)
-                    }
-                )
-            }
-
-            if (showImportPinDialog) {
-                PinDialog(
-                    title = "Import PIN",
-                    subtitle = "Copy encrypted config to clipboard first",
-                    onDismiss = { showImportPinDialog = false },
-                    onConfirm = { pin ->
-                        showImportPinDialog = false
-                        importEncryptedServices(pin)
-                    }
-                )
-            }
-
-            // Dialogs
-            if (showAddDialog || editingService != null) {
-                // Pre-decrypt existing vault secret so the user can edit it.
-                // Failure → empty field + a warning shown in the dialog.
-                val editing = editingService
-                val existingBlob = editing?.encryptedSecret
-                val (initialSecret, decryptFailed) = if (editing?.type == "vault" && existingBlob != null) {
-                    val key = engine.deriveAesKey(masterSeed, editing.name, account)
-                    val decrypted = ConfigCrypto.decryptWithRawKey(existingBlob, key)
-                    if (decrypted != null) decrypted to false else "" to true
-                } else "" to false
-
-                ServiceEditDialog(
-                    service = editing,
-                    initialVaultSecret = initialSecret,
-                    vaultDecryptFailed = decryptFailed,
-                    onDismiss = { showAddDialog = false; editingService = null },
-                    onSave = { name, type, comment, vaultSecret ->
-                        val encryptedSecret = if (type == "vault" && !vaultSecret.isNullOrEmpty()) {
-                            val key = engine.deriveAesKey(masterSeed, name, account)
-                            ConfigCrypto.encryptWithRawKey(vaultSecret, key)
-                        } else null
-                        val newList = services.toMutableList()
-                        if (editing != null) {
-                            val idx = newList.indexOfFirst { it.id == editing.id }
-                            if (idx >= 0) {
-                                newList[idx] = editing.copy(
-                                    name = name, type = type, comment = comment,
-                                    encryptedSecret = encryptedSecret
-                                )
-                            }
-                        } else {
-                            newList.add(DgpService(
-                                name = name, type = type, comment = comment,
-                                encryptedSecret = encryptedSecret
-                            ))
-                        }
-                        saveServices(newList)
-                        showAddDialog = false
-                        editingService = null
-                    },
-                    onDelete = {
-                        if (editing != null) {
-                            val newList = services.filter { it.id != editing.id }
-                            saveServices(newList)
-                            editingService = null
-                        }
-                    },
-                    onArchiveToggle = {
-                        if (editing != null) {
-                            val newList = services.map {
-                                if (it.id == editing.id) it.copy(archived = !it.archived) else it
-                            }
-                            saveServices(newList)
-                            editingService = null
-                        }
-                    }
-                )
-            }
-
-            if (showSeedSettings) {
-                SeedSettingsDialog(
-                    currentSeed = masterSeed,
-                    onDismiss = { showSeedSettings = false },
-                    onSave = { newSeed ->
-                        // Re-encrypt services with new seed
-                        val json = serializeServices(services)
-                        prefs.edit()
-                            .putString("services_encrypted", ConfigCrypto.encrypt(json, newSeed))
-                            .apply()
-                        masterSeed = newSeed
-                        saveSeedWithBiometric(newSeed)
-                        showSeedSettings = false
-                    },
-                    onScanQr = { onResult -> scanQr(onResult) },
-                    onExport = { showExportPinDialog = true },
-                    onImportEncrypted = { showImportPinDialog = true },
-                    onImportJson = { launchImportFilePicker() }
-                )
-            }
-
-            if (showTestVectors) {
-                val passed = testResults.count { it.passed }
-                val failed = testResults.count { !it.passed }
-                val total = TestVectors.vectors.size
-                AlertDialog(
-                    onDismissRequest = {
-                        showTestVectors = false
-                        testRunning = false
-                    },
-                    title = {
-                        Text(if (testRunning) "Running... ${testResults.size}/$total"
-                             else "$passed passed, $failed failed / $total")
-                    },
-                    text = {
-                        LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
-                            items(testResults.size) { i ->
-                                val r = testResults[i]
-                                Column(modifier = Modifier.padding(vertical = 2.dp)) {
-                                    Text(
-                                        text = (if (r.passed) "PASS " else "FAIL ") + r.label,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (r.passed) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.error
-                                    )
-                                    if (r.passed) {
-                                        Text("  = ${r.actual}",
-                                             style = MaterialTheme.typography.bodySmall)
-                                    } else {
-                                        Text("  expected: ${r.expected}",
-                                             style = MaterialTheme.typography.bodySmall)
-                                        Text("  actual:   ${r.actual}",
-                                             style = MaterialTheme.typography.bodySmall,
-                                             color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
-                                if (i < testResults.size - 1) Divider()
-                            }
-                            if (testRunning) {
-                                item {
-                                    LinearProgressIndicator(
-                                        progress = testResults.size.toFloat() / total,
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showTestVectors = false
-                            testRunning = false
-                        }) { Text("Close") }
-                    }
-                )
-            }
-
-            if (selectedServiceForGen != null) {
-                AlertDialog(
-                    onDismissRequest = { selectedServiceForGen = null },
-                    title = { Text(selectedServiceForGen!!.name) },
-                    text = {
-                        Column {
-                            Text("Type: ${selectedServiceForGen!!.type}",
-                                 style = MaterialTheme.typography.bodySmall)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(generatedPassword, style = MaterialTheme.typography.headlineMedium)
-                        }
-                    },
-                    confirmButton = {
-                        Button(onClick = {
-                            val clip = android.content.ClipData.newPlainText("DGP Password", generatedPassword)
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                clip.description.extras = android.os.PersistableBundle().apply {
-                                    putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
-                                }
-                            }
-                            clipboardManager.setPrimaryClip(clip)
-                            selectedServiceForGen = null
-                        }) {
-                            Text("Copy")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { selectedServiceForGen = null }) { Text("Close") }
-                    }
-                )
-            }
-        }
+        )
     }
 }
 
