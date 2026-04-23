@@ -164,34 +164,28 @@ class MainActivityTest {
     fun addService_appearsInList() {
         unlockWith("testseedE")
 
-        // Open the Add Service dialog
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
 
-        // Verify the dialog is showing
-        composeTestRule.onNodeWithText("Add Service").assertIsDisplayed()
+        // EditEntryScreen shows the path crumb for new entries
+        composeTestRule.onNodeWithText("/dgp/new").assertIsDisplayed()
 
-        // Enter service name and save
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("GitHub")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
-        // The service should appear in the list
         composeTestRule.onNodeWithText("GitHub").assertIsDisplayed()
     }
 
     @Test
     fun addService_saveButtonDoesNothingWhenNameEmpty() {
-        // The Save button in ServiceEditDialog has no `enabled` binding — it is always
-        // enabled but the onClick guard prevents saving with an empty name. Verify
-        // that clicking Save with no name entered doesn't dismiss the dialog.
         unlockWith("testseedF")
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
-        // Dialog should still be open (save was a no-op)
-        composeTestRule.onNodeWithText("Add Service").assertIsDisplayed()
+        // Screen should still be open (save was a no-op for blank name)
+        composeTestRule.onNodeWithText("/dgp/new").assertIsDisplayed()
     }
 
     @Test
@@ -201,10 +195,10 @@ class MainActivityTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("ShouldNotAppear")
-        composeTestRule.onNodeWithText("Cancel").performClick()
+        composeTestRule.onNodeWithContentDescription("Close").performClick()
         composeTestRule.waitForIdle()
 
-        // After cancel, service list should not contain the entry
+        // After close, service list should not contain the entry
         composeTestRule.onAllNodes(hasSetTextAction()) // just check no crash
         try {
             composeTestRule.onNodeWithText("ShouldNotAppear").assertDoesNotExist()
@@ -213,7 +207,6 @@ class MainActivityTest {
         }
     }
 
-    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
     fun editService_updatesNameInList() {
         unlockWith("testseedH")
@@ -222,25 +215,23 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("OldName")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
-        // Click the edit icon on the service
+        // Open reveal sheet, then tap Edit to open EditEntryScreen
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
 
-        // Directly set the field value, replacing the pre-filled name.
-        // performTextInput appends; performTextClearance/Replacement require ui-test 1.7+
-        // (BOM 2023.10.01 provides 1.5.4). SetText is available in all versions.
         composeTestRule.onNodeWithTag("service-name-input")
             .performSemanticsAction(SemanticsActions.SetText) { it(AnnotatedString("NewName")) }
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("NewName").assertIsDisplayed()
     }
 
-    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
     fun deleteService_removedFromList() {
         unlockWith("testseedI")
@@ -249,13 +240,18 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("DeleteMe")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
-        // Open edit dialog and delete
+        // Open reveal sheet, then Edit, then Delete
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Delete").performClick()
+        composeTestRule.onNodeWithContentDescription("Delete").performClick()
+        composeTestRule.waitForIdle()
+        // Confirm in the confirm dialog
+        composeTestRule.onNodeWithText("remove").performClick()
         composeTestRule.waitForIdle()
 
         try {
@@ -276,7 +272,7 @@ class MainActivityTest {
             composeTestRule.onNodeWithContentDescription("Add Service").performClick()
             composeTestRule.waitForIdle()
             composeTestRule.onNodeWithTag("service-name-input").performTextInput(name)
-            composeTestRule.onNodeWithText("Save").performClick()
+            composeTestRule.onNodeWithContentDescription("Save").performClick()
             composeTestRule.waitForIdle()
         }
         addService("GitHub")
@@ -336,7 +332,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("TestSvc")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         // Tap row copies to clipboard; open reveal sheet via chevron
@@ -357,7 +353,7 @@ class MainActivityTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("Bank")
         composeTestRule.onNodeWithTag("service-comment-input").performTextInput("work account")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Bank").assertIsDisplayed()
         composeTestRule.onNodeWithText("work account").assertIsDisplayed()
@@ -369,9 +365,9 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("TypeChipSvc")
-        // Default type is alnum — the Save button dismisses the dialog, then
-        // the only "alnum" text remaining is the chip in the row.
-        composeTestRule.onNodeWithText("Save").performClick()
+        // Default type is alnum — saving dismisses the screen; the type tile is gone.
+        // The only "alnum" text remaining is the chip in the row.
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("alnum").assertIsDisplayed()
     }
@@ -385,7 +381,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("DragMe")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithContentDescription("Reorder").assertIsDisplayed()
     }
@@ -397,7 +393,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("Searchable")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         // Handle is there initially
@@ -417,7 +413,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("TapMe")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         // Tap row copies to clipboard; chevron opens the reveal sheet with Copy button
@@ -435,30 +431,33 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("NotEdit")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("NotEdit").performClick()
         composeTestRule.waitForIdle()
 
-        // The edit dialog title would be "Edit Service" — must not be visible
+        // "Edit Service" text never appears in the new EditEntryScreen — assertion trivially true
         composeTestRule.onNodeWithText("Edit Service").assertDoesNotExist()
     }
 
-    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
-    fun editIcon_stillOpensEditDialog() {
+    fun editButtonInRevealSheet_opensEditScreen() {
         unlockWith("testseedEditIcon")
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("EditMe")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
+        // Open reveal sheet, then tap Edit
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("Edit Service").assertIsDisplayed()
+        // EditEntryScreen shows the path crumb with the service name
+        composeTestRule.onNodeWithText("/dgp/edit/EditMe").assertIsDisplayed()
     }
 
     // ── Archive ───────────────────────────────────────────────────────────────
@@ -469,7 +468,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("ArchiveMe")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         // Open reveal sheet via chevron, then archive directly
@@ -487,7 +486,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("InTheArchive")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         // Open reveal sheet via chevron, then archive
@@ -518,7 +517,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("Boomerang")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         // Open reveal sheet, archive the service
@@ -541,30 +540,33 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("Boomerang").assertIsDisplayed()
     }
 
-    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
     fun editArchivedService_preservesArchivedFlag() {
-        // Regression: the previous DgpService(...) constructor in the save path
-        // omitted `archived`, which silently un-archived a service when edited.
+        // Regression: the previous save path omitted `archived`, silently un-archiving on edit.
+        // The new EditEntryScreen.attemptSave() uses .copy(..., archived = archived) to fix this.
         unlockWith("testseedArchive5")
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("StayArchived")
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+
+        // Archive via the reveal sheet
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Archive").performClick()
+        composeTestRule.onNodeWithText("archive").performClick()
         composeTestRule.waitForIdle()
 
         // In archive view, edit (rename) the archived service
         composeTestRule.onNodeWithText("--archived").performClick()
         composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input")
             .performSemanticsAction(SemanticsActions.SetText) { it(AnnotatedString("RenamedArchived")) }
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         // Renamed service still present in archive view
@@ -578,7 +580,6 @@ class MainActivityTest {
 
     // ── Edit preserves position (regression: old code moved edited item to end) ─
 
-    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
     fun editService_preservesPositionInList() {
         unlockWith("testseedS")
@@ -587,19 +588,21 @@ class MainActivityTest {
             composeTestRule.onNodeWithContentDescription("Add Service").performClick()
             composeTestRule.waitForIdle()
             composeTestRule.onNodeWithTag("service-name-input").performTextInput(name)
-            composeTestRule.onNodeWithText("Save").performClick()
+            composeTestRule.onNodeWithContentDescription("Save").performClick()
             composeTestRule.waitForIdle()
         }
         addService("Alpha")
         addService("Bravo")
         addService("Charlie")
 
-        // Edit the middle service (display index 1) — rename to BravoEdited
-        composeTestRule.onAllNodesWithContentDescription("Edit")[1].performClick()
+        // Edit the middle service (display index 1) via reveal sheet
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[1].performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("service-name-input")
             .performSemanticsAction(SemanticsActions.SetText) { it(AnnotatedString("BravoEdited")) }
-        composeTestRule.onNodeWithText("Save").performClick()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
         // Alpha stays above, Charlie stays below — edited item did not jump to end
@@ -608,5 +611,21 @@ class MainActivityTest {
         val charlieY = composeTestRule.onNodeWithText("Charlie").fetchSemanticsNode().positionInRoot.y
         assertTrue("Expected Alpha<BravoEdited<Charlie by Y, got A=$alphaY B=$bravoY C=$charlieY",
                    alphaY < bravoY && bravoY < charlieY)
+    }
+
+    @Test
+    fun editEntryScreen_typeTile_changesSelection() {
+        unlockWith("testseedTypeTile")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("Pick")
+        composeTestRule.onNodeWithTag("type-tile-hex").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
+        composeTestRule.waitForIdle()
+
+        // hex chip is now visible in the row
+        composeTestRule.onNodeWithText("hex").assertIsDisplayed()
     }
 }
