@@ -14,6 +14,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -372,37 +374,58 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("alnum").assertIsDisplayed()
     }
 
-    // ── Drag handle visibility ────────────────────────────────────────────────
+    // ── Reorder mode ──────────────────────────────────────────────────────────
 
-    @Ignore("reorder moved to Phase 7 dedicated screen")
     @Test
-    fun dragHandle_visibleWhenSearchIsEmpty() {
-        unlockWith("testseedQ")
+    fun longPressRow_entersReorderMode() {
+        unlockWith("testseedReorder1")
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag("service-name-input").performTextInput("DragMe")
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("AlphaSvc")
         composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription("Reorder").assertIsDisplayed()
+
+        composeTestRule.onNodeWithText("AlphaSvc").performTouchInput { longClick() }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Done Reorder").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Close Reorder").assertIsDisplayed()
     }
 
-    @Ignore("reorder moved to Phase 7 dedicated screen")
     @Test
-    fun dragHandle_hiddenWhileSearching() {
-        unlockWith("testseedR")
+    fun reorderScreen_done_returnsToList() {
+        unlockWith("testseedReorder2")
         composeTestRule.onNodeWithContentDescription("Add Service").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag("service-name-input").performTextInput("Searchable")
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("BetaSvc")
         composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
 
-        // Handle is there initially
-        composeTestRule.onNodeWithContentDescription("Reorder").assertIsDisplayed()
-
-        // Typing in search hides it (service still matches so the row stays visible)
-        composeTestRule.onNodeWithText("Search services...").performTextInput("Search")
+        composeTestRule.onNodeWithText("BetaSvc").performTouchInput { longClick() }
         composeTestRule.waitForIdle()
-        assertEquals(0, composeTestRule.onAllNodesWithContentDescription("Reorder").fetchSemanticsNodes().size)
+        composeTestRule.onNodeWithContentDescription("Done Reorder").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("/dgp/").assertIsDisplayed()
+        composeTestRule.onNodeWithText("BetaSvc").assertIsDisplayed()
+    }
+
+    @Test
+    fun reorderScreen_close_returnsToList() {
+        unlockWith("testseedReorder3")
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput("GammaSvc")
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("GammaSvc").performTouchInput { longClick() }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Close Reorder").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("/dgp/").assertIsDisplayed()
+        composeTestRule.onNodeWithText("GammaSvc").assertIsDisplayed()
     }
 
     // ── Tap behavior: row tap generates, edit icon edits ─────────────────────

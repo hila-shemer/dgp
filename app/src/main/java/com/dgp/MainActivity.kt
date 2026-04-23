@@ -26,6 +26,7 @@ import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
 import com.dgp.ui.EditEntryScreen
 import com.dgp.ui.ListFilter
+import com.dgp.ui.ReorderScreen
 import com.dgp.ui.RevealSheet
 import com.dgp.ui.ServicesScreen
 import com.dgp.ui.components.CopyToastState
@@ -257,6 +258,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     var seedError by remember { mutableStateOf(false) }
     var activeFilter by remember { mutableStateOf<ListFilter>(ListFilter.All) }
     var copyToast by remember { mutableStateOf<CopyToastState>(CopyToastState.Idle) }
+    var reordering by remember { mutableStateOf(false) }
 
     fun loadServices(seed: String): Boolean {
         val encrypted = prefs.getString("services_encrypted", null)
@@ -469,6 +471,19 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         return@DgpApp
     }
 
+    // Reorder screen — full-screen, takes the entire composition slot
+    if (reordering && isSeeded) {
+        ReorderScreen(
+            services = services,
+            onDone = { newOrder ->
+                saveServices(newOrder)
+                reordering = false
+            },
+            onCancel = { reordering = false },
+        )
+        return@DgpApp
+    }
+
     // Account prompt (shown after seed unlock)
     if (showAccountPrompt && isSeeded) {
         AccountPromptDialog(
@@ -502,7 +517,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             copyToast = CopyToastState.Visible(svc.name)
         },
         onChevronTap = { svc -> revealingService = svc },
-        onLongPressRow = { /* Phase 7 */ },
+        onLongPressRow = { reordering = true },
         onAdd = { showAddDialog = true },
         onScan = {
             scanQr { _ ->
