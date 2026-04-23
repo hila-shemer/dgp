@@ -149,10 +149,11 @@ fun ReorderScreen(
         ) {
             items(workingOrder, key = { it.id }) { svc ->
                 ReorderableItem(reorderState, key = svc.id) { isDragging ->
+                    // Handle only on the drag icon so the list itself can be scrolled.
                     ReorderCard(
                         service = svc,
                         isDragging = isDragging,
-                        modifier = Modifier.draggableHandle(
+                        dragHandleModifier = Modifier.draggableHandle(
                             onDragStarted = {
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             },
@@ -168,7 +169,7 @@ fun ReorderScreen(
 private fun ReorderCard(
     service: DgpService,
     isDragging: Boolean,
-    modifier: Modifier = Modifier,
+    dragHandleModifier: Modifier = Modifier,
 ) {
     val editorial = MaterialTheme.editorial
     val t = MaterialTheme.editorialType
@@ -188,8 +189,7 @@ private fun ReorderCard(
                 width = if (isDragging) 1.5.dp else 1.dp,
                 color = if (isDragging) editorial.accent else editorial.rule,
                 shape = RoundedCornerShape(6.dp),
-            )
-            .then(modifier),
+            ),
     ) {
         // 3dp accent strip flush left
         Box(
@@ -239,12 +239,20 @@ private fun ReorderCard(
 
             Spacer(Modifier.width(8.dp))
 
-            Icon(
-                imageVector = Icons.Rounded.DragIndicator,
-                contentDescription = "Reorder",
-                tint = editorial.inkMuted,
-                modifier = Modifier.size(24.dp),
-            )
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .then(dragHandleModifier)
+                    .semantics { contentDescription = "Reorder handle" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.DragIndicator,
+                    contentDescription = null,
+                    tint = editorial.inkMuted,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
         }
     }
 }
