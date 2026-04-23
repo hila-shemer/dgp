@@ -27,6 +27,7 @@ import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
 import com.dgp.ui.theme.EditorialTheme
+import com.dgp.ui.UnlockScreen
 import android.net.Uri
 import android.util.Base64
 import androidx.core.content.FileProvider
@@ -448,10 +449,13 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
 
     // Seed entry prompt (shown when locked)
     if (showSeedPrompt && !isSeeded) {
-        SeedEntryDialog(
+        UnlockScreen(
             error = seedError,
             onUnlock = { seed -> unlockWithSeed(seed) },
             onScanQr = { onResult -> scanQr(onResult) },
+            onBiometric = {
+                loadSeedWithBiometric { seed -> unlockWithSeed(seed, skipSave = true) }
+            },
             onResetConfig = {
                 prefs.edit()
                     .remove("services_encrypted")
@@ -459,8 +463,9 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
                     .apply()
                 seedError = false
                 android.widget.Toast.makeText(context, "Config cleared", android.widget.Toast.LENGTH_SHORT).show()
-            }
+            },
         )
+        return@DgpApp
     }
 
     // Account prompt (shown after seed unlock)
@@ -847,66 +852,6 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             }
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SeedEntryDialog(
-    error: Boolean,
-    onUnlock: (String) -> Unit,
-    onScanQr: ((String) -> Unit) -> Unit,
-    onResetConfig: () -> Unit = {}
-) {
-    var seed by remember { mutableStateOf("") }
-    var visible by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = {},
-        title = { Text("Unlock DGP") },
-        text = {
-            Column {
-                TextField(
-                    value = seed,
-                    onValueChange = { seed = it },
-                    label = { Text("Master Seed") },
-                    modifier = Modifier.semantics { testTag = "seed-input" },
-                    visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { visible = !visible }) {
-                            Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
-                        }
-                    }
-                )
-                if (error) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Wrong seed — could not decrypt config",
-                         color = MaterialTheme.colorScheme.error,
-                         style = MaterialTheme.typography.bodySmall)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { onScanQr { scanned -> seed = scanned } },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Scan QR Code")
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { if (seed.isNotEmpty()) onUnlock(seed) },
-                enabled = seed.isNotEmpty(),
-                modifier = Modifier.semantics { testTag = "unlock-button" }
-            ) { Text("Unlock") }
-        },
-        dismissButton = {
-            TextButton(onClick = onResetConfig) {
-                Text("Reset Config", color = MaterialTheme.colorScheme.error)
-            }
-        }
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

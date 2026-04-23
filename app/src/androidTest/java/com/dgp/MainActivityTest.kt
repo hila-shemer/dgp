@@ -88,7 +88,7 @@ class MainActivityTest {
 
     @Test
     fun app_startsInLockedState_showsUnlockDialog() {
-        composeTestRule.onNodeWithText("Unlock DGP").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("seed-input").assertIsDisplayed()
     }
 
     @Test
@@ -109,7 +109,7 @@ class MainActivityTest {
 
     @Test
     fun seedEntryDialog_scanQrButton_isVisible() {
-        composeTestRule.onNodeWithText("Scan QR Code").assertIsDisplayed()
+        composeTestRule.onNodeWithText("scan qr").assertIsDisplayed()
     }
 
     // ── Unlock flow ───────────────────────────────────────────────────────────
