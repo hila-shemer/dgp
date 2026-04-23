@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DGP.Editorial" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/editorial_paper_dark</item>
+        <item name="android:statusBarColor">@color/editorial_paper_dark</item>
+        <item name="android:navigationBarColor">@color/editorial_paper_dark</item>
+    </style>
+</resources>
