@@ -3,6 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Load local.properties for signing
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localProperties.load(new FileInputStream(localPropertiesFile))
+}
+
 android {
     namespace = "com.dgp"
     compileSdk = 34
@@ -20,10 +27,20 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            storeFile = localProperties['signing.store.file'] ? file(localProperties['signing.store.file']) : null
+            storePassword = localProperties['signing.store.password']
+            keyAlias = localProperties['signing.key.alias']
+            keyPassword = localProperties['signing.key.password']
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
     compileOptions {
