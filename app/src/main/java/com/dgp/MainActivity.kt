@@ -102,6 +102,13 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Prevent passwords and seed from appearing in screenshots, screen
+        // recordings, the Recents thumbnail, or Assistant captures.
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE,
+        )
+
         val wordList = mutableListOf<String>()
         try {
             assets.open("english.txt").use { stream ->

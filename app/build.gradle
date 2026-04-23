@@ -77,6 +77,10 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
+    // Referenced explicitly because values/themes.xml extends Theme.AppCompat.DayNight.
+    // Currently also pulled in transitively by androidx.biometric; declare here so a
+    // future biometric upgrade doesn't silently break the XML theme.
+    implementation("androidx.appcompat:appcompat:1.7.0")
     // Compose UI test 1.7+ calls androidx.tracing.Trace.forceEnableAppTracing(), which
     // only exists in tracing 1.2.0+. Without this, instrumentation tests throw
     // NoSuchMethodError in runEspressoOnIdle and report "No compose hierarchies found".
