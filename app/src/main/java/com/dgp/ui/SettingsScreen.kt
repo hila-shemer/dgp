@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dgp.ui.components.TagPill
+import com.dgp.ui.components.ThemeSwitchPill
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.ThemeMode
 import com.dgp.ui.theme.editorial
@@ -253,24 +254,10 @@ fun SettingsScreen(
                         color = editorial.ink,
                         modifier = Modifier.weight(1f),
                     )
-                    Row {
-                        listOf(
-                            ThemeMode.Auto to "auto",
-                            ThemeMode.Light to "light",
-                            ThemeMode.Dark to "dark",
-                        ).forEach { (mode, label) ->
-                            TagPill(
-                                flag = label,
-                                count = null,
-                                active = themeMode == mode,
-                                onClick = { onThemeModeChange(mode) },
-                                modifier = Modifier.semantics {
-                                    contentDescription = "Theme $label"
-                                },
-                            )
-                            if (mode != ThemeMode.Dark) Spacer(Modifier.width(4.dp))
-                        }
-                    }
+                    ThemeSwitchPill(
+                        mode = themeMode,
+                        onModeChange = onThemeModeChange,
+                    )
                 }
                 HorizontalDivider(color = editorial.rule, thickness = 1.dp)
                 SettingsRow(
