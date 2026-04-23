@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+
 package com.dgp.ui.theme
 
 import androidx.compose.material3.MaterialTheme
@@ -6,12 +8,39 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.dgp.R
 
-private val Mono = FontFamily.Monospace   // TODO(phase-1.1): JetBrains Mono bundled
-private val Sans = FontFamily.Default     // TODO(phase-1.1): Roboto Flex bundled
+private val JetBrainsMono = FontFamily(
+    Font(R.font.jetbrains_mono_regular,  FontWeight.Normal),
+    Font(R.font.jetbrains_mono_medium,   FontWeight.Medium),
+    Font(R.font.jetbrains_mono_semibold, FontWeight.SemiBold),
+)
+
+private val RobotoFlex = FontFamily(
+    Font(
+        R.font.roboto_flex,
+        weight = FontWeight.Normal,
+        variationSettings = FontVariation.Settings(FontVariation.weight(400)),
+    ),
+    Font(
+        R.font.roboto_flex,
+        weight = FontWeight.Medium,
+        variationSettings = FontVariation.Settings(FontVariation.weight(500)),
+    ),
+    Font(
+        R.font.roboto_flex,
+        weight = FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(600)),
+    ),
+)
+
+private val Mono = JetBrainsMono
+private val Sans = RobotoFlex
 
 @Immutable
 data class EditorialType(
