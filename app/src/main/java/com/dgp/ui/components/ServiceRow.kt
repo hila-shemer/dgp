@@ -45,6 +45,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dgp.DgpService
+import com.dgp.ui.theme.EditorialMotion
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.LocalCompactRows
 import com.dgp.ui.theme.ThemeMode
@@ -61,6 +62,7 @@ fun ServiceRow(
     onLongPress: () -> Unit,
     onSwipeLeft: () -> Unit,   // copy
     onSwipeRight: () -> Unit,  // reveal pin/edit/archive row actions
+    flashed: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val editorial = MaterialTheme.editorial
@@ -68,9 +70,18 @@ fun ServiceRow(
     val compact = LocalCompactRows.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val targetBg = when {
+        flashed -> editorial.accentSoft
+        isPressed -> editorial.accentSoft
+        else -> Color.Transparent
+    }
     val rowBg by animateColorAsState(
-        targetValue = if (isPressed) editorial.accentSoft else Color.Transparent,
-        animationSpec = tween(120),
+        targetValue = targetBg,
+        animationSpec = tween(
+            durationMillis = if (flashed) EditorialMotion.saveFlashMs
+                            else EditorialMotion.rowPressFlashMs,
+            easing = EditorialMotion.standardEasing,
+        ),
         label = "rowBg",
     )
 

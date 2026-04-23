@@ -3,7 +3,6 @@ package com.dgp.ui.theme
 import android.app.Activity
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -48,8 +47,8 @@ fun EditorialTheme(
     val type = editorialType()
 
     val animSpec: AnimationSpec<Color> = tween(
-        durationMillis = 180,
-        easing = CubicBezierEasing(0.2f, 0.7f, 0.3f, 1f),
+        durationMillis = EditorialMotion.standardDurationMs,
+        easing = EditorialMotion.standardEasing,
     )
     val animated = EditorialColors(
         paper = animateColorAsState(colors.paper, animSpec, label = "paper").value,
