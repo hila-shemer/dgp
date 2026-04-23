@@ -1,6 +1,7 @@
 package com.dgp
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.*
@@ -134,7 +135,15 @@ class MainActivity : FragmentActivity() {
                 )
             }
             CompositionLocalProvider(LocalDensity provides clampedDensity) {
-                DgpApp(dgpEngine, prefs, biometricHelper)
+                // Edge-to-edge is on by default at targetSdk 35; pad the whole UI by
+                // safeDrawing so nothing ends up behind the status or navigation bars.
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.safeDrawing),
+                ) {
+                    DgpApp(dgpEngine, prefs, biometricHelper)
+                }
             }
         }
     }
@@ -571,161 +580,149 @@ fun DgpAppContent(
         loadSeedWithBiometric { seed -> unlockWithSeed(seed, skipSave = true) }
     }
 
-    // Seed entry prompt (shown when locked)
-    if (showSeedPrompt && !isSeeded) {
-        UnlockScreen(
-            error = seedError,
-            onUnlock = { seed -> unlockWithSeed(seed) },
-            onScanQr = { onResult -> scanQr(onResult) },
-            onBiometric = {
-                loadSeedWithBiometric { seed -> unlockWithSeed(seed, skipSave = true) }
-            },
-            onResetConfig = {
-                prefs.edit()
-                    .remove("services_encrypted")
-                    .remove("account_encrypted")
-                    .apply()
-                seedError = false
-                android.widget.Toast.makeText(context, "Config cleared", android.widget.Toast.LENGTH_SHORT).show()
-            },
-        )
-        return@DgpAppContent
-    }
+    // Pick the top-level screen. Dialogs and sheets below render on top of
+    // whichever branch is active — that's why Settings-triggered dialogs
+    // (export PIN, change-seed, etc.) stay visible instead of only appearing
+    // after the user closes Settings.
+    when {
+        showSeedPrompt && !isSeeded -> {
+            UnlockScreen(
+                error = seedError,
+                onUnlock = { seed -> unlockWithSeed(seed) },
+                onScanQr = { onResult -> scanQr(onResult) },
+                onBiometric = {
+                    loadSeedWithBiometric { seed -> unlockWithSeed(seed, skipSave = true) }
+                },
+                onResetConfig = {
+                    prefs.edit()
+                        .remove("services_encrypted")
+                        .remove("account_encrypted")
+                        .apply()
+                    seedError = false
+                    android.widget.Toast.makeText(context, "Config cleared", android.widget.Toast.LENGTH_SHORT).show()
+                },
+            )
+        }
 
-    // Reorder screen — full-screen, takes the entire composition slot
-    if (reordering && isSeeded) {
-        ReorderScreen(
-            services = services,
-            onDone = { newOrder ->
-                saveServices(newOrder)
-                reordering = false
-            },
-            onCancel = { reordering = false },
-        )
-        return@DgpAppContent
-    }
+        reordering && isSeeded -> {
+            ReorderScreen(
+                services = services,
+                onDone = { newOrder ->
+                    saveServices(newOrder)
+                    reordering = false
+                },
+                onCancel = { reordering = false },
+            )
+        }
 
-    // Settings screen — full-screen, takes the entire composition slot
-    if (showSettings && isSeeded) {
-        SettingsScreen(
-            clipboardTimeoutSec = clipboardTimeoutSec,
-            onClipboardTimeoutChange = onClipboardTimeoutChange,
-            clearOnLock = clearOnLock,
-            onClearOnLockChange = onClearOnLockChange,
-            themeMode = themeMode,
-            onThemeModeChange = onThemeModeChange,
-            compactRows = compactRows,
-            onCompactRowsChange = onCompactRowsChange,
-            seedFingerprint = remember(masterSeed) {
-                if (masterSeed.isEmpty()) "(no seed set)"
-                else {
-                    val digest = java.security.MessageDigest.getInstance("SHA-256")
-                        .digest(masterSeed.toByteArray())
-                    "SHA-256: " + digest.take(8).joinToString("") { "%02x".format(it) }
-                }
-            },
-            onChangeSeed = { authenticate { showSeedSettings = true } },
-            onRunTestVectors = {
-                showSettings = false
-                testResults.clear()
-                showTestVectors = true
-                testRunning = true
-                scope.launch {
-                    for (i in TestVectors.vectors.indices) {
-                        val result = withContext(Dispatchers.Default) {
-                            TestVectors.runOne(engine, i)
+        showSettings && isSeeded -> {
+            SettingsScreen(
+                clipboardTimeoutSec = clipboardTimeoutSec,
+                onClipboardTimeoutChange = onClipboardTimeoutChange,
+                clearOnLock = clearOnLock,
+                onClearOnLockChange = onClearOnLockChange,
+                compactRows = compactRows,
+                onCompactRowsChange = onCompactRowsChange,
+                seedFingerprint = remember(masterSeed) {
+                    if (masterSeed.isEmpty()) "(no seed set)"
+                    else {
+                        val digest = java.security.MessageDigest.getInstance("SHA-256")
+                            .digest(masterSeed.toByteArray())
+                        "SHA-256: " + digest.take(8).joinToString("") { "%02x".format(it) }
+                    }
+                },
+                onChangeSeed = { authenticate { showSeedSettings = true } },
+                onRunTestVectors = {
+                    testResults.clear()
+                    showTestVectors = true
+                    testRunning = true
+                    scope.launch {
+                        for (i in TestVectors.vectors.indices) {
+                            val result = withContext(Dispatchers.Default) {
+                                TestVectors.runOne(engine, i)
+                            }
+                            testResults.add(result)
                         }
-                        testResults.add(result)
+                        testRunning = false
                     }
-                    testRunning = false
-                }
-            },
-            onExportConfig = { showExportPinDialog = true },
-            onImportEncrypted = { showImportPinDialog = true },
-            onImportPlaintext = { launchImportFilePicker() },
-            onEnterReorder = {
-                showSettings = false
-                reordering = true
-            },
-            onClearAll = {
-                saveServices(emptyList())
-            },
-            onLockAndQuit = {
-                if (clearOnLock) {
-                    clipboardClearJob?.cancel()
-                    if (android.os.Build.VERSION.SDK_INT >= 28) {
-                        clipboardManager.clearPrimaryClip()
+                },
+                onExportConfig = { showExportPinDialog = true },
+                onImportEncrypted = { showImportPinDialog = true },
+                onImportPlaintext = { launchImportFilePicker() },
+                onClearAll = {
+                    saveServices(emptyList())
+                },
+                onLockAndQuit = {
+                    if (clearOnLock) {
+                        clipboardClearJob?.cancel()
+                        if (android.os.Build.VERSION.SDK_INT >= 28) {
+                            clipboardManager.clearPrimaryClip()
+                        }
                     }
-                }
-                masterSeed = ""
-                isSeeded = false
-                account = ""
-                (context as? android.app.Activity)?.finishAndRemoveTask()
-            },
-            onBack = { showSettings = false },
-        )
-        return@DgpAppContent
-    }
+                    masterSeed = ""
+                    isSeeded = false
+                    account = ""
+                    (context as? android.app.Activity)?.finishAndRemoveTask()
+                },
+                onBack = { showSettings = false },
+            )
+        }
 
-    // Account prompt (shown after seed unlock)
-    if (showAccountPrompt && isSeeded) {
-        AccountPromptDialog(
-            onDismiss = { showAccountPrompt = false },
-            onSave = { newAccount ->
-                account = newAccount
-                if (masterSeed.isNotEmpty()) {
-                    prefs.edit().putString("account_encrypted", ConfigCrypto.encrypt(newAccount, masterSeed)).apply()
-                }
-                showAccountPrompt = false
+        else -> {
+            if (showAccountPrompt && isSeeded) {
+                AccountPromptDialog(
+                    onDismiss = { showAccountPrompt = false },
+                    onSave = { newAccount ->
+                        account = newAccount
+                        if (masterSeed.isNotEmpty()) {
+                            prefs.edit().putString("account_encrypted", ConfigCrypto.encrypt(newAccount, masterSeed)).apply()
+                        }
+                        showAccountPrompt = false
+                    }
+                )
             }
-        )
-    }
 
-    ServicesScreen(
-        services = services,
-        account = account,
-        searchQuery = searchQuery,
-        onSearchChange = { searchQuery = it },
-        activeFilter = activeFilter,
-        onFilterChange = { activeFilter = it },
-        onTapRow = { svc ->
-            val password = generateForService(svc)
-            copyPasswordToClipboard(password)
-            copyToast = CopyToastState.Visible(svc.name)
-        },
-        onChevronTap = { svc -> revealingService = svc },
-        onLongPressRow = { reordering = true },
-        onAdd = { showAddDialog = true },
-        onScan = {
-            scanQr { _ ->
-                editingService = null
-                showAddDialog = true
-            }
-        },
-        onLock = {
-            if (clearOnLock) {
-                clipboardClearJob?.cancel()
-                if (android.os.Build.VERSION.SDK_INT >= 28) {
-                    clipboardManager.clearPrimaryClip()
-                }
-            }
-            masterSeed = ""
-            isSeeded = false
-            account = ""
-            showSeedPrompt = true
-        },
-        onOpenAccount = {
-            if (account.isNotEmpty()) clearAccount()
-            showAccountPrompt = true
-        },
-        onOpenSettings = { showSettings = true },
-        themeMode = themeMode,
-        onThemeModeChange = onThemeModeChange,
-        copyToast = copyToast,
-        flashedServiceId = flashedServiceId,
-        onToastDismiss = { copyToast = CopyToastState.Idle },
-        onToastUndo = { copyToast = CopyToastState.Idle },
-    )
+            ServicesScreen(
+                services = services,
+                account = account,
+                searchQuery = searchQuery,
+                onSearchChange = { searchQuery = it },
+                activeFilter = activeFilter,
+                onFilterChange = { activeFilter = it },
+                onTapRow = { svc ->
+                    val password = generateForService(svc)
+                    copyPasswordToClipboard(password)
+                    copyToast = CopyToastState.Visible(svc.name)
+                },
+                onChevronTap = { svc -> revealingService = svc },
+                onLongPressRow = { reordering = true },
+                onAdd = { showAddDialog = true },
+                onLock = {
+                    if (clearOnLock) {
+                        clipboardClearJob?.cancel()
+                        if (android.os.Build.VERSION.SDK_INT >= 28) {
+                            clipboardManager.clearPrimaryClip()
+                        }
+                    }
+                    masterSeed = ""
+                    isSeeded = false
+                    account = ""
+                    showSeedPrompt = true
+                },
+                onOpenAccount = {
+                    if (account.isNotEmpty()) clearAccount()
+                    showAccountPrompt = true
+                },
+                onOpenSettings = { showSettings = true },
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
+                copyToast = copyToast,
+                flashedServiceId = flashedServiceId,
+                onToastDismiss = { copyToast = CopyToastState.Idle },
+                onToastUndo = { copyToast = CopyToastState.Idle },
+            )
+        }
+    }
 
     if (showExportPinDialog) {
         PinDialog(
@@ -799,9 +796,6 @@ fun DgpAppContent(
                 showSeedSettings = false
             },
             onScanQr = { onResult -> scanQr(onResult) },
-            onExport = { showExportPinDialog = true },
-            onImportEncrypted = { showImportPinDialog = true },
-            onImportJson = { launchImportFilePicker() }
         )
     }
 
@@ -935,9 +929,6 @@ fun SeedSettingsDialog(
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
     onScanQr: ((String) -> Unit) -> Unit,
-    onExport: () -> Unit,
-    onImportEncrypted: () -> Unit,
-    onImportJson: () -> Unit
 ) {
     var seed by remember { mutableStateOf(currentSeed) }
     var visible by remember { mutableStateOf(false) }
@@ -951,17 +942,23 @@ fun SeedSettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Master Seed Settings") },
+        title = { Text("Change Master Seed") },
         text = {
             Column {
-                Text("Caution: Changing your master seed will change all generated passwords " +
-                     "and make vault-stored secrets unreadable.",
-                     color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Caution: Changing your master seed will change all generated passwords " +
+                        "and make vault-stored secrets unreadable.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = seed,
                     onValueChange = { seed = it },
                     label = { Text("Master Seed") },
+                    // Multi-line so a pasted or scanned seed containing newlines
+                    // is visible and fixable.
+                    singleLine = false,
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(
@@ -972,12 +969,12 @@ fun SeedSettingsDialog(
                         ) {
                             Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, contentDescription = null)
                         }
-                    }
+                    },
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { onScanQr { scanned -> seed = scanned } },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -986,7 +983,7 @@ fun SeedSettingsDialog(
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedButton(
                     onClick = { showFingerprint = !showFingerprint },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Default.Fingerprint, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -995,22 +992,6 @@ fun SeedSettingsDialog(
                 if (showFingerprint) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(seedFingerprint(seed), style = MaterialTheme.typography.bodySmall)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Divider()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Service Config", style = MaterialTheme.typography.titleSmall)
-                Spacer(modifier = Modifier.height(4.dp))
-                OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
-                    Text("Export (encrypted)")
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                OutlinedButton(onClick = onImportEncrypted, modifier = Modifier.fillMaxWidth()) {
-                    Text("Import (encrypted, from clipboard)")
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                OutlinedButton(onClick = onImportJson, modifier = Modifier.fillMaxWidth()) {
-                    Text("Import (plaintext JSON file)")
                 }
             }
         },

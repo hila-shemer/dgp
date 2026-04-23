@@ -24,10 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,7 +72,6 @@ fun ServicesScreen(
     onChevronTap: (DgpService) -> Unit,
     onLongPressRow: (DgpService) -> Unit,
     onAdd: () -> Unit,
-    onScan: () -> Unit,
     onLock: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -161,14 +158,6 @@ fun ServicesScreen(
             leadingIcon = {
                 Icon(
                     Icons.Rounded.Search,
-                    contentDescription = null,
-                    tint = editorial.inkMuted,
-                    modifier = Modifier.size(20.dp),
-                )
-            },
-            trailingIcon = {
-                Icon(
-                    Icons.Rounded.Tune,
                     contentDescription = null,
                     tint = editorial.inkMuted,
                     modifier = Modifier.size(20.dp),
@@ -293,12 +282,6 @@ fun ServicesScreen(
                 Spacer(Modifier.width(8.dp))
             }
             IconButton(
-                onClick = onScan,
-                modifier = Modifier.size(44.dp),
-            ) {
-                Icon(Icons.Rounded.QrCodeScanner, contentDescription = "Scan", tint = editorial.ink)
-            }
-            IconButton(
                 onClick = onLock,
                 modifier = Modifier.size(44.dp),
             ) {
@@ -350,7 +333,6 @@ private fun ServicesScreenLightPreview() {
             onChevronTap = {},
             onLongPressRow = {},
             onAdd = {},
-            onScan = {},
             onLock = {},
             onOpenAccount = {},
             onOpenSettings = {},
@@ -394,7 +376,6 @@ private fun ServicesScreenDarkPreview() {
             onChevronTap = {},
             onLongPressRow = {},
             onAdd = {},
-            onScan = {},
             onLock = {},
             onOpenAccount = {},
             onOpenSettings = {},
