@@ -24,6 +24,7 @@ import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
+import com.dgp.ui.EditEntryScreen
 import com.dgp.ui.ListFilter
 import com.dgp.ui.RevealSheet
 import com.dgp.ui.ServicesScreen
@@ -564,40 +565,19 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     }
 
     if (showAddDialog || editingService != null) {
-        // Pre-decrypt existing vault secret so the user can edit it.
-        // Failure → empty field + a warning shown in the dialog.
         val editing = editingService
-        val existingBlob = editing?.encryptedSecret
-        val (initialSecret, decryptFailed) = if (editing?.type == "vault" && existingBlob != null) {
-            val key = engine.deriveAesKey(masterSeed, editing.name, account)
-            val decrypted = ConfigCrypto.decryptWithRawKey(existingBlob, key)
-            if (decrypted != null) decrypted to false else "" to true
-        } else "" to false
-
-        ServiceEditDialog(
+        EditEntryScreen(
             service = editing,
-            initialVaultSecret = initialSecret,
-            vaultDecryptFailed = decryptFailed,
-            onDismiss = { showAddDialog = false; editingService = null },
-            onSave = { name, type, comment, vaultSecret ->
-                val encryptedSecret = if (type == "vault" && !vaultSecret.isNullOrEmpty()) {
-                    val key = engine.deriveAesKey(masterSeed, name, account)
-                    ConfigCrypto.encryptWithRawKey(vaultSecret, key)
-                } else null
+            seed = masterSeed,
+            account = account,
+            engine = engine,
+            onSave = { updated ->
                 val newList = services.toMutableList()
                 if (editing != null) {
                     val idx = newList.indexOfFirst { it.id == editing.id }
-                    if (idx >= 0) {
-                        newList[idx] = editing.copy(
-                            name = name, type = type, comment = comment,
-                            encryptedSecret = encryptedSecret
-                        )
-                    }
+                    if (idx >= 0) newList[idx] = updated
                 } else {
-                    newList.add(DgpService(
-                        name = name, type = type, comment = comment,
-                        encryptedSecret = encryptedSecret
-                    ))
+                    newList.add(updated)
                 }
                 saveServices(newList)
                 showAddDialog = false
@@ -605,20 +585,14 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
             },
             onDelete = {
                 if (editing != null) {
-                    val newList = services.filter { it.id != editing.id }
-                    saveServices(newList)
+                    saveServices(services.filter { it.id != editing.id })
                     editingService = null
                 }
             },
-            onArchiveToggle = {
-                if (editing != null) {
-                    val newList = services.map {
-                        if (it.id == editing.id) it.copy(archived = !it.archived) else it
-                    }
-                    saveServices(newList)
-                    editingService = null
-                }
-            }
+            onClose = {
+                showAddDialog = false
+                editingService = null
+            },
         )
     }
 
@@ -730,103 +704,6 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ServiceEditDialog(
-    service: DgpService?,
-    initialVaultSecret: String,
-    vaultDecryptFailed: Boolean,
-    onDismiss: () -> Unit,
-    onSave: (name: String, type: String, comment: String, vaultSecret: String?) -> Unit,
-    onDelete: () -> Unit,
-    onArchiveToggle: () -> Unit
-) {
-    var name by remember { mutableStateOf(service?.name ?: "") }
-    var type by remember { mutableStateOf(service?.type ?: "alnum") }
-    var comment by remember { mutableStateOf(service?.comment ?: "") }
-    var vaultSecret by remember { mutableStateOf(initialVaultSecret) }
-    var vaultVisible by remember { mutableStateOf(false) }
-    val types = listOf(
-        "alnum", "alnumlong", "hex", "hexlong",
-        "base58", "base58long", "xkcd", "xkcdlong", "vault"
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (service == null) "Add Service" else "Edit Service") },
-        text = {
-            Column {
-                TextField(value = name, onValueChange = { name = it }, label = { Text("Service Name") },
-                    modifier = Modifier.semantics { testTag = "service-name-input" })
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(value = comment, onValueChange = { comment = it }, label = { Text("Comment") },
-                    modifier = Modifier.semantics { testTag = "service-comment-input" })
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Password Type:", style = MaterialTheme.typography.labelMedium)
-                types.chunked(2).forEach { row ->
-                    Row {
-                        row.forEach { t ->
-                            FilterChip(
-                                selected = type == t,
-                                onClick = { type = t },
-                                label = { Text(t) },
-                                modifier = Modifier.padding(end = 4.dp)
-                            )
-                        }
-                    }
-                }
-                if (type == "vault") {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Stores an encrypted secret (legacy passwords, OTP seeds) " +
-                        "tied to this seed + account + service name.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    if (vaultDecryptFailed) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Existing secret could not be decrypted — saving will overwrite it.",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    TextField(
-                        value = vaultSecret,
-                        onValueChange = { vaultSecret = it },
-                        label = { Text("Secret") },
-                        modifier = Modifier.semantics { testTag = "vault-secret-input" },
-                        visualTransformation = if (vaultVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { vaultVisible = !vaultVisible }) {
-                                Icon(if (vaultVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
-                            }
-                        }
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                if (name.isNotEmpty()) {
-                    val secretOut = if (type == "vault") vaultSecret else null
-                    onSave(name, type, comment, secretOut)
-                }
-            }) { Text("Save") }
-        },
-        dismissButton = {
-            Row {
-                if (service != null) {
-                    TextButton(onClick = onArchiveToggle) {
-                        Text(if (service.archived) "Unarchive" else "Archive")
-                    }
-                    TextButton(onClick = onDelete) { Text("Delete", color = MaterialTheme.colorScheme.error) }
-                }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-            }
-        }
-    )
-}
 
 @Composable
 fun AccountPromptDialog(
