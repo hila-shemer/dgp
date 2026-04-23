@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dgp.ui.theme.EditorialMotion
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.ThemeMode
 import com.dgp.ui.theme.editorial
@@ -64,17 +65,21 @@ fun CopyToast(
 
     LaunchedEffect(state) {
         if (state is CopyToastState.Visible) {
-            delay(2500)
+            delay(EditorialMotion.toastDwellMs.toLong())
             onDismiss()
         }
     }
 
     AnimatedVisibility(
         visible = state is CopyToastState.Visible,
-        enter = slideInVertically(initialOffsetY = { -it }, animationSpec = tween(240)) +
-                fadeIn(tween(240)),
-        exit = slideOutVertically(targetOffsetY = { -it }, animationSpec = tween(180)) +
-                fadeOut(tween(180)),
+        enter = slideInVertically(
+            initialOffsetY = { -it },
+            animationSpec = tween(EditorialMotion.toastEnterMs),
+        ) + fadeIn(tween(EditorialMotion.toastEnterMs)),
+        exit = slideOutVertically(
+            targetOffsetY = { -it },
+            animationSpec = tween(EditorialMotion.toastExitMs),
+        ) + fadeOut(tween(EditorialMotion.toastExitMs)),
         modifier = modifier,
     ) {
         Row(
