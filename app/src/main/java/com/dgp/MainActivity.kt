@@ -605,10 +605,26 @@ fun DgpAppContent(
         }
 
         reordering && isSeeded -> {
+            // Reorder only the items matching the active filter. Items outside
+            // the filter (e.g. archived while filter=All) keep their absolute
+            // positions in the JSON array.
+            val visible = services.filter { svc ->
+                when (val f = activeFilter) {
+                    ListFilter.All -> !svc.archived
+                    ListFilter.Pinned -> !svc.archived && svc.pinned
+                    ListFilter.Archived -> svc.archived
+                    is ListFilter.Tag -> !svc.archived && f.tag in svc.tags
+                }
+            }
+            val visibleIds = visible.mapTo(HashSet()) { it.id }
             ReorderScreen(
-                services = services,
+                services = visible,
                 onDone = { newOrder ->
-                    saveServices(newOrder)
+                    val queue = ArrayDeque(newOrder)
+                    val merged = services.map { original ->
+                        if (original.id in visibleIds) queue.removeFirst() else original
+                    }
+                    saveServices(merged)
                     reordering = false
                 },
                 onCancel = { reordering = false },
