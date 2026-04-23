@@ -25,6 +25,7 @@ import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
 import com.dgp.ui.ListFilter
+import com.dgp.ui.RevealSheet
 import com.dgp.ui.ServicesScreen
 import com.dgp.ui.components.CopyToastState
 import com.dgp.ui.theme.EditorialTheme
@@ -251,8 +252,7 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
     var showTestVectors by remember { mutableStateOf(false) }
     val testResults = remember { mutableStateListOf<TestVectors.SingleTestResult>() }
     var testRunning by remember { mutableStateOf(false) }
-    var selectedServiceForGen by remember { mutableStateOf<DgpService?>(null) }
-    var generatedPassword by remember { mutableStateOf("") }
+    var revealingService by remember { mutableStateOf<DgpService?>(null) }
     var seedError by remember { mutableStateOf(false) }
     var activeFilter by remember { mutableStateOf<ListFilter>(ListFilter.All) }
     var copyToast by remember { mutableStateOf<CopyToastState>(CopyToastState.Idle) }
@@ -490,13 +490,17 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         activeFilter = activeFilter,
         onFilterChange = { activeFilter = it },
         onTapRow = { svc ->
-            selectedServiceForGen = svc
-            generatedPassword = generateForService(svc)
+            val password = generateForService(svc)
+            val clip = android.content.ClipData.newPlainText("DGP Password", password)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                clip.description.extras = android.os.PersistableBundle().apply {
+                    putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
+                }
+            }
+            clipboardManager.setPrimaryClip(clip)
+            copyToast = CopyToastState.Visible(svc.name)
         },
-        onChevronTap = { svc ->
-            selectedServiceForGen = svc
-            generatedPassword = generateForService(svc)
-        },
+        onChevronTap = { svc -> revealingService = svc },
         onLongPressRow = { /* Phase 7 */ },
         onAdd = { showAddDialog = true },
         onScan = {
@@ -695,35 +699,33 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
         )
     }
 
-    if (selectedServiceForGen != null) {
-        AlertDialog(
-            onDismissRequest = { selectedServiceForGen = null },
-            title = { Text(selectedServiceForGen!!.name) },
-            text = {
-                Column {
-                    Text("Type: ${selectedServiceForGen!!.type}",
-                         style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(generatedPassword, style = MaterialTheme.typography.headlineMedium)
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val clip = android.content.ClipData.newPlainText("DGP Password", generatedPassword)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        clip.description.extras = android.os.PersistableBundle().apply {
-                            putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
-                        }
+    revealingService?.let { svc ->
+        RevealSheet(
+            service = svc,
+            passwordProvider = { generateForService(svc) },
+            onCopy = {
+                val password = generateForService(svc)
+                val clip = android.content.ClipData.newPlainText("DGP Password", password)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    clip.description.extras = android.os.PersistableBundle().apply {
+                        putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
                     }
-                    clipboardManager.setPrimaryClip(clip)
-                    selectedServiceForGen = null
-                }) {
-                    Text("Copy")
                 }
+                clipboardManager.setPrimaryClip(clip)
+                copyToast = CopyToastState.Visible(svc.name)
+                revealingService = null
             },
-            dismissButton = {
-                TextButton(onClick = { selectedServiceForGen = null }) { Text("Close") }
-            }
+            onEdit = {
+                revealingService = null
+                editingService = svc
+            },
+            onArchive = {
+                saveServices(services.map {
+                    if (it.id == svc.id) it.copy(archived = !it.archived) else it
+                })
+                revealingService = null
+            },
+            onDismiss = { revealingService = null },
         )
     }
 }

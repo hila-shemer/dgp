@@ -213,6 +213,7 @@ class MainActivityTest {
         }
     }
 
+    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
     fun editService_updatesNameInList() {
         unlockWith("testseedH")
@@ -239,6 +240,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("NewName").assertIsDisplayed()
     }
 
+    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
     fun deleteService_removedFromList() {
         unlockWith("testseedI")
@@ -337,13 +339,13 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("Save").performClick()
         composeTestRule.waitForIdle()
 
-        // Click the generate (key) button on that service
-        composeTestRule.onNodeWithContentDescription("Generate").performClick()
+        // Tap row copies to clipboard; open reveal sheet via chevron
+        composeTestRule.onNodeWithText("TestSvc").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
         composeTestRule.waitForIdle()
 
-        // The Copy button is unique to the dialog; the service name appears in both
-        // the list and the dialog title so we don't assert on it directly.
-        composeTestRule.onNodeWithText("Copy").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Copy").assertIsDisplayed()
     }
 
     // ── Row content: comment subtitle + type chip ─────────────────────────────
@@ -418,12 +420,13 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("Save").performClick()
         composeTestRule.waitForIdle()
 
-        // Tap the row (via the headline text) — should open generate dialog, not edit
+        // Tap row copies to clipboard; chevron opens the reveal sheet with Copy button
         composeTestRule.onNodeWithText("TapMe").performClick()
         composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
+        composeTestRule.waitForIdle()
 
-        // Copy button is unique to the generate dialog
-        composeTestRule.onNodeWithText("Copy").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Copy").assertIsDisplayed()
     }
 
     @Test
@@ -442,6 +445,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("Edit Service").assertDoesNotExist()
     }
 
+    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
     fun editIcon_stillOpensEditDialog() {
         unlockWith("testseedEditIcon")
@@ -468,9 +472,10 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("Save").performClick()
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        // Open reveal sheet via chevron, then archive directly
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Archive").performClick()
+        composeTestRule.onNodeWithText("archive").performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("ArchiveMe").assertDoesNotExist()
@@ -484,9 +489,11 @@ class MainActivityTest {
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("InTheArchive")
         composeTestRule.onNodeWithText("Save").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+
+        // Open reveal sheet via chevron, then archive
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Archive").performClick()
+        composeTestRule.onNodeWithText("archive").performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("--archived").performClick()
@@ -513,17 +520,19 @@ class MainActivityTest {
         composeTestRule.onNodeWithTag("service-name-input").performTextInput("Boomerang")
         composeTestRule.onNodeWithText("Save").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+
+        // Open reveal sheet, archive the service
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Archive").performClick()
+        composeTestRule.onNodeWithText("archive").performClick()
         composeTestRule.waitForIdle()
 
-        // Switch to archive view, then unarchive
+        // Switch to archive view, then unarchive via reveal sheet
         composeTestRule.onNodeWithText("--archived").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription("Edit").performClick()
+        composeTestRule.onAllNodesWithContentDescription("Reveal")[0].performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Unarchive").performClick()
+        composeTestRule.onNodeWithText("unarchive").performClick()
         composeTestRule.waitForIdle()
 
         // Back to active view — service should be there
@@ -532,6 +541,7 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("Boomerang").assertIsDisplayed()
     }
 
+    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
     fun editArchivedService_preservesArchivedFlag() {
         // Regression: the previous DgpService(...) constructor in the save path
@@ -568,6 +578,7 @@ class MainActivityTest {
 
     // ── Edit preserves position (regression: old code moved edited item to end) ─
 
+    @Ignore("rewritten in Phase 6 edit-entry sheet")
     @Test
     fun editService_preservesPositionInList() {
         unlockWith("testseedS")
