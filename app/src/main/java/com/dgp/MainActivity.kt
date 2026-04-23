@@ -26,6 +26,7 @@ import com.dgp.engine.DgpEngine
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
+import com.dgp.ui.theme.EditorialTheme
 import android.net.Uri
 import android.util.Base64
 import androidx.core.content.FileProvider
@@ -103,7 +104,9 @@ class MainActivity : FragmentActivity() {
         prefs = getSharedPreferences("dgp_prefs", MODE_PRIVATE)
 
         setContent {
-            DgpApp(dgpEngine, prefs, biometricHelper)
+            EditorialTheme {
+                DgpApp(dgpEngine, prefs, biometricHelper)
+            }
         }
     }
 
