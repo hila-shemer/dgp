@@ -42,7 +42,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
@@ -151,6 +155,7 @@ private fun FlagRow(
 @Composable
 fun EditEntryScreen(
     service: DgpService?,
+    initialName: String = "",
     seed: String,
     account: String,
     engine: DgpEngine,
@@ -163,8 +168,11 @@ fun EditEntryScreen(
 
     val originalName = remember { service?.name ?: "" }
     val originalAccount = remember { account }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
-    var name by remember { mutableStateOf(service?.name ?: "") }
+    var name by remember(service, initialName) { mutableStateOf(service?.name ?: initialName) }
     var type by remember { mutableStateOf(service?.type ?: "alnum") }
     var comment by remember { mutableStateOf(service?.comment ?: "") }
     var pinned by remember { mutableStateOf(service?.pinned ?: false) }
@@ -176,6 +184,13 @@ fun EditEntryScreen(
 
     // One-shot decrypt on mount for existing vault entry.
     // Decrypt uses originalName + originalAccount so rename doesn't re-key until save.
+    LaunchedEffect(Unit) {
+        focusManager.clearFocus(force = true)
+        focusRequester.requestFocus()
+        keyboardController?.show()
+    }
+
+    // One-shot decrypt on mount for existing vault entry.
     LaunchedEffect(Unit) {
         if (service != null && service.type == "vault" && service.encryptedSecret != null) {
             val key = withContext(Dispatchers.Default) {
@@ -340,7 +355,9 @@ fun EditEntryScreen(
                     onValueChange = { name = it },
                     placeholder = "service-name",
                     leadingIcon = { Text("❯", color = editorial.accent, style = t.inputValue) },
-                    modifier = Modifier.semantics { testTag = "service-name-input" },
+                    modifier = Modifier
+                        .focusRequester(focusRequester)
+                        .semantics { testTag = "service-name-input" },
                 )
             }
 

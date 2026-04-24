@@ -371,6 +371,7 @@ fun DgpAppContent(
     var showAccountPrompt by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
+    var addDialogInitialName by remember { mutableStateOf("") }
     var editingService by remember { mutableStateOf<DgpService?>(null) }
     var showSeedSettings by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
@@ -383,6 +384,10 @@ fun DgpAppContent(
     var copyToast by remember { mutableStateOf<CopyToastState>(CopyToastState.Idle) }
     var reordering by remember { mutableStateOf(false) }
     var flashedServiceId by remember { mutableStateOf<String?>(null) }
+    var hasSavedSeed by remember {
+        mutableStateOf(!prefs.getString("master_seed_encrypted", null).isNullOrEmpty())
+    }
+    val canUseSavedSeed = hasSavedSeed && biometricHelper.canAuthenticateForSavedSeed(context)
 
     LaunchedEffect(flashedServiceId) {
         if (flashedServiceId != null) {
@@ -483,11 +488,18 @@ fun DgpAppContent(
         try {
             val cipher = biometricHelper.getEncryptionCipher()
             val executor = ContextCompat.getMainExecutor(context)
-            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            val promptInfoBuilder = BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Save Seed")
                 .setSubtitle("Authenticate to securely store your seed")
-                .setNegativeButtonText("Skip")
-                .build()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                promptInfoBuilder.setAllowedAuthenticators(
+                    androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                        androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                )
+            } else {
+                promptInfoBuilder.setNegativeButtonText("Skip")
+            }
+            val promptInfo = promptInfoBuilder.build()
             val biometricPrompt = BiometricPrompt(context, executor,
                 object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -499,6 +511,7 @@ fun DgpAppContent(
                             .putString("master_seed_encrypted", encoded)
                             .remove("master_seed")
                             .apply()
+                        hasSavedSeed = true
                     }
                 })
             biometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
@@ -520,11 +533,18 @@ fun DgpAppContent(
                     val ciphertext = Base64.decode(parts[1], Base64.NO_WRAP)
                     val cipher = biometricHelper.getDecryptionCipher(iv)
                     val executor = ContextCompat.getMainExecutor(context)
-                    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    val promptInfoBuilder = BiometricPrompt.PromptInfo.Builder()
                         .setTitle("Unlock DGP")
                         .setSubtitle("Authenticate to access your seed")
-                        .setNegativeButtonText("Enter manually")
-                        .build()
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                        promptInfoBuilder.setAllowedAuthenticators(
+                            androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                                androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                        )
+                    } else {
+                        promptInfoBuilder.setNegativeButtonText("Enter manually")
+                    }
+                    val promptInfo = promptInfoBuilder.build()
                     val biometricPrompt = BiometricPrompt(context, executor,
                         object : BiometricPrompt.AuthenticationCallback() {
                             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -623,11 +643,16 @@ fun DgpAppContent(
                 onBiometric = {
                     loadSeedWithBiometric { seed -> unlockWithSeed(seed, skipSave = true) }
                 },
+                hasSavedSeed = hasSavedSeed,
+                biometricEnabled = canUseSavedSeed,
                 onResetConfig = {
                     prefs.edit()
                         .remove("services_encrypted")
                         .remove("account_encrypted")
+                        .remove("master_seed_encrypted")
+                        .remove("master_seed")
                         .apply()
+                    hasSavedSeed = false
                     seedError = false
                     android.widget.Toast.makeText(context, "Config cleared", android.widget.Toast.LENGTH_SHORT).show()
                 },
@@ -746,7 +771,10 @@ fun DgpAppContent(
                 },
                 onChevronTap = { svc -> revealingService = svc },
                 onLongPressRow = { reordering = true },
-                onAdd = { showAddDialog = true },
+                onAdd = { initialName ->
+                    addDialogInitialName = initialName
+                    showAddDialog = true
+                },
                 onLock = {
                     if (clearOnLock) {
                         clipboardClearJob?.cancel()
@@ -809,6 +837,7 @@ fun DgpAppContent(
         val editing = editingService
         EditEntryScreen(
             service = editing,
+            initialName = if (editing == null) addDialogInitialName else editing.name,
             seed = masterSeed,
             account = account,
             engine = engine,
@@ -823,6 +852,7 @@ fun DgpAppContent(
                 saveServices(newList)
                 flashedServiceId = updated.id
                 showAddDialog = false
+                addDialogInitialName = ""
                 editingService = null
             },
             onDelete = {
@@ -833,6 +863,7 @@ fun DgpAppContent(
             },
             onClose = {
                 showAddDialog = false
+                addDialogInitialName = ""
                 editingService = null
             },
         )
