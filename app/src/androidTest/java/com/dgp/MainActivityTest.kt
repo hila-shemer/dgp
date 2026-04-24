@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.text.AnnotatedString
@@ -250,7 +251,7 @@ class MainActivityTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithContentDescription("Edit").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription("Delete").performClick()
+        composeTestRule.onNodeWithContentDescription("Delete").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         // Confirm in the confirm dialog
         composeTestRule.onNodeWithText("remove").performClick()
