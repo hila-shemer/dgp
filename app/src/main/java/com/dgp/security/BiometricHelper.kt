@@ -1,7 +1,10 @@
 package com.dgp.security
 
+import android.content.Context
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import androidx.biometric.BiometricManager
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -26,15 +29,22 @@ class BiometricHelper {
             val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
             if (!keyStore.containsAlias(KEY_ALIAS)) {
                 val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
-                val spec = KeyGenParameterSpec.Builder(
+                val builder = KeyGenParameterSpec.Builder(
                     KEY_ALIAS,
                     KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
                 )
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setUserAuthenticationRequired(true) // Requires Biometric/PIN
-                    .setInvalidatedByBiometricEnrollment(true) // Security best practice
-                    .build()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    builder.setUserAuthenticationParameters(
+                        0,
+                        KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL,
+                    )
+                } else {
+                    builder.setInvalidatedByBiometricEnrollment(true) // Security best practice
+                }
+                val spec = builder.build()
                 keyGenerator.init(spec)
                 keyGenerator.generateKey()
             }
@@ -74,5 +84,16 @@ class BiometricHelper {
      */
     fun decrypt(cipher: Cipher, ciphertext: ByteArray): String {
         return String(cipher.doFinal(ciphertext))
+    }
+
+    fun canAuthenticateForSavedSeed(context: Context): Boolean {
+        val authenticators = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        } else {
+            BiometricManager.Authenticators.BIOMETRIC_STRONG
+        }
+        return BiometricManager.from(context).canAuthenticate(authenticators) ==
+            BiometricManager.BIOMETRIC_SUCCESS
     }
 }

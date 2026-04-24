@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Visibility
@@ -59,6 +59,8 @@ fun UnlockScreen(
     onUnlock: (seed: String) -> Unit,
     onScanQr: (onResult: (String) -> Unit) -> Unit,
     onBiometric: () -> Unit,
+    hasSavedSeed: Boolean,
+    biometricEnabled: Boolean,
     onResetConfig: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -206,20 +208,34 @@ fun UnlockScreen(
                 },
             )
             GhostButton(
-                text = "biometric",
+                text = "saved seed",
                 onClick = onBiometric,
+                enabled = biometricEnabled,
                 modifier = Modifier.weight(1f),
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Rounded.Fingerprint,
+                        imageVector = Icons.Rounded.Lock,
                         contentDescription = null,
-                        tint = editorial.ink,
+                        tint = if (biometricEnabled) editorial.ink else editorial.inkFaint,
                     )
                 },
             )
         }
 
         Spacer(Modifier.height(12.dp))
+
+        if (!biometricEnabled) {
+            Text(
+                text = if (!hasSavedSeed) {
+                    "saved-seed unlock becomes available after you store a seed once."
+                } else {
+                    "saved-seed unlock is unavailable until this device has a usable screen lock or strong biometric enrolled."
+                },
+                style = type.caption,
+                color = editorial.inkFaint,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
 
         PrimaryButton(
             text = "unlock ›",
@@ -262,6 +278,8 @@ private fun UnlockScreenLightPreview() {
             onUnlock = {},
             onScanQr = {},
             onBiometric = {},
+            hasSavedSeed = true,
+            biometricEnabled = true,
             onResetConfig = {},
         )
     }
@@ -276,6 +294,8 @@ private fun UnlockScreenDarkPreview() {
             onUnlock = {},
             onScanQr = {},
             onBiometric = {},
+            hasSavedSeed = true,
+            biometricEnabled = true,
             onResetConfig = {},
         )
     }
@@ -290,6 +310,8 @@ private fun UnlockScreenErrorPreview() {
             onUnlock = {},
             onScanQr = {},
             onBiometric = {},
+            hasSavedSeed = false,
+            biometricEnabled = false,
             onResetConfig = {},
         )
     }
