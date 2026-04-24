@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
@@ -33,6 +34,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -71,7 +74,7 @@ fun ServicesScreen(
     onTapRow: (DgpService) -> Unit,
     onChevronTap: (DgpService) -> Unit,
     onLongPressRow: (DgpService) -> Unit,
-    onAdd: () -> Unit,
+    onAdd: (String) -> Unit,
     onLock: () -> Unit,
     onOpenAccount: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -85,6 +88,8 @@ fun ServicesScreen(
 ) {
     val editorial = MaterialTheme.editorial
     val type = MaterialTheme.editorialType
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val nonArchivedCount = services.count { !it.archived }
     val pinnedCount = services.count { it.pinned && !it.archived }
@@ -163,6 +168,22 @@ fun ServicesScreen(
                     modifier = Modifier.size(20.dp),
                 )
             },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(
+                        onClick = { onSearchChange("") },
+                        modifier = Modifier.semantics {
+                            contentDescription = "Clear search"
+                        },
+                    ) {
+                        Icon(
+                            Icons.Rounded.Close,
+                            contentDescription = null,
+                            tint = editorial.inkMuted,
+                        )
+                    }
+                }
+            },
         )
 
         // 3. Filter rail
@@ -200,7 +221,7 @@ fun ServicesScreen(
                 TagPill(
                     flag = "--tag $tag",
                     count = services.count { !it.archived && tag in it.tags },
-                    active = activeFilter is ListFilter.Tag && (activeFilter as ListFilter.Tag).tag == tag,
+                    active = (activeFilter as? ListFilter.Tag)?.tag == tag,
                     onClick = { onFilterChange(ListFilter.Tag(tag)) },
                 )
             }
@@ -267,7 +288,11 @@ fun ServicesScreen(
             if (activeFilter !is ListFilter.Archived) {
                 PrimaryButton(
                     text = "new service",
-                    onClick = onAdd,
+                    onClick = {
+                        keyboardController?.hide()
+                        focusManager.clearFocus(force = true)
+                        onAdd(if (filtered.isEmpty()) q else "")
+                    },
                     leadingIcon = {
                         Icon(
                             Icons.Rounded.Add,
