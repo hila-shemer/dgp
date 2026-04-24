@@ -264,6 +264,7 @@ fun DgpAppContent(
     // Config export/import
     var showExportPinDialog by remember { mutableStateOf(false) }
     var showImportPinDialog by remember { mutableStateOf(false) }
+    var importEncryptedFileUri by remember { mutableStateOf<Uri?>(null) }
 
     fun loadImportedJson(json: String) {
         val imported = parseServices(json)
@@ -292,6 +293,15 @@ fun DgpAppContent(
         }
     }
 
+    fun launchEncryptedImportFilePicker() {
+        mainActivity.launchFilePicker { uri ->
+            if (uri != null) {
+                importEncryptedFileUri = uri
+                showImportPinDialog = true
+            }
+        }
+    }
+
     fun exportServices(pin: String) {
         scope.launch {
             try {
@@ -314,16 +324,21 @@ fun DgpAppContent(
         }
     }
 
-    fun importEncryptedServices(pin: String) {
+    fun importEncryptedServices(pin: String, uri: Uri? = null) {
         scope.launch {
             try {
-                val clip = clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()
-                if (clip.isNullOrEmpty()) {
-                    android.widget.Toast.makeText(context, "Clipboard is empty", android.widget.Toast.LENGTH_LONG).show()
+                val encrypted = if (uri != null) {
+                    context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+                } else {
+                    clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()
+                }
+                if (encrypted.isNullOrBlank()) {
+                    val message = if (uri != null) "Encrypted file is empty" else "Clipboard is empty"
+                    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
                     return@launch
                 }
                 val json = withContext(Dispatchers.Default) {
-                    ConfigCrypto.decryptExport(clip, pin)
+                    ConfigCrypto.decryptExport(encrypted, pin)
                 }
                 if (json == null) {
                     android.widget.Toast.makeText(context, "Decryption failed — wrong PIN?", android.widget.Toast.LENGTH_LONG).show()
@@ -332,6 +347,8 @@ fun DgpAppContent(
                 loadImportedJson(json)
             } catch (e: Exception) {
                 android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            } finally {
+                importEncryptedFileUri = null
             }
         }
     }
@@ -663,7 +680,11 @@ fun DgpAppContent(
                     }
                 },
                 onExportConfig = { showExportPinDialog = true },
-                onImportEncrypted = { showImportPinDialog = true },
+                onImportEncryptedFile = { launchEncryptedImportFilePicker() },
+                onImportEncrypted = {
+                    importEncryptedFileUri = null
+                    showImportPinDialog = true
+                },
                 onImportPlaintext = { launchImportFilePicker() },
                 onClearAll = {
                     saveServices(emptyList())
@@ -755,11 +776,18 @@ fun DgpAppContent(
     if (showImportPinDialog) {
         PinDialog(
             title = "Import PIN",
-            subtitle = "Copy encrypted config to clipboard first",
-            onDismiss = { showImportPinDialog = false },
+            subtitle = if (importEncryptedFileUri != null) {
+                "Choose the PIN for the encrypted file"
+            } else {
+                "Copy encrypted config to clipboard first"
+            },
+            onDismiss = {
+                showImportPinDialog = false
+                importEncryptedFileUri = null
+            },
             onConfirm = { pin ->
                 showImportPinDialog = false
-                importEncryptedServices(pin)
+                importEncryptedServices(pin, importEncryptedFileUri)
             }
         )
     }

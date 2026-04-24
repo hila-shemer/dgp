@@ -60,6 +60,7 @@ fun SettingsScreen(
     onChangeSeed: () -> Unit,
     onRunTestVectors: () -> Unit,
     onExportConfig: () -> Unit,
+    onImportEncryptedFile: () -> Unit,
     onImportEncrypted: () -> Unit,
     onImportPlaintext: () -> Unit,
     onClearAll: () -> Unit,
@@ -212,6 +213,11 @@ fun SettingsScreen(
                 SettingsRow(label = "change seed", onClick = onChangeSeed)
                 HorizontalDivider(color = editorial.rule, thickness = 1.dp)
                 SettingsRow(label = "export (encrypted)", onClick = onExportConfig)
+                HorizontalDivider(color = editorial.rule, thickness = 1.dp)
+                SettingsRow(
+                    label = "import (encrypted file)",
+                    onClick = onImportEncryptedFile,
+                )
                 HorizontalDivider(color = editorial.rule, thickness = 1.dp)
                 SettingsRow(
                     label = "import (encrypted, from clipboard)",
@@ -407,6 +413,7 @@ private fun SettingsScreenPreview() {
             onChangeSeed = {},
             onRunTestVectors = {},
             onExportConfig = {},
+            onImportEncryptedFile = {},
             onImportEncrypted = {},
             onImportPlaintext = {},
             onClearAll = {},
