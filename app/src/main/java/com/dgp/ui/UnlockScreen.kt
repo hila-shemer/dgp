@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -84,6 +85,7 @@ fun UnlockScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(editorial.paper)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {

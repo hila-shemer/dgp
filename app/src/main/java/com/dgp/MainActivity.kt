@@ -211,28 +211,33 @@ fun DgpApp(engine: DgpEngine, prefs: android.content.SharedPreferences, biometri
 
     EditorialTheme(mode = themeMode) {
     CompositionLocalProvider(LocalCompactRows provides compactRows) {
-    DgpAppContent(engine, prefs, biometricHelper,
-        clipboardTimeoutSec, onClipboardTimeoutChange = { sec ->
-            clipboardTimeoutSec = sec
-            prefs.edit().putInt("clipboard_timeout_sec", sec).apply()
-        },
-        clearOnLock, onClearOnLockChange = { v ->
-            clearOnLock = v
-            prefs.edit().putBoolean("clear_on_lock", v).apply()
-        },
-        themeMode, onThemeModeChange = { mode ->
-            themeMode = mode
-            prefs.edit().putString("theme_mode", when (mode) {
-                ThemeMode.Auto -> "auto"
-                ThemeMode.Light -> "light"
-                ThemeMode.Dark -> "dark"
-            }).apply()
-        },
-        compactRows, onCompactRowsChange = { v ->
-            compactRows = v
-            prefs.edit().putBoolean("compact_rows", v).apply()
-        },
-    )
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        DgpAppContent(engine, prefs, biometricHelper,
+            clipboardTimeoutSec, onClipboardTimeoutChange = { sec ->
+                clipboardTimeoutSec = sec
+                prefs.edit().putInt("clipboard_timeout_sec", sec).apply()
+            },
+            clearOnLock, onClearOnLockChange = { v ->
+                clearOnLock = v
+                prefs.edit().putBoolean("clear_on_lock", v).apply()
+            },
+            themeMode, onThemeModeChange = { mode ->
+                themeMode = mode
+                prefs.edit().putString("theme_mode", when (mode) {
+                    ThemeMode.Auto -> "auto"
+                    ThemeMode.Light -> "light"
+                    ThemeMode.Dark -> "dark"
+                }).apply()
+            },
+            compactRows, onCompactRowsChange = { v ->
+                compactRows = v
+                prefs.edit().putBoolean("compact_rows", v).apply()
+            },
+        )
+    }
     } // CompositionLocalProvider
     } // EditorialTheme
 }

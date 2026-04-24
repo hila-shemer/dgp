@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -12,13 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
-import java.time.LocalTime
-import kotlinx.coroutines.delay
 
 enum class ThemeMode { Auto, Light, Dark }
 
@@ -29,18 +27,11 @@ fun EditorialTheme(
     mode: ThemeMode = ThemeMode.Auto,
     content: @Composable () -> Unit,
 ) {
+    val systemIsDark = isSystemInDarkTheme()
     val isDark = when (mode) {
         ThemeMode.Light -> false
         ThemeMode.Dark -> true
-        ThemeMode.Auto -> {
-            val hour = produceState(initialValue = LocalTime.now().hour) {
-                while (true) {
-                    kotlinx.coroutines.delay(10 * 60 * 1000L)
-                    value = LocalTime.now().hour
-                }
-            }.value
-            hour !in 7..17
-        }
+        ThemeMode.Auto -> systemIsDark
     }
 
     val colors = if (isDark) EditorialColorsDark else EditorialColorsLight
