@@ -1,6 +1,10 @@
 package com.dgp
 
+import android.app.Activity
+import android.content.ClipData
 import android.content.Context
+import android.content.Intent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -8,18 +12,27 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.text.AnnotatedString
+import androidx.core.content.FileProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.espresso.intent.Intents
+import androidx.test.espresso.intent.Intents.intended
+import androidx.test.espresso.intent.Intents.intending
+import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.platform.app.InstrumentationRegistry
+import com.dgp.security.ConfigCrypto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -29,6 +42,7 @@ import org.junit.Test
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.junit.runner.RunWith
+import java.io.File
 
 /**
  * Compose UI instrumentation tests for MainActivity.
@@ -83,9 +97,73 @@ class MainActivityTest {
     @Before
     fun clearPreferences() {
         // Clear any data left by previous test runs.
-        InstrumentationRegistry.getInstrumentation().targetContext
-            .getSharedPreferences("dgp_prefs", Context.MODE_PRIVATE)
-            .edit().clear().commit()
+        prefs().edit().clear().commit()
+        File(targetContext.cacheDir, "dgp-export.enc").delete()
+        File(targetContext.cacheDir, "test-import.enc").delete()
+    }
+
+    private val targetContext: Context
+        get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    private fun prefs() =
+        targetContext.getSharedPreferences("dgp_prefs", Context.MODE_PRIVATE)
+
+    private fun openSettings() {
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("/dgp/settings").assertIsDisplayed()
+    }
+
+    private fun addService(name: String, comment: String = "") {
+        composeTestRule.onNodeWithContentDescription("Add Service").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("service-name-input").performTextInput(name)
+        if (comment.isNotEmpty()) {
+            composeTestRule.onNodeWithTag("service-comment-input").performTextInput(comment)
+        }
+        composeTestRule.onNodeWithContentDescription("Save").performClick()
+        composeTestRule.waitForIdle()
+    }
+
+    private fun enterPin(pin: String) {
+        composeTestRule.onNodeWithTag("pin-input").performTextInput(pin)
+        composeTestRule.onNodeWithText("OK").performClick()
+        composeTestRule.waitForIdle()
+    }
+
+    private fun persistServices(seed: String, services: List<DgpService>) {
+        prefs().edit()
+            .putString("services_encrypted", ConfigCrypto.encrypt(serializeServices(services), seed))
+            .commit()
+    }
+
+    private fun loadPersistedServices(seed: String): List<DgpService> {
+        val encrypted = prefs().getString("services_encrypted", null)
+            ?: error("services_encrypted was not written")
+        val json = ConfigCrypto.decrypt(encrypted, seed)
+            ?: error("could not decrypt persisted services for seed $seed")
+        return parseServices(json)
+    }
+
+    private fun dragHandle(tag: String, deltaY: Float, steps: Int = 8) {
+        composeTestRule.onNodeWithTag(tag).performTouchInput {
+            down(center)
+            repeat(steps) {
+                moveBy(Offset(0f, deltaY / steps))
+                advanceEventTime(16)
+            }
+            up()
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    private fun scrollUntilTagVisible(tag: String, maxSwipes: Int = 8) {
+        repeat(maxSwipes) {
+            if (composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()) return
+            composeTestRule.onRoot().performTouchInput { swipeUp() }
+            composeTestRule.waitForIdle()
+        }
+        composeTestRule.onNodeWithTag(tag).assertExists()
     }
 
     // ── Locked state ──────────────────────────────────────────────────────────
@@ -325,6 +403,117 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("/dgp/").assertIsDisplayed()
     }
 
+    @Test
+    fun exportEncrypted_writesDecryptableFile() {
+        val seed = "testseedExport1"
+        val pin = "2468"
+        val services = listOf(
+            DgpService(id = "svc-export-1", name = "Alpha"),
+            DgpService(id = "svc-export-2", name = "Bravo", type = "hex", comment = "note"),
+        )
+        persistServices(seed, services)
+        unlockWith(seed)
+        openSettings()
+
+        Intents.init()
+        try {
+            intending(hasAction(Intent.ACTION_CHOOSER))
+                .respondWith(android.app.Instrumentation.ActivityResult(Activity.RESULT_CANCELED, Intent()))
+            composeTestRule.onNodeWithText("export (encrypted)").performScrollTo().performClick()
+            composeTestRule.waitForIdle()
+            enterPin(pin)
+
+            val exportFile = File(targetContext.cacheDir, "dgp-export.enc")
+            composeTestRule.waitUntil(5_000) { exportFile.exists() && exportFile.readText().isNotBlank() }
+
+            val decrypted = ConfigCrypto.decryptExport(exportFile.readText(), pin)
+            assertEquals(serializeServices(services), decrypted)
+            intended(hasAction(Intent.ACTION_CHOOSER))
+        } finally {
+            Intents.release()
+        }
+    }
+
+    @Test
+    fun importEncryptedFromClipboard_replacesServices() {
+        val seed = "testseedImportClipboard1"
+        val pin = "1357"
+        persistServices(seed, listOf(DgpService(id = "svc-old", name = "OldService")))
+        unlockWith(seed)
+
+        val imported = listOf(
+            DgpService(id = "svc-clip-1", name = "ClipOne"),
+            DgpService(id = "svc-clip-2", name = "ClipTwo", comment = "via clipboard"),
+        )
+        val encrypted = ConfigCrypto.encryptExport(serializeServices(imported), pin)
+        val clipboard = targetContext.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("encrypted-config", encrypted))
+
+        openSettings()
+        composeTestRule.onNodeWithText("import (encrypted, from clipboard)").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        enterPin(pin)
+
+        composeTestRule.waitUntil(5_000) {
+            loadPersistedServices(seed).map { it.name } == imported.map { it.name }
+        }
+
+        val persisted = loadPersistedServices(seed)
+        assertEquals(imported.map { it.name }, persisted.map { it.name })
+        composeTestRule.onNodeWithContentDescription("Close Settings").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("ClipOne").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ClipTwo").assertIsDisplayed()
+    }
+
+    @Test
+    fun importEncryptedFile_replacesServices() {
+        val seed = "testseedImportFile1"
+        val pin = "8642"
+        persistServices(seed, listOf(DgpService(id = "svc-old-file", name = "OldFileService")))
+        unlockWith(seed)
+
+        val imported = listOf(
+            DgpService(id = "svc-file-1", name = "FileOne"),
+            DgpService(id = "svc-file-2", name = "FileTwo", type = "hexlong"),
+        )
+        val importFile = File(targetContext.cacheDir, "test-import.enc").apply {
+            writeText(ConfigCrypto.encryptExport(serializeServices(imported), pin))
+        }
+        val uri = FileProvider.getUriForFile(
+            targetContext,
+            "${targetContext.packageName}.fileprovider",
+            importFile,
+        )
+
+        Intents.init()
+        try {
+            intending(hasAction(Intent.ACTION_GET_CONTENT))
+                .respondWith(android.app.Instrumentation.ActivityResult(
+                    Activity.RESULT_OK,
+                    Intent().setData(uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                ))
+
+            openSettings()
+            composeTestRule.onNodeWithText("import (encrypted file)").performScrollTo().performClick()
+            composeTestRule.waitForIdle()
+            enterPin(pin)
+
+            composeTestRule.waitUntil(5_000) {
+                loadPersistedServices(seed).map { it.name } == imported.map { it.name }
+            }
+
+            val persisted = loadPersistedServices(seed)
+            assertEquals(imported.map { it.name }, persisted.map { it.name })
+            composeTestRule.onNodeWithContentDescription("Close Settings").performClick()
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithText("FileOne").assertIsDisplayed()
+            composeTestRule.onNodeWithText("FileTwo").assertIsDisplayed()
+        } finally {
+            Intents.release()
+        }
+    }
+
     // ── Password generation ───────────────────────────────────────────────────
 
     @Test
@@ -427,6 +616,58 @@ class MainActivityTest {
 
         composeTestRule.onNodeWithText("/dgp/").assertIsDisplayed()
         composeTestRule.onNodeWithText("GammaSvc").assertIsDisplayed()
+    }
+
+    @Test
+    fun reorder_draggingHandle_persistsNewOrder() {
+        val seed = "testseedReorderPersist1"
+        persistServices(
+            seed,
+            listOf(
+                DgpService(id = "svc-alpha", name = "Alpha"),
+                DgpService(id = "svc-bravo", name = "Bravo"),
+                DgpService(id = "svc-charlie", name = "Charlie"),
+            ),
+        )
+        unlockWith(seed)
+
+        composeTestRule.onNodeWithText("Alpha").performTouchInput { longClick() }
+        composeTestRule.waitForIdle()
+        dragHandle("reorder-handle-svc-alpha", deltaY = 240f)
+        composeTestRule.onNodeWithContentDescription("Done Reorder").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(
+            listOf("Bravo", "Charlie", "Alpha"),
+            loadPersistedServices(seed).map { it.name },
+        )
+    }
+
+    @Test
+    fun reorder_longListAfterScroll_persistsMovedItem() {
+        val seed = "testseedReorderLong1"
+        val services = (1..20).map { index ->
+            DgpService(
+                id = "svc-%02d".format(index),
+                name = "Item%02d".format(index),
+            )
+        }
+        persistServices(seed, services)
+        unlockWith(seed)
+
+        composeTestRule.onNodeWithText("Item01").performTouchInput { longClick() }
+        composeTestRule.waitForIdle()
+        scrollUntilTagVisible("reorder-handle-svc-15")
+        dragHandle("reorder-handle-svc-15", deltaY = -260f)
+        composeTestRule.onNodeWithContentDescription("Done Reorder").performClick()
+        composeTestRule.waitForIdle()
+
+        val persistedNames = loadPersistedServices(seed).map { it.name }
+        assertTrue(
+            "Expected Item15 to move earlier in the list, but order was $persistedNames",
+            persistedNames.indexOf("Item15") < 14,
+        )
+        assertEquals(services.map { it.name }.sorted(), persistedNames.sorted())
     }
 
     // ── Tap behavior: row tap generates, edit icon edits ─────────────────────
