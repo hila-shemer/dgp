@@ -334,19 +334,27 @@ fun DgpAppContent(
                 }
                 if (encrypted.isNullOrBlank()) {
                     val message = if (uri != null) "Encrypted file is empty" else "Clipboard is empty"
-                    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                    withContext(Dispatchers.Main.immediate) {
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                    }
                     return@launch
                 }
                 val json = withContext(Dispatchers.Default) {
                     ConfigCrypto.decryptExport(encrypted, pin)
                 }
                 if (json == null) {
-                    android.widget.Toast.makeText(context, "Decryption failed — wrong PIN?", android.widget.Toast.LENGTH_LONG).show()
+                    withContext(Dispatchers.Main.immediate) {
+                        android.widget.Toast.makeText(context, "Decryption failed — wrong PIN?", android.widget.Toast.LENGTH_LONG).show()
+                    }
                     return@launch
                 }
-                loadImportedJson(json)
+                withContext(Dispatchers.Main.immediate) {
+                    loadImportedJson(json)
+                }
             } catch (e: Exception) {
-                android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                withContext(Dispatchers.Main.immediate) {
+                    android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                }
             } finally {
                 importEncryptedFileUri = null
             }
@@ -1068,6 +1076,7 @@ fun PinDialog(
                 TextField(
                     value = pin,
                     onValueChange = { pin = it },
+                    modifier = Modifier.semantics { testTag = "pin-input" },
                     label = { Text("PIN") },
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
