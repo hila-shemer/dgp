@@ -2,7 +2,6 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-import tempfile
 
 from dgp.cli import _add_common_args, resolve_seed, resolve_account
 
@@ -36,10 +35,12 @@ def register(subparsers) -> None:
 
 def _atomic_write(path: str, data: bytes, mode: int) -> None:
     dir_ = os.path.dirname(os.path.abspath(path))
-    with tempfile.NamedTemporaryFile(dir=dir_, delete=False) as tmp:
-        tmp.write(data)
-        tmp_path = tmp.name
-    os.chmod(tmp_path, mode)
+    tmp_path = os.path.join(dir_, ".dgp_tmp_" + os.urandom(8).hex())
+    fd = os.open(tmp_path, os.O_CREAT | os.O_WRONLY | os.O_EXCL, mode)
+    try:
+        os.write(fd, data)
+    finally:
+        os.close(fd)
     os.replace(tmp_path, path)
 
 

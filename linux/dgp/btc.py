@@ -79,7 +79,7 @@ def bech32_p2wpkh_mainnet(pub_compressed: bytes) -> str:
     return _bech32_encode("bc", 0, program)
 
 
-def derive_bip39_mnemonic(seed: str, name: str, account: str, words: int = 24) -> list:
+def derive_bip39_mnemonic(seed: str, name: str, account: str) -> list[str]:
     wordlist = load_bip39_english()
     entropy = pbkdf2_raw(seed, account, name)[:32]
     checksum = _sha256(entropy)[0]
