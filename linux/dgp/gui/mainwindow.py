@@ -128,6 +128,7 @@ class MainWindow(QMainWindow):
             item.setData(Qt.ItemDataRole.UserRole, svc)
             self._list_widget.addItem(item)
         self._list_widget.blockSignals(False)
+        self._on_search(self._search_box.text())
 
     def _service_at_row(self, row: int) -> DgpService | None:
         item = self._list_widget.item(row)
@@ -163,7 +164,10 @@ class MainWindow(QMainWindow):
         self._btn_show.setText("Hide" if checked else "Show")
 
     def _copy_password(self):
-        QApplication.clipboard().setText(self._password_field.text())
+        text = self._password_field.text()
+        if text.startswith("[") and text.endswith("]"):
+            return
+        QApplication.clipboard().setText(text)
 
     def _unlock(self):
         seed, ok = QInputDialog.getText(
