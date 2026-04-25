@@ -19,7 +19,9 @@ def main(argv=None) -> int:
     # Parse here so --help exits before any Qt import
     args = parser.parse_args(argv)
 
-    # All Qt imports deferred past argparse so --help works without a display
+    # All Qt imports deferred past argparse so --help works without libxkbcommon
+    import os
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from PyQt6.QtWidgets import QApplication
     from dgp.gui.mainwindow import MainWindow
 
