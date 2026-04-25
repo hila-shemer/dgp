@@ -17,7 +17,10 @@ def serialize_openssh_public(verify_key, comment: str = "") -> str:
         + struct.pack(">I", 32) + vk_bytes
     )
     encoded = base64.b64encode(pubkey_blob).decode("ascii")
-    return f"ssh-ed25519 {encoded} {comment}"
+    parts = ["ssh-ed25519", encoded]
+    if comment:
+        parts.append(comment)
+    return " ".join(parts)
 
 
 def serialize_openssh_private(signing_key, comment: str = "") -> bytes:
