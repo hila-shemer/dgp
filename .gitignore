@@ -25,3 +25,6 @@ DECISIONS.md
 PROBLEMS.md
 ralph*
 test_results.txt
+.codex
+.ralph/
+implementation_plan.md
