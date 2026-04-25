@@ -41,6 +41,7 @@ import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.LocalCompactRows
 import com.dgp.ui.theme.ThemeMode
 import com.dgp.ui.UnlockScreen
+import com.dgp.ui.ActiveModal
 import android.net.Uri
 import android.util.Base64
 import androidx.core.content.FileProvider
@@ -266,10 +267,7 @@ fun DgpAppContent(
     var account by remember { mutableStateOf("") }
     var services by remember { mutableStateOf(listOf<DgpService>()) }
 
-    // Config export/import
-    var showExportPinDialog by remember { mutableStateOf(false) }
-    var showImportPinDialog by remember { mutableStateOf(false) }
-    var importEncryptedFileUri by remember { mutableStateOf<Uri?>(null) }
+    var activeModal by remember { mutableStateOf<ActiveModal>(ActiveModal.None) }
 
     fun loadImportedJson(json: String) {
         val imported = parseServices(json)
@@ -301,8 +299,7 @@ fun DgpAppContent(
     fun launchEncryptedImportFilePicker() {
         mainActivity.launchFilePicker { uri ->
             if (uri != null) {
-                importEncryptedFileUri = uri
-                showImportPinDialog = true
+                activeModal = ActiveModal.ImportPin(uri)
             }
         }
     }
@@ -361,24 +358,17 @@ fun DgpAppContent(
                     android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
                 }
             } finally {
-                importEncryptedFileUri = null
+                if (activeModal is ActiveModal.ImportPin) activeModal = ActiveModal.None
             }
         }
     }
 
     // UI States
     var showSeedPrompt by remember { mutableStateOf(true) }
-    var showAccountPrompt by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var showAddDialog by remember { mutableStateOf(false) }
-    var addDialogInitialName by remember { mutableStateOf("") }
-    var editingService by remember { mutableStateOf<DgpService?>(null) }
-    var showSeedSettings by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
-    var showTestVectors by remember { mutableStateOf(false) }
     val testResults = remember { mutableStateListOf<TestVectors.SingleTestResult>() }
     var testRunning by remember { mutableStateOf(false) }
-    var revealingService by remember { mutableStateOf<DgpService?>(null) }
     var seedError by remember { mutableStateOf(false) }
     var activeFilter by remember { mutableStateOf<ListFilter>(ListFilter.All) }
     var copyToast by remember { mutableStateOf<CopyToastState>(CopyToastState.Idle) }
@@ -584,7 +574,7 @@ fun DgpAppContent(
             if (!decryptedAccount.isNullOrEmpty()) {
                 account = decryptedAccount
             } else {
-                showAccountPrompt = true
+                activeModal = ActiveModal.Account
             }
             if (!skipSave) {
                 saveSeedWithBiometric(seed)
@@ -702,10 +692,10 @@ fun DgpAppContent(
                         "SHA-256: " + digest.take(8).joinToString("") { "%02x".format(it) }
                     }
                 },
-                onChangeSeed = { authenticate { showSeedSettings = true } },
+                onChangeSeed = { authenticate { activeModal = ActiveModal.ChangeSeed } },
                 onRunTestVectors = {
                     testResults.clear()
-                    showTestVectors = true
+                    activeModal = ActiveModal.TestVectors
                     testRunning = true
                     scope.launch {
                         for (i in TestVectors.vectors.indices) {
@@ -717,11 +707,10 @@ fun DgpAppContent(
                         testRunning = false
                     }
                 },
-                onExportConfig = { showExportPinDialog = true },
+                onExportConfig = { activeModal = ActiveModal.ExportPin },
                 onImportEncryptedFile = { launchEncryptedImportFilePicker() },
                 onImportEncrypted = {
-                    importEncryptedFileUri = null
-                    showImportPinDialog = true
+                    activeModal = ActiveModal.ImportPin(null)
                 },
                 onImportPlaintext = { launchImportFilePicker() },
                 onClearAll = {
@@ -744,19 +733,6 @@ fun DgpAppContent(
         }
 
         else -> {
-            if (showAccountPrompt && isSeeded) {
-                AccountPromptDialog(
-                    onDismiss = { showAccountPrompt = false },
-                    onSave = { newAccount ->
-                        account = newAccount
-                        if (masterSeed.isNotEmpty()) {
-                            prefs.edit().putString("account_encrypted", ConfigCrypto.encrypt(newAccount, masterSeed)).apply()
-                        }
-                        showAccountPrompt = false
-                    }
-                )
-            }
-
             ServicesScreen(
                 services = services,
                 account = account,
@@ -769,11 +745,10 @@ fun DgpAppContent(
                     copyPasswordToClipboard(password)
                     copyToast = CopyToastState.Visible(svc.name)
                 },
-                onChevronTap = { svc -> revealingService = svc },
+                onChevronTap = { svc -> activeModal = ActiveModal.Revealing(svc) },
                 onLongPressRow = { reordering = true },
                 onAdd = { initialName ->
-                    addDialogInitialName = initialName
-                    showAddDialog = true
+                    activeModal = ActiveModal.AddNew(initialName)
                 },
                 onLock = {
                     if (clearOnLock) {
@@ -789,7 +764,7 @@ fun DgpAppContent(
                 },
                 onOpenAccount = {
                     if (account.isNotEmpty()) clearAccount()
-                    showAccountPrompt = true
+                    activeModal = ActiveModal.Account
                 },
                 onOpenSettings = { showSettings = true },
                 themeMode = themeMode,
@@ -802,169 +777,180 @@ fun DgpAppContent(
         }
     }
 
-    if (showExportPinDialog) {
-        PinDialog(
-            title = "Export PIN",
-            subtitle = "Encrypt config with a PIN for sharing",
-            onDismiss = { showExportPinDialog = false },
-            onConfirm = { pin ->
-                showExportPinDialog = false
-                exportServices(pin)
+    when (val m = activeModal) {
+        is ActiveModal.None -> Unit
+        is ActiveModal.Account -> {
+            if (isSeeded) {
+                AccountPromptDialog(
+                    onDismiss = { activeModal = ActiveModal.None },
+                    onSave = { newAccount ->
+                        account = newAccount
+                        if (masterSeed.isNotEmpty()) {
+                            prefs.edit().putString("account_encrypted", ConfigCrypto.encrypt(newAccount, masterSeed)).apply()
+                        }
+                        activeModal = ActiveModal.None
+                    }
+                )
             }
-        )
-    }
-
-    if (showImportPinDialog) {
-        PinDialog(
-            title = "Import PIN",
-            subtitle = if (importEncryptedFileUri != null) {
-                "Choose the PIN for the encrypted file"
-            } else {
-                "Copy encrypted config to clipboard first"
-            },
-            onDismiss = {
-                showImportPinDialog = false
-                importEncryptedFileUri = null
-            },
-            onConfirm = { pin ->
-                showImportPinDialog = false
-                importEncryptedServices(pin, importEncryptedFileUri)
-            }
-        )
-    }
-
-    if (showAddDialog || editingService != null) {
-        val editing = editingService
-        EditEntryScreen(
-            service = editing,
-            initialName = if (editing == null) addDialogInitialName else editing.name,
-            seed = masterSeed,
-            account = account,
-            engine = engine,
-            onSave = { updated ->
-                val newList = services.toMutableList()
-                if (editing != null) {
-                    val idx = newList.indexOfFirst { it.id == editing.id }
-                    if (idx >= 0) newList[idx] = updated
+        }
+        is ActiveModal.ExportPin -> {
+            PinDialog(
+                title = "Export PIN",
+                subtitle = "Encrypt config with a PIN for sharing",
+                onDismiss = { activeModal = ActiveModal.None },
+                onConfirm = { pin ->
+                    activeModal = ActiveModal.None
+                    exportServices(pin)
+                }
+            )
+        }
+        is ActiveModal.ImportPin -> {
+            PinDialog(
+                title = "Import PIN",
+                subtitle = if (m.fileUri != null) {
+                    "Choose the PIN for the encrypted file"
                 } else {
+                    "Copy encrypted config to clipboard first"
+                },
+                onDismiss = { activeModal = ActiveModal.None },
+                onConfirm = { pin ->
+                    val fileUri = m.fileUri
+                    activeModal = ActiveModal.None
+                    importEncryptedServices(pin, fileUri)
+                }
+            )
+        }
+        is ActiveModal.AddNew -> {
+            EditEntryScreen(
+                service = null,
+                initialName = m.initialName,
+                seed = masterSeed,
+                account = account,
+                engine = engine,
+                onSave = { updated ->
+                    val newList = services.toMutableList()
                     newList.add(updated)
-                }
-                saveServices(newList)
-                flashedServiceId = updated.id
-                showAddDialog = false
-                addDialogInitialName = ""
-                editingService = null
-            },
-            onDelete = {
-                if (editing != null) {
-                    saveServices(services.filter { it.id != editing.id })
-                    editingService = null
-                }
-            },
-            onClose = {
-                showAddDialog = false
-                addDialogInitialName = ""
-                editingService = null
-            },
-        )
-    }
-
-    if (showSeedSettings) {
-        SeedSettingsDialog(
-            currentSeed = masterSeed,
-            onDismiss = { showSeedSettings = false },
-            onSave = { newSeed ->
-                // Re-encrypt services with new seed
-                val json = serializeServices(services)
-                prefs.edit()
-                    .putString("services_encrypted", ConfigCrypto.encrypt(json, newSeed))
-                    .apply()
-                masterSeed = newSeed
-                saveSeedWithBiometric(newSeed)
-                showSeedSettings = false
-            },
-            onScanQr = { onResult -> scanQr(onResult) },
-        )
-    }
-
-    if (showTestVectors) {
-        val passed = testResults.count { it.passed }
-        val failed = testResults.count { !it.passed }
-        val total = TestVectors.vectors.size
-        AlertDialog(
-            onDismissRequest = {
-                showTestVectors = false
-                testRunning = false
-            },
-            title = {
-                Text(if (testRunning) "Running... ${testResults.size}/$total"
-                     else "$passed passed, $failed failed / $total")
-            },
-            text = {
-                LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
-                    items(testResults.size) { i ->
-                        val r = testResults[i]
-                        Column(modifier = Modifier.padding(vertical = 2.dp)) {
-                            Text(
-                                text = (if (r.passed) "PASS " else "FAIL ") + r.label,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (r.passed) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.error
-                            )
-                            if (r.passed) {
-                                Text("  = ${r.actual}",
-                                     style = MaterialTheme.typography.bodySmall)
-                            } else {
-                                Text("  expected: ${r.expected}",
-                                     style = MaterialTheme.typography.bodySmall)
-                                Text("  actual:   ${r.actual}",
-                                     style = MaterialTheme.typography.bodySmall,
-                                     color = MaterialTheme.colorScheme.error)
+                    saveServices(newList)
+                    flashedServiceId = updated.id
+                    activeModal = ActiveModal.None
+                },
+                onDelete = { },
+                onClose = { activeModal = ActiveModal.None },
+            )
+        }
+        is ActiveModal.Editing -> {
+            EditEntryScreen(
+                service = m.service,
+                initialName = m.service.name,
+                seed = masterSeed,
+                account = account,
+                engine = engine,
+                onSave = { updated ->
+                    val newList = services.toMutableList()
+                    val idx = newList.indexOfFirst { it.id == m.service.id }
+                    if (idx >= 0) newList[idx] = updated
+                    saveServices(newList)
+                    flashedServiceId = updated.id
+                    activeModal = ActiveModal.None
+                },
+                onDelete = {
+                    saveServices(services.filter { it.id != m.service.id })
+                    activeModal = ActiveModal.None
+                },
+                onClose = { activeModal = ActiveModal.None },
+            )
+        }
+        is ActiveModal.Revealing -> {
+            RevealSheet(
+                service = m.service,
+                passwordProvider = { generateForService(m.service) },
+                onCopy = {
+                    val password = generateForService(m.service)
+                    copyPasswordToClipboard(password)
+                    copyToast = CopyToastState.Visible(m.service.name)
+                    activeModal = ActiveModal.None
+                },
+                onEdit = { activeModal = ActiveModal.Editing(m.service) },
+                onArchive = {
+                    saveServices(services.map {
+                        if (it.id == m.service.id) it.copy(archived = !it.archived) else it
+                    })
+                    activeModal = ActiveModal.None
+                },
+                onDismiss = { activeModal = ActiveModal.None },
+            )
+        }
+        is ActiveModal.ChangeSeed -> {
+            SeedSettingsDialog(
+                currentSeed = masterSeed,
+                onDismiss = { activeModal = ActiveModal.None },
+                onSave = { newSeed ->
+                    val json = serializeServices(services)
+                    prefs.edit()
+                        .putString("services_encrypted", ConfigCrypto.encrypt(json, newSeed))
+                        .apply()
+                    masterSeed = newSeed
+                    saveSeedWithBiometric(newSeed)
+                    activeModal = ActiveModal.None
+                },
+                onScanQr = { onResult -> scanQr(onResult) },
+            )
+        }
+        is ActiveModal.TestVectors -> {
+            val passed = testResults.count { it.passed }
+            val failed = testResults.count { !it.passed }
+            val total = TestVectors.vectors.size
+            AlertDialog(
+                onDismissRequest = {
+                    activeModal = ActiveModal.None
+                    testRunning = false
+                },
+                title = {
+                    Text(if (testRunning) "Running... ${testResults.size}/$total"
+                         else "$passed passed, $failed failed / $total")
+                },
+                text = {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                        items(testResults.size) { i ->
+                            val r = testResults[i]
+                            Column(modifier = Modifier.padding(vertical = 2.dp)) {
+                                Text(
+                                    text = (if (r.passed) "PASS " else "FAIL ") + r.label,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (r.passed) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.error
+                                )
+                                if (r.passed) {
+                                    Text("  = ${r.actual}",
+                                         style = MaterialTheme.typography.bodySmall)
+                                } else {
+                                    Text("  expected: ${r.expected}",
+                                         style = MaterialTheme.typography.bodySmall)
+                                    Text("  actual:   ${r.actual}",
+                                         style = MaterialTheme.typography.bodySmall,
+                                         color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                            if (i < testResults.size - 1) Divider()
+                        }
+                        if (testRunning) {
+                            item {
+                                LinearProgressIndicator(
+                                    progress = testResults.size.toFloat() / total,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                                )
                             }
                         }
-                        if (i < testResults.size - 1) Divider()
                     }
-                    if (testRunning) {
-                        item {
-                            LinearProgressIndicator(
-                                progress = testResults.size.toFloat() / total,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                            )
-                        }
-                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        activeModal = ActiveModal.None
+                        testRunning = false
+                    }) { Text("Close") }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showTestVectors = false
-                    testRunning = false
-                }) { Text("Close") }
-            }
-        )
-    }
-
-    revealingService?.let { svc ->
-        RevealSheet(
-            service = svc,
-            passwordProvider = { generateForService(svc) },
-            onCopy = {
-                val password = generateForService(svc)
-                copyPasswordToClipboard(password)
-                copyToast = CopyToastState.Visible(svc.name)
-                revealingService = null
-            },
-            onEdit = {
-                revealingService = null
-                editingService = svc
-            },
-            onArchive = {
-                saveServices(services.map {
-                    if (it.id == svc.id) it.copy(archived = !it.archived) else it
-                })
-                revealingService = null
-            },
-            onDismiss = { revealingService = null },
-        )
+            )
+        }
     }
 }
 
