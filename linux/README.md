@@ -104,4 +104,10 @@ Walk through to verify the GUI after install:
    **Settings → Import**: clear services, import the blob with same PIN — entries match.
 9. **Settings → Test Vectors**: click "Run vectors" — all 74 rows show green.
 10. For a vault entry: `dgp config add vaulttest --vault` (CLI), then open GUI
-    and click the entry — VaultDialog appears with the decrypted secret text.
+    and **double-click** the entry — VaultDialog appears with the decrypted
+    secret text. (Single-click shows a placeholder; double-click opens the editor.)
+11. **Settings → Seed → Save** a new seed value; close the dialog; click any
+    service row — the password updates immediately without restarting the app.
+12. Type `.*` in the search box — the list filters literally (substring match),
+    not as a regex. All services whose name contains the literal string `.*`
+    are shown (likely none); clearing the box restores all rows.

@@ -32,6 +32,13 @@ if [ ! -f local.properties ]; then
     echo "sdk.dir=/opt/android-sdk" > local.properties
 fi
 
+# Skip Android steps when the SDK directory is absent (e.g. in the Python sandbox).
+SDK_DIR=$(grep '^sdk.dir=' local.properties 2>/dev/null | cut -d= -f2-)
+if [ -z "$SDK_DIR" ] || [ ! -d "$SDK_DIR" ]; then
+    echo "Android SDK not found at '${SDK_DIR}' — skipping Gradle steps." | tee -a test_results.txt
+    exit 0
+fi
+
 GRADLE_OPTS="-Dorg.gradle.java.home=${JAVA_HOME}"
 
 {
