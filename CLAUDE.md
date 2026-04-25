@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 DGP (Deterministically Generated Passwords) is an Android password manager that derives passwords deterministically from a **seed + account secret + service name** using PBKDF2. Given the same inputs it always produces the same password — no database of stored passwords is needed.
 
-The repo was restructured in commit `62985ad` to be Android-only; prior Flask/C/Python implementations live in git history.
+The Android app is the primary target. A Linux Python port lives in `linux/` (see "Linux desktop port" below) and shares the algorithm + export/import wire format. The legacy Flask/C/Python implementations were removed in commit `62985ad` and live in git history only.
 
 ## Build & Test Commands
 
@@ -16,6 +16,7 @@ The repo was restructured in commit `62985ad` to be Android-only; prior Flask/C/
 ./gradlew :app:test                                            # JVM unit tests
 ./gradlew :app:testDebugUnitTest --tests com.dgp.engine.DgpEngineTest   # single test class
 ./gradlew :app:connectedDebugAndroidTest                       # instrumentation tests (needs emulator/device)
+./run_tests.sh                                                 # Python (linux/) + JVM + Android in one shot; skips Android if SDK/device absent
 ```
 
 **Requirements:** JDK 21 (path in `gradle.properties` → `org.gradle.java.home`), Android SDK 34 (path in `local.properties`, gitignored). AGP 8.7.3, Kotlin 1.9.25, Compose compiler 1.5.15, compose-bom 2024.10.01. Min SDK 26, target SDK 34.
@@ -55,15 +56,24 @@ Vault entries are the **only** user-chosen secret material the app stores. They 
 - Export/import-from-clipboard: PBKDF2-HMAC-SHA256, **600,000 iterations** (user-supplied PIN is the only secret).
 - `decrypt()` returns `null` on failure; callers must handle.
 
-### UI — `app/src/main/java/com/dgp/MainActivity.kt` (~1.1k lines)
+### UI — `app/src/main/java/com/dgp/MainActivity.kt` (~1.1k lines) + `com.dgp.ui.*`
 
-Jetpack Compose + Material3. `MainActivity` extends `FragmentActivity` (required by `BiometricPrompt`). States: locked (seed entry / biometric unlock) → unlocked (service list, search, manual drag-reorder via `sh.calvin.reorderable`, archive toggle) → tap a service to generate → password display with clipboard copy. Settings cover seed change, PIN-encrypted config export (share-sheet) / import (from clipboard), plaintext-JSON file import, QR-code scanning (used to fill the seed field), and the test-vector runner.
+Jetpack Compose + Material3. `MainActivity` extends `FragmentActivity` (required by `BiometricPrompt`) and owns top-level state and navigation; individual screens live in `com.dgp.ui.*` (`UnlockScreen`, `ServicesScreen`, `SettingsScreen`, `EditEntryScreen`, `ReorderScreen`, `RevealSheet`, `ActiveModal`), with shared widgets in `com.dgp.ui.components` and the Material3 palette in `com.dgp.ui.theme`. States: locked (seed entry / biometric unlock) → unlocked (service list, search, manual drag-reorder via `sh.calvin.reorderable`, archive toggle) → tap a service to generate → password display with clipboard copy. Settings cover seed change, PIN-encrypted config export (share-sheet) / import (from clipboard), plaintext-JSON file import, QR-code scanning (used to fill the seed field), and the test-vector runner.
 
 Clipboard copy sets `ClipDescription.EXTRA_IS_SENSITIVE = true` (Android 13+). The account field is persisted encrypted with the seed and cleared on reboot and on biometric failure.
 
 ### Test vectors — `app/src/main/java/com/dgp/engine/TestVectors.kt`
 
 50+ input/output pairs covering 64-byte (triggers pre-hashing in some impls) and 65-byte seeds, empty-account edge, varied service lengths, all 8 formats. Exposed in the app via the settings → test-vectors screen; also covered by `DgpEngineTest`.
+
+### Linux desktop port — `linux/`
+
+A Python 3.11+ port of the same engine, packaged as `dgp` (`pyproject.toml`). Two entry points: `dgp` (CLI — `linux/dgp/cli/`) and `dgp-gui` (PyQt6 desktop app — `linux/dgp/gui/`). Install with `pip install -e linux` from the repo root, or `pip install -e .[test]` from `linux/` for tests. Run tests with `pytest -q` inside `linux/`; `run_tests.sh` does this first and bails before Gradle if it fails.
+
+- **Algorithm parity is load-bearing.** All 74 PBKDF2 test vectors match Android's `DgpEngine` exactly, and the PIN-encrypted export/import format is wire-compatible with Android `ConfigCrypto`. A Java cross-language fixture (`linux/tests/fixtures/AndroidExportFixture.java`, run via `pytest tests/test_android_compat.py`, requires a JDK) proves it. Don't change the engine on either side without re-greening both test suites.
+- **Different security posture.** Filesystem-permission-based: `~/.config/dgp/{seed,account,services.json}` at 0600, parent dir 0700. No keystore, no biometric, no memory encryption. Plaintext seed on disk is by design — the threat model is a single-user Linux box, not a phone that can be lost. Do not "harden" this without the user's say-so.
+- **Beyond Android.** The CLI exposes derivations the Android app does not: `dgp ssh` (SSH key derivation, `linux/dgp/ssh.py`), `dgp btc-key` / `dgp btc-mnemonic` (Bitcoin key/mnemonic, `linux/dgp/btc.py`), `dgp prng` (deterministic byte stream, `linux/dgp/prng.py`). These are not part of the Android <-> Linux compatibility contract.
+- **pytest-qt is disabled by default** in `linux/pyproject.toml` (`addopts = "-p no:pytest-qt ..."`) because the headless sandbox lacks libxkbcommon. GUI tests need a real display.
 
 ## Non-obvious gotchas
 
