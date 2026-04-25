@@ -38,4 +38,10 @@ GRADLE_OPTS="-Dorg.gradle.java.home=${JAVA_HOME}"
     ./gradlew $GRADLE_OPTS :app:test && \
     ./gradlew $GRADLE_OPTS :app:assembleDebug
 } 2>&1 | tee -a test_results.txt
-exit ${PIPESTATUS[0]}
+JVM_EXIT=${PIPESTATUS[0]}
+[ $JVM_EXIT -ne 0 ] && exit $JVM_EXIT
+
+if command -v adb &>/dev/null && adb devices | grep -q $'\tdevice$'; then
+    ./gradlew $GRADLE_OPTS :app:connectedDebugAndroidTest 2>&1 | tee -a test_results.txt
+    exit ${PIPESTATUS[0]}
+fi
