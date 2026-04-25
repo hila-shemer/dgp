@@ -160,8 +160,6 @@ class MainActivityTest {
     private fun scrollUntilTagVisible(tag: String, maxSwipes: Int = 8) {
         repeat(maxSwipes) {
             if (composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()) {
-                // Use semantics-based scroll (no fling) so the list is fully settled
-                // before dragHandle fires its down() event.
                 composeTestRule.onNodeWithTag(tag).performScrollTo()
                 composeTestRule.waitForIdle()
                 return
@@ -665,14 +663,14 @@ class MainActivityTest {
         composeTestRule.onNodeWithText("Item01").performTouchInput { longClick() }
         composeTestRule.waitForIdle()
         scrollUntilTagVisible("reorder-handle-svc-15")
-        dragHandle("reorder-handle-svc-15", deltaY = -260f)
+        dragHandle("reorder-handle-svc-15", deltaY = 480f)
         composeTestRule.onNodeWithContentDescription("Done Reorder").performClick()
         composeTestRule.waitForIdle()
 
         val persistedNames = loadPersistedServices(seed).map { it.name }
         assertTrue(
-            "Expected Item15 to move earlier in the list, but order was $persistedNames",
-            persistedNames.indexOf("Item15") < 14,
+            "Expected Item15 to move later in the list, but order was $persistedNames",
+            persistedNames.indexOf("Item15") > 14,
         )
         assertEquals(services.map { it.name }.sorted(), persistedNames.sorted())
     }
