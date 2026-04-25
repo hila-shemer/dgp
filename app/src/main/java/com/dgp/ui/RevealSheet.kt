@@ -1,6 +1,7 @@
 package com.dgp.ui
 
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -32,8 +33,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -44,9 +47,10 @@ import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.ThemeMode
 import com.dgp.ui.theme.editorial
 import com.dgp.ui.theme.editorialType
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
-private fun RevealSheetContent(
+internal fun RevealSheetContent(
     service: DgpService,
     password: String,
     onCopy: () -> Unit,
@@ -90,6 +94,7 @@ private fun RevealSheetContent(
 
         Spacer(Modifier.height(12.dp))
 
+        val view = LocalView.current
         var revealed by remember { mutableStateOf(false) }
         val masked = "•".repeat(password.length.coerceAtLeast(1))
 
@@ -99,12 +104,18 @@ private fun RevealSheetContent(
                 .background(editorial.paperElev, RoundedCornerShape(6.dp))
                 .border(1.dp, editorial.rule, RoundedCornerShape(6.dp))
                 .padding(12.dp)
+                .semantics { testTag = "reveal-target" }
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
-                            revealed = true
-                            tryAwaitRelease()
-                            revealed = false
+                            val held = withTimeoutOrNull(150) { tryAwaitRelease() }
+                            if (held == null) {
+                                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                                revealed = true
+                                tryAwaitRelease()
+                                revealed = false
+                                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            }
                         },
                     )
                 },
