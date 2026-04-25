@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -174,14 +176,19 @@ fun UnlockScreen(
                 )
             },
             trailingIcon = {
-                Icon(
-                    imageVector = if (visible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
-                    contentDescription = if (visible) "Hide seed" else "Show seed",
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable { visible = !visible },
-                    tint = editorial.inkMuted,
-                )
+                IconButton(
+                    onClick = { visible = !visible },
+                    modifier = Modifier.semantics {
+                        contentDescription = if (visible) "Hide seed" else "Show seed"
+                    },
+                ) {
+                    Icon(
+                        imageVector = if (visible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = editorial.inkMuted,
+                    )
+                }
             },
             imeAction = ImeAction.Go,
             onImeAction = { if (seed.isNotEmpty()) onUnlock(seed) },
