@@ -12,7 +12,8 @@ if (localPropertiesFile.exists()) {
 
 android {
     namespace = "com.dgp"
-    compileSdk = 35
+    compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "io.github.hilashemer.dgp"
