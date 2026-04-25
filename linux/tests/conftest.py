@@ -1,6 +1,5 @@
 import shutil
 import subprocess
-import tempfile
 import pytest
 from pathlib import Path
 from dgp.service import serialize_services, new_service
@@ -9,7 +8,7 @@ linux_dir = Path(__file__).parent.parent
 
 
 @pytest.fixture(scope="session")
-def android_export_blob():
+def android_export_blob(tmp_path_factory):
     if shutil.which("javac") is None or shutil.which("java") is None:
         pytest.skip("JDK not available")
 
@@ -31,16 +30,10 @@ def android_export_blob():
     ]
     plaintext = serialize_services(services)
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, dir=linux_dir
-    ) as pf:
-        pf.write(plaintext)
-        plaintext_file = pf.name
-
-    with tempfile.NamedTemporaryFile(
-        suffix=".txt", delete=False, dir=linux_dir
-    ) as bf:
-        blob_file = bf.name
+    work_dir = tmp_path_factory.mktemp("android_export")
+    plaintext_file = work_dir / "plaintext.txt"
+    plaintext_file.write_text(plaintext, encoding="utf-8")
+    blob_file = work_dir / "blob.txt"
 
     subprocess.run(
         [
@@ -50,12 +43,12 @@ def android_export_blob():
             "AndroidExportFixture",
             "encrypt",
             "hunter2",
-            plaintext_file,
-            blob_file,
+            str(plaintext_file),
+            str(blob_file),
         ],
         check=True,
         cwd=linux_dir,
     )
 
-    blob = Path(blob_file).read_text(encoding="utf-8").strip()
+    blob = blob_file.read_text(encoding="utf-8").strip()
     return {"blob": blob, "plaintext": plaintext, "pin": "hunter2"}
