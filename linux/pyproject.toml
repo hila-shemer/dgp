@@ -19,6 +19,7 @@ dependencies = [
 test = [
     "pytest>=8",
     "pytest-qt>=4.4",
+    "pytest-cov>=5",
 ]
 
 [project.scripts]
@@ -37,4 +38,4 @@ include = ["dgp*"]
 [tool.pytest.ini_options]
 # pytest-qt crashes in this sandbox (libxkbcommon.so.0 missing); GUI tests
 # must be run separately with a display. Disable the plugin globally here.
-addopts = "-p no:pytest-qt"
+addopts = "-p no:pytest-qt --cov=dgp.gui --cov-fail-under=80"
