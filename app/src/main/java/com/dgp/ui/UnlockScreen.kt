@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
@@ -44,6 +46,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.dgp.ui.components.autoFocus
 import com.dgp.ui.components.EditorialInputField
 import com.dgp.ui.components.GhostButton
 import com.dgp.ui.components.PrimaryButton
@@ -88,7 +91,7 @@ fun UnlockScreen(
         modifier = modifier
             .fillMaxSize()
             .background(editorial.paper)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .windowInsetsPadding(WindowInsets.safeDrawing.union(WindowInsets.ime))
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
         // Header row
@@ -157,7 +160,8 @@ fun UnlockScreen(
             placeholder = "seed",
             modifier = Modifier
                 .offset { IntOffset(shakeX.value.roundToInt(), 0) }
-                .semantics { testTag = "seed-input" },
+                .semantics { testTag = "seed-input" }
+                .autoFocus(),
             // Allow multi-line so a pasted / QR-scanned seed containing newlines
             // is visible and editable instead of silently mangled.
             singleLine = false,

@@ -6,8 +6,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -897,5 +899,23 @@ class MainActivityTest {
 
         // hex chip is now visible in the row
         composeTestRule.onNodeWithText("hex").assertIsDisplayed()
+    }
+
+    @Test
+    fun unlockScreen_seedInput_isFocusedOnLaunch() {
+        composeTestRule.waitUntil(timeoutMillis = 1_500) {
+            composeTestRule.onAllNodesWithTag("seed-input")
+                .fetchSemanticsNodes()
+                .firstOrNull()
+                ?.config?.getOrElseNullable(SemanticsProperties.Focused) { null } == true
+        }
+        composeTestRule.onNodeWithTag("seed-input").assertIsFocused()
+    }
+
+    @Test
+    fun unlockScreen_unlockButton_isDisplayedWithKeyboardOpen() {
+        composeTestRule.onNodeWithTag("seed-input").performTextInput("testseed")
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("unlock-button").assertIsDisplayed()
     }
 }
