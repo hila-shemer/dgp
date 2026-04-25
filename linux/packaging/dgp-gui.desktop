@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=DGP
+Comment=Deterministically Generated Passwords
+Exec=dgp-gui
+Icon=dialog-password
+Terminal=false
+Categories=Utility;Security;
