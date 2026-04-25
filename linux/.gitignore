@@ -1,0 +1,8 @@
+build/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+dist/
+*.pyc
+# Override root .gitignore which ignores DECISIONS.md as a loop-memory file
+!DECISIONS.md
