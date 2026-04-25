@@ -9,6 +9,7 @@ def make_window(seed=None, account="", seed_file=None, account_file=None):
         w._seed = seed
         w._unlock_row.setVisible(False)
     w._account = account
+    w.show()
     return w
 
 
