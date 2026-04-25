@@ -11,6 +11,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.assertTouchWidthIsEqualTo
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -917,5 +920,12 @@ class MainActivityTest {
         composeTestRule.onNodeWithTag("seed-input").performTextInput("testseed")
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("unlock-button").assertIsDisplayed()
+    }
+
+    @Test
+    fun unlockScreen_visibilityToggle_meetsMinTouchTarget() {
+        composeTestRule.onNodeWithContentDescription("Show seed")
+            .assertTouchWidthIsEqualTo(48.dp)
+            .assertTouchHeightIsEqualTo(48.dp)
     }
 }
