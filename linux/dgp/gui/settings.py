@@ -57,8 +57,14 @@ class SettingsDialog(QDialog):
         return w
 
     def _save_seed(self):
+        text = self._seed_edit.text()
+        if not text:
+            QMessageBox.warning(self, "Error", "Seed must not be empty.")
+            return
         try:
-            store.write_text_file(store.seed_path(), self._seed_edit.text())
+            store.write_text_file(store.seed_path(), text)
+            if self.parent() and hasattr(self.parent(), "set_seed"):
+                self.parent().set_seed(text)
             QMessageBox.information(self, "Saved", "Seed saved.")
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
@@ -91,8 +97,11 @@ class SettingsDialog(QDialog):
         return w
 
     def _save_account(self):
+        text = self._account_edit.text()
         try:
-            store.write_text_file(store.account_path(), self._account_edit.text())
+            store.write_text_file(store.account_path(), text)
+            if self.parent() and hasattr(self.parent(), "set_account"):
+                self.parent().set_account(text)
             QMessageBox.information(self, "Saved", "Account saved.")
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))

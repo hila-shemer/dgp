@@ -225,3 +225,12 @@ class MainWindow(QMainWindow):
     def reload_services(self):
         self._services = store.read_services()
         self._refresh_list()
+
+    def set_seed(self, seed: str) -> None:
+        self._seed = seed
+        self._unlock_row.setVisible(False)
+        self._on_item_changed(self._list_widget.currentItem(), None)
+
+    def set_account(self, account: str) -> None:
+        self._account = account
+        self._on_item_changed(self._list_widget.currentItem(), None)
