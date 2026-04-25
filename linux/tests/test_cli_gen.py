@@ -54,6 +54,34 @@ def test_gen_unknown_service_defaults_alnum(tmp_path):
     assert r.stdout.strip() == expected
 
 
+def test_gen_vault_decrypts_secret(tmp_path):
+    from dgp.vault import encrypt_vault
+    blob = encrypt_vault("hunter2", "myseed", "vaultsvc", "myaccount")
+    svc = new_service("vaultsvc", type="vault", encrypted_secret=blob)
+    (tmp_path / "services.json").write_text(serialize_services([svc]))
+    r = _run(tmp_path, "gen", "vaultsvc", "--seed", "myseed", "--account", "myaccount")
+    assert r.returncode == 0
+    assert r.stdout.strip() == "hunter2"
+
+
+def test_gen_vault_wrong_seed_fails(tmp_path):
+    from dgp.vault import encrypt_vault
+    blob = encrypt_vault("hunter2", "myseed", "vaultsvc", "myaccount")
+    svc = new_service("vaultsvc", type="vault", encrypted_secret=blob)
+    (tmp_path / "services.json").write_text(serialize_services([svc]))
+    r = _run(tmp_path, "gen", "vaultsvc", "--seed", "wrongseed", "--account", "myaccount")
+    assert r.returncode == 1
+    assert "failed to decrypt" in r.stderr
+
+
+def test_gen_vault_missing_encrypted_secret_fails(tmp_path):
+    svc = new_service("vaultsvc", type="vault")
+    (tmp_path / "services.json").write_text(serialize_services([svc]))
+    r = _run(tmp_path, "gen", "vaultsvc", "--seed", "myseed", "--account", "myaccount")
+    assert r.returncode == 1
+    assert "no vault secret" in r.stderr
+
+
 def test_gen_missing_seed_exits_2(tmp_path):
     r = _run(tmp_path, "gen", "svc")
     assert r.returncode == 2
