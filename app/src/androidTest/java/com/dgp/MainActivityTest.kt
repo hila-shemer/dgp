@@ -159,10 +159,17 @@ class MainActivityTest {
 
     private fun scrollUntilTagVisible(tag: String, maxSwipes: Int = 8) {
         repeat(maxSwipes) {
-            if (composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()) return
+            if (composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()) {
+                // Use semantics-based scroll (no fling) so the list is fully settled
+                // before dragHandle fires its down() event.
+                composeTestRule.onNodeWithTag(tag).performScrollTo()
+                composeTestRule.waitForIdle()
+                return
+            }
             composeTestRule.onRoot().performTouchInput { swipeUp() }
             composeTestRule.waitForIdle()
         }
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag(tag).assertExists()
     }
 
@@ -633,7 +640,7 @@ class MainActivityTest {
 
         composeTestRule.onNodeWithText("Alpha").performTouchInput { longClick() }
         composeTestRule.waitForIdle()
-        dragHandle("reorder-handle-svc-alpha", deltaY = 240f)
+        dragHandle("reorder-handle-svc-alpha", deltaY = 480f)
         composeTestRule.onNodeWithContentDescription("Done Reorder").performClick()
         composeTestRule.waitForIdle()
 
