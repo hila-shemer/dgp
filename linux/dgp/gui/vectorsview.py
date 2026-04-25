@@ -28,9 +28,9 @@ class VectorsView(QWidget):
         self._table.horizontalHeader().setStretchLastSection(True)
         layout.addWidget(self._table)
 
-        btn = QPushButton("Run vectors")
-        btn.clicked.connect(self._run)
-        layout.addWidget(btn)
+        self._run_btn = QPushButton("Run vectors")
+        self._run_btn.clicked.connect(self._run)
+        layout.addWidget(self._run_btn)
 
         self._thread: QThread | None = None
         self._worker: _Worker | None = None
@@ -45,6 +45,7 @@ class VectorsView(QWidget):
         self._thread.started.connect(self._worker.run)
         self._worker.finished.connect(self._on_finished)
         self._worker.finished.connect(self._thread.quit)
+        self._run_btn.setEnabled(False)
         self._thread.start()
 
     def _on_finished(self, results: list):
@@ -59,3 +60,12 @@ class VectorsView(QWidget):
             pf_item = QTableWidgetItem(pf)
             pf_item.setBackground(green if r.passed else red)
             self._table.setItem(row, 3, pf_item)
+        self._run_btn.setEnabled(True)
+        # Ensure the thread has exited before deleteLater fires; QThread
+        # destructor calls qFatal if the thread is still running.
+        self._thread.quit()
+        self._thread.wait()
+        self._worker.deleteLater()
+        self._thread.deleteLater()
+        self._thread = None
+        self._worker = None
