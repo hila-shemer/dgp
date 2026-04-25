@@ -42,11 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
@@ -57,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.dgp.DgpService
 import com.dgp.engine.DgpEngine
 import com.dgp.security.ConfigCrypto
+import com.dgp.ui.components.autoFocus
 import com.dgp.ui.components.EditorialInputField
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.ThemeMode
@@ -168,9 +165,6 @@ fun EditEntryScreen(
 
     val originalName = remember { service?.name ?: "" }
     val originalAccount = remember { account }
-    val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     var name by remember(service, initialName) { mutableStateOf(service?.name ?: initialName) }
     var type by remember { mutableStateOf(service?.type ?: "alnum") }
@@ -181,14 +175,6 @@ fun EditEntryScreen(
     var vaultVisible by remember { mutableStateOf(false) }
     var vaultDecryptFailed by remember { mutableStateOf(false) }
     var initialVaultPlaintext by remember { mutableStateOf("") }
-
-    // One-shot decrypt on mount for existing vault entry.
-    // Decrypt uses originalName + originalAccount so rename doesn't re-key until save.
-    LaunchedEffect(Unit) {
-        focusManager.clearFocus(force = true)
-        focusRequester.requestFocus()
-        keyboardController?.show()
-    }
 
     // One-shot decrypt on mount for existing vault entry.
     LaunchedEffect(Unit) {
@@ -356,7 +342,7 @@ fun EditEntryScreen(
                     placeholder = "service-name",
                     leadingIcon = { Text("❯", color = editorial.accent, style = t.inputValue) },
                     modifier = Modifier
-                        .focusRequester(focusRequester)
+                        .autoFocus()
                         .semantics { testTag = "service-name-input" },
                 )
             }
