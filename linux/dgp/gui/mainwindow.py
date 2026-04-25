@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
         self._list_widget = QListWidget()
         self._list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self._list_widget.currentItemChanged.connect(self._on_item_changed)
+        self._list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
         self._list_widget.model().rowsMoved.connect(self._on_reorder)
         left_layout.addWidget(self._list_widget)
 
@@ -146,12 +147,34 @@ class MainWindow(QMainWindow):
         self._service_label.setText(svc.name)
         if self._seed is None:
             self._password_field.setText("[unlock required]")
-        else:
-            try:
-                pw = engine.generate(self._seed, svc.name, svc.type, self._account)
-                self._password_field.setText(pw)
-            except Exception as e:
-                self._password_field.setText(f"[error: {e}]")
+            return
+        if svc.type == "vault":
+            self._password_field.setText("[vault entry — double-click to open]")
+            return
+        try:
+            pw = engine.generate(self._seed, svc.name, svc.type, self._account)
+            self._password_field.setText(pw)
+        except Exception as e:
+            self._password_field.setText(f"[error: {e}]")
+
+    def _on_item_double_clicked(self, item):
+        svc: DgpService = item.data(Qt.ItemDataRole.UserRole)
+        if svc.type != "vault":
+            return
+        if self._seed is None:
+            return
+        from dgp.gui.vaultdialog import VaultDialog
+        dlg = VaultDialog(svc, self._seed, self._account, self)
+        new_text = dlg.get_result()
+        if new_text is None:
+            return  # cancelled
+        from dgp.vault import encrypt_vault
+        svc.encrypted_secret = encrypt_vault(new_text, self._seed, svc.name, self._account)
+        for i, s in enumerate(self._services):
+            if s.id == svc.id:
+                self._services[i] = svc
+                break
+        store.write_services(self._services)
 
     def _on_search(self, query: str):
         q = query.lower()
