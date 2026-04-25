@@ -49,9 +49,11 @@ def main(argv: list[str] | None = None) -> int:
     from dgp.cli import gen as gen_mod
     from dgp.cli import vectors as vec_mod
     from dgp.cli import config as config_mod
+    from dgp.cli import extras as extras_mod
     gen_mod.register(subparsers)
     vec_mod.register(subparsers)
     config_mod.register(subparsers)
+    extras_mod.register(subparsers)
 
     args = parser.parse_args(argv)
     return args.func(args)
