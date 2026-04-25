@@ -31,3 +31,8 @@ include = ["dgp*"]
 
 [tool.setuptools.package-data]
 "dgp.data" = ["english.txt"]
+
+[tool.pytest.ini_options]
+# pytest-qt crashes in this sandbox (libxkbcommon.so.0 missing); GUI tests
+# must be run separately with a display. Disable the plugin globally here.
+addopts = "-p no:pytest-qt"
