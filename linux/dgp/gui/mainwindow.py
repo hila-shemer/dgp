@@ -10,7 +10,6 @@ from PyQt6.QtCore import Qt
 
 from dgp.service import DgpService
 from dgp import store, engine
-from dgp.vault import decrypt_vault
 
 
 class MainWindow(QMainWindow):
@@ -147,15 +146,7 @@ class MainWindow(QMainWindow):
             self._password_field.setText("[unlock required]")
         else:
             try:
-                if svc.type == "vault":
-                    if not svc.encrypted_secret:
-                        pw = "[no vault secret stored]"
-                    else:
-                        pw = decrypt_vault(svc.encrypted_secret, self._seed, svc.name, self._account)
-                        if pw is None:
-                            pw = "[failed to decrypt vault secret]"
-                else:
-                    pw = engine.generate(self._seed, svc.name, svc.type, self._account)
+                pw = engine.generate(self._seed, svc.name, svc.type, self._account)
                 self._password_field.setText(pw)
             except Exception as e:
                 self._password_field.setText(f"[error: {e}]")

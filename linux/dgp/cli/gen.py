@@ -17,26 +17,9 @@ def _cmd(args: argparse.Namespace) -> int:
     seed = resolve_seed(args)
     account = resolve_account(args)
     entry_type = args.entry_type
-    match = None
     if entry_type is None:
         services = store.read_services()
         match = next((s for s in services if s.name == args.service), None)
         entry_type = match.type if match else "alnum"
-
-    if entry_type == "vault":
-        from dgp.vault import decrypt_vault
-        if match is None:
-            services = store.read_services()
-            match = next((s for s in services if s.name == args.service), None)
-        if match is None or not match.encrypted_secret:
-            print(f"Error: no vault secret stored for '{args.service}'.", file=sys.stderr)
-            return 1
-        result = decrypt_vault(match.encrypted_secret, seed, args.service, account)
-        if result is None:
-            print("Error: failed to decrypt vault secret.", file=sys.stderr)
-            return 1
-        print(result)
-        return 0
-
     print(engine.generate(seed, args.service, entry_type, account))
     return 0
