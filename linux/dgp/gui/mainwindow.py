@@ -3,7 +3,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QListWidget, QListWidgetItem, QLineEdit,
-    QLabel, QPushButton, QAbstractItemView, QInputDialog,
+    QLabel, QPushButton, QAbstractItemView,
     QApplication,
 )
 from PyQt6.QtCore import Qt
@@ -106,6 +106,7 @@ class MainWindow(QMainWindow):
         unlock_layout.addWidget(self._seed_input)
         self._btn_unlock = QPushButton("Unlock")
         self._btn_unlock.clicked.connect(self._unlock)
+        self._seed_input.returnPressed.connect(self._unlock)
         unlock_layout.addWidget(self._btn_unlock)
         right_layout.addWidget(self._unlock_row)
 
@@ -170,13 +171,13 @@ class MainWindow(QMainWindow):
         QApplication.clipboard().setText(text)
 
     def _unlock(self):
-        seed, ok = QInputDialog.getText(
-            self, "Unlock", "Enter seed:", QLineEdit.EchoMode.Password
-        )
-        if ok and seed:
-            self._seed = seed
-            self._unlock_row.setVisible(False)
-            self._on_item_changed(self._list_widget.currentItem(), None)
+        seed = self._seed_input.text()
+        if not seed:
+            return
+        self._seed = seed
+        self._seed_input.clear()
+        self._unlock_row.setVisible(False)
+        self._on_item_changed(self._list_widget.currentItem(), None)
 
     def _on_archive_toggle(self, checked: bool):
         self._show_archived = checked
