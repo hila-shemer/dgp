@@ -17,9 +17,9 @@ fi
 
 # Portable JDK resolution — try sandbox (Debian) path first, then Fedora, then generic.
 for candidate in \
-    /usr/lib/jvm/java-21-openjdk-amd64 \
-    /usr/lib/jvm/java-21-openjdk \
-    /usr/lib/jvm/java-21; do
+    /usr/lib/jvm/java-25-openjdk-amd64 \
+    /usr/lib/jvm/java-25-openjdk \
+    /usr/lib/jvm/java-25; do
     if [ -d "$candidate" ]; then
         JAVA_HOME="$candidate"
         break
