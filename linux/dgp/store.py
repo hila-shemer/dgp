@@ -38,6 +38,14 @@ def write_text_file(path: Path, content: str) -> None:
         raise
 
 
+def seed_path() -> Path:
+    return _config_dir() / "seed"
+
+
+def account_path() -> Path:
+    return _config_dir() / "account"
+
+
 def read_services() -> list[DgpService]:
     path = _config_dir() / "services.json"
     try:
