@@ -1,6 +1,5 @@
 import shutil
 import subprocess
-import tempfile
 import pytest
 from pathlib import Path
 from dgp.exportcrypto import decrypt_export, encrypt_export
@@ -17,22 +16,15 @@ def test_java_encrypt_python_decrypt(android_export_blob):
     assert result == android_export_blob["plaintext"]
 
 
-def test_python_encrypt_java_decrypt(android_export_blob):
+def test_python_encrypt_java_decrypt(android_export_blob, tmp_path):
     plaintext = android_export_blob["plaintext"]
     pin = android_export_blob["pin"]
 
     py_blob = encrypt_export(plaintext, pin)
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, dir=linux_dir
-    ) as bf:
-        bf.write(py_blob)
-        blob_file = bf.name
-
-    with tempfile.NamedTemporaryFile(
-        suffix=".txt", delete=False, dir=linux_dir
-    ) as of:
-        out_file = of.name
+    blob_file = tmp_path / "blob.txt"
+    blob_file.write_text(py_blob, encoding="utf-8")
+    out_file = tmp_path / "out.txt"
 
     subprocess.run(
         [
@@ -42,12 +34,12 @@ def test_python_encrypt_java_decrypt(android_export_blob):
             "AndroidExportFixture",
             "decrypt",
             pin,
-            blob_file,
-            out_file,
+            str(blob_file),
+            str(out_file),
         ],
         check=True,
         cwd=linux_dir,
     )
 
-    result = Path(out_file).read_text(encoding="utf-8")
+    result = out_file.read_text(encoding="utf-8")
     assert result == plaintext
