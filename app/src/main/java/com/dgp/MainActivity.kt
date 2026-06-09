@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.dgp.engine.DgpEngine
+import com.dgp.engine.FlagFingerprint
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
@@ -36,6 +37,7 @@ import com.dgp.ui.RevealSheet
 import com.dgp.ui.ServicesScreen
 import com.dgp.ui.SettingsScreen
 import com.dgp.ui.components.CopyToastState
+import com.dgp.ui.components.FlagChip
 import com.dgp.ui.theme.EditorialMotion
 import com.dgp.ui.theme.EditorialTheme
 import com.dgp.ui.theme.LocalCompactRows
@@ -806,6 +808,11 @@ fun DgpAppContent(
         is ActiveModal.Account -> {
             if (isSeeded) {
                 AccountPromptDialog(
+                    seed = masterSeed,
+                    engine = engine,
+                    nonce = flagNonce,
+                    registered = flagNonce != null,
+                    initial = account,
                     onDismiss = { activeModal = ActiveModal.None },
                     onSave = { newAccount ->
                         account = newAccount
@@ -813,7 +820,21 @@ fun DgpAppContent(
                             prefs.edit().putString("account_encrypted", ConfigCrypto.encrypt(newAccount, masterSeed)).apply()
                         }
                         activeModal = ActiveModal.None
-                    }
+                    },
+                    onSetAsFlag = { newAccount ->
+                        account = newAccount
+                        if (masterSeed.isNotEmpty()) {
+                            prefs.edit().putString("account_encrypted", ConfigCrypto.encrypt(newAccount, masterSeed)).apply()
+                        }
+                        scope.launch {
+                            val bytes = withContext(Dispatchers.Default) { engine.deriveFingerprintBytes(masterSeed, newAccount) }
+                            fpBytes = bytes
+                            val n = engine.mineFlagNonce(bytes)
+                            flagNonce = n
+                            prefs.edit().putInt("flag_nonce", n).apply()
+                        }
+                        activeModal = ActiveModal.None
+                    },
                 )
             }
         }
@@ -983,43 +1004,77 @@ fun DgpAppContent(
 
 @Composable
 fun AccountPromptDialog(
+    seed: String,
+    engine: DgpEngine,
+    nonce: Int?,
+    registered: Boolean,
+    initial: String = "",
     onDismiss: () -> Unit,
-    onSave: (String) -> Unit
+    onSave: (String) -> Unit,
+    onSetAsFlag: (String) -> Unit,
 ) {
-    var value by remember { mutableStateOf("") }
+    var value by remember { mutableStateOf(initial) }
     var visible by remember { mutableStateOf(false) }
+    var fp by remember { mutableStateOf<FlagFingerprint?>(null) }
+
+    // Debounced, off-main-thread live fingerprint of the typed account.
+    LaunchedEffect(value) {
+        if (value.isEmpty()) { fp = null; return@LaunchedEffect }
+        fp = null
+        delay(250)
+        val bytes = withContext(Dispatchers.Default) { engine.deriveFingerprintBytes(seed, value) }
+        fp = engine.fingerprintFor(bytes, nonce ?: 0)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Enter Account") },
         text = {
-            TextField(
-                value = value,
-                onValueChange = { value = it },
-                label = { Text("Account") },
-                visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    IconButton(
-                        onClick = { visible = !visible },
-                        modifier = Modifier.semantics {
-                            contentDescription = if (visible) "Hide password" else "Show password"
-                        },
-                    ) {
-                        Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, contentDescription = null)
+            Column {
+                TextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    label = { Text("Account") },
+                    visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { visible = !visible },
+                            modifier = Modifier.semantics {
+                                contentDescription = if (visible) "Hide password" else "Show password"
+                            },
+                        ) {
+                            Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, contentDescription = null)
+                        }
+                    },
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(16.dp))
+                when {
+                    value.isEmpty() -> Text("Type your account to see its flag.")
+                    fp == null -> Text("Deriving flag…")
+                    else -> {
+                        FlagChip(flagIndex = fp!!.flagIndex, word = fp!!.word)
+                        // Once the identity already maps to the reference flag, the flag
+                        // itself is the confirmation — no extra label needed.
+                        if (!registered || fp!!.flagIndex != DgpEngine.REFERENCE_FLAG_INDEX) {
+                            Spacer(Modifier.height(8.dp))
+                            TextButton(onClick = { if (value.isNotEmpty()) onSetAsFlag(value) }) {
+                                Text("This is correct — make it my flag")
+                            }
+                        }
                     }
-                },
-                singleLine = true
-            )
+                }
+            }
         },
         confirmButton = {
             Button(
                 onClick = { if (value.isNotEmpty()) onSave(value) },
-                enabled = value.isNotEmpty()
+                enabled = value.isNotEmpty(),
             ) { Text("OK") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Skip") }
-        }
+        },
     )
 }
 
