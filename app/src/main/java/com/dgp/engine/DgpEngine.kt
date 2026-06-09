@@ -1,6 +1,7 @@
 package com.dgp.engine
 
 import java.math.BigInteger
+import java.security.MessageDigest
 import java.security.spec.KeySpec
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
@@ -57,6 +58,75 @@ class DgpEngine(private val wordList: List<String>) {
         return binData.sliceArray(0 until 32)
     }
 
+    companion object {
+        /** Number of flags in the gallery (see FlagGallery). Load-bearing: the
+         *  flag index maps into that ordered list. */
+        const val FLAG_COUNT = 10
+        /** Index of the reference flag — the vanity-mining target. */
+        const val REFERENCE_FLAG_INDEX = 0
+
+        // Reserved salt that domain-separates the visual fingerprint from every
+        // password / aeskey derivation (those salt with the service name).
+        private val FINGERPRINT_SALT = "dgp-flag-fp:v1".toByteArray()
+    }
+
+    /**
+     * 32 bytes derived from seed+account under a reserved salt. This is the only
+     * expensive step (PBKDF2-HMAC-SHA1, same iteration count as password gen).
+     * Independent of the password path: callers display only the low-entropy
+     * flag/word derived from these bytes, never the bytes themselves.
+     */
+    fun deriveFingerprintBytes(seed: String, account: String, iterations: Int = 42000): ByteArray {
+        val keySpec: KeySpec = PBEKeySpec((seed + account).toCharArray(), FINGERPRINT_SALT, iterations, 32 * 8)
+        val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+        return factory.generateSecret(keySpec).encoded
+    }
+
+    /** Two lowercase BIP-39 words joined by '-'. Nonce-independent, so the
+     *  correct identity always shows the same word. */
+    fun fingerprintWord(fpBytes: ByteArray): String {
+        var intData = BigInteger(1, fpBytes)
+        val wordBn = BigInteger.valueOf(2048)
+        val words = mutableListOf<String>()
+        repeat(2) {
+            val (div, mod) = intData.divideAndRemainder(wordBn)
+            words.add(wordList[mod.toInt()])
+            intData = div
+        }
+        return words.joinToString("-")
+    }
+
+    /** Flag index = first 4 bytes of SHA-256(fpBytes ‖ nonce-LE) as an unsigned
+     *  int, mod flagCount. Fast — so nonce mining is cheap. */
+    fun flagIndexFor(fpBytes: ByteArray, nonce: Int, flagCount: Int = FLAG_COUNT): Int {
+        val md = MessageDigest.getInstance("SHA-256")
+        md.update(fpBytes)
+        md.update(byteArrayOf(
+            (nonce and 0xFF).toByte(),
+            ((nonce ushr 8) and 0xFF).toByte(),
+            ((nonce ushr 16) and 0xFF).toByte(),
+            ((nonce ushr 24) and 0xFF).toByte(),
+        ))
+        val h = md.digest()
+        val v = ((h[0].toLong() and 0xFF) shl 24) or
+            ((h[1].toLong() and 0xFF) shl 16) or
+            ((h[2].toLong() and 0xFF) shl 8) or
+            (h[3].toLong() and 0xFF)
+        return (v % flagCount).toInt()
+    }
+
+    /** Smallest nonce >= 0 mapping fpBytes onto targetIndex (~flagCount tries on
+     *  average; SHA-256 over the varying nonce is uniform, so it always finds one). */
+    fun mineFlagNonce(fpBytes: ByteArray, targetIndex: Int = REFERENCE_FLAG_INDEX, flagCount: Int = FLAG_COUNT): Int {
+        var nonce = 0
+        while (flagIndexFor(fpBytes, nonce, flagCount) != targetIndex) nonce++
+        return nonce
+    }
+
+    /** Convenience: flag index (for a stored nonce) + nonce-independent word. */
+    fun fingerprintFor(fpBytes: ByteArray, nonce: Int, flagCount: Int = FLAG_COUNT): FlagFingerprint =
+        FlagFingerprint(flagIndexFor(fpBytes, nonce, flagCount), fingerprintWord(fpBytes))
+
     private fun binToHex(data: ByteArray): String {
         return data.joinToString("") { "%02x".format(it) }
     }
@@ -103,3 +173,6 @@ class DgpEngine(private val wordList: List<String>) {
         return sb.toString()
     }
 }
+
+/** A rendered identity fingerprint: which flag to show + the two-word label. */
+data class FlagFingerprint(val flagIndex: Int, val word: String)

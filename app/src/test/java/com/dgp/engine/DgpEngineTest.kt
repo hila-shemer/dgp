@@ -1,6 +1,8 @@
 package com.dgp.engine
 
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -16,6 +18,7 @@ import org.junit.Test
 class DgpEngineTest {
 
     private lateinit var engine: DgpEngine
+    private lateinit var fpWordList: List<String>
 
     @Before
     fun setUp() {
@@ -24,6 +27,7 @@ class DgpEngineTest {
         val stream = javaClass.getResourceAsStream("/english.txt")
         val wordList = stream?.bufferedReader()?.readLines() ?: emptyList()
         engine = DgpEngine(wordList)
+        fpWordList = wordList
     }
 
     // ── Test vectors ──────────────────────────────────────────────────────────
@@ -276,5 +280,61 @@ class DgpEngineTest {
         val bytes = engine.deriveAesKey("pass", "salt", "word")
         val hex = bytes.joinToString("") { "%02x".format(it) }
         assertEquals(engine.generate("pass", "salt", "aeskey", "word"), hex)
+    }
+
+    // ── Flag fingerprint ──────────────────────────────────────────────────────
+
+    @Test
+    fun fingerprintBytes_areDeterministic_and32Bytes() {
+        val a = engine.deriveFingerprintBytes("seed-abc", "alice@example.com")
+        val b = engine.deriveFingerprintBytes("seed-abc", "alice@example.com")
+        assertEquals(32, a.size)
+        assertArrayEquals(a, b)
+    }
+
+    @Test
+    fun fingerprintBytes_differ_whenIdentityDiffers() {
+        val base = engine.deriveFingerprintBytes("seed-abc", "alice@example.com")
+        assertFalse(base.contentEquals(engine.deriveFingerprintBytes("seed-abc", "alicz@example.com")))
+        assertFalse(base.contentEquals(engine.deriveFingerprintBytes("seed-abd", "alice@example.com")))
+    }
+
+    @Test
+    fun fingerprintBytes_domainSeparatedFromPasswordPath() {
+        // Same seed/account, but the aeskey of a normally-named service uses the
+        // service name as salt, so it must not equal the fingerprint bytes.
+        val fp = engine.deriveFingerprintBytes("seed-abc", "alice@example.com")
+        val aes = engine.deriveAesKey("seed-abc", "github", "alice@example.com")
+        assertFalse(fp.contentEquals(aes))
+    }
+
+    @Test
+    fun fingerprintWord_isTwoLowercaseBip39Words() {
+        val fp = engine.deriveFingerprintBytes("seed-abc", "alice@example.com")
+        val parts = engine.fingerprintWord(fp).split("-")
+        assertEquals(2, parts.size)
+        for (p in parts) {
+            assertEquals(p.lowercase(), p)
+            assertTrue("'$p' should be a BIP-39 word", p in fpWordList)
+        }
+    }
+
+    @Test
+    fun flagIndex_isAlwaysInRange() {
+        val fp = engine.deriveFingerprintBytes("seed-abc", "alice@example.com")
+        for (n in 0..64) {
+            val i = engine.flagIndexFor(fp, n, DgpEngine.FLAG_COUNT)
+            assertTrue("index $i out of range", i in 0 until DgpEngine.FLAG_COUNT)
+        }
+    }
+
+    @Test
+    fun mineFlagNonce_findsSmallestNonceMappingToReference() {
+        val fp = engine.deriveFingerprintBytes("seed-abc", "alice@example.com")
+        val nonce = engine.mineFlagNonce(fp, DgpEngine.REFERENCE_FLAG_INDEX, DgpEngine.FLAG_COUNT)
+        assertEquals(DgpEngine.REFERENCE_FLAG_INDEX, engine.flagIndexFor(fp, nonce, DgpEngine.FLAG_COUNT))
+        for (n in 0 until nonce) {
+            assertNotEquals(DgpEngine.REFERENCE_FLAG_INDEX, engine.flagIndexFor(fp, n, DgpEngine.FLAG_COUNT))
+        }
     }
 }
