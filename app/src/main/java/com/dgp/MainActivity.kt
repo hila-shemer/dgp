@@ -267,6 +267,23 @@ fun DgpAppContent(
     var account by remember { mutableStateOf("") }
     var services by remember { mutableStateOf(listOf<DgpService>()) }
 
+    // Visual flag fingerprint of seed+account. fpBytes is the one expensive
+    // derivation; recompute off the main thread whenever seed or account changes.
+    var fpBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var flagNonce by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(masterSeed, account, isSeeded) {
+        fpBytes = if (isSeeded && masterSeed.isNotEmpty()) {
+            withContext(Dispatchers.Default) { engine.deriveFingerprintBytes(masterSeed, account) }
+        } else {
+            null
+        }
+    }
+
+    val headerFlagIndex: Int? = fpBytes
+        ?.takeIf { account.isNotEmpty() }
+        ?.let { engine.flagIndexFor(it, flagNonce ?: 0) }
+
     var activeModal by remember { mutableStateOf<ActiveModal>(ActiveModal.None) }
 
     fun loadImportedJson(json: String) {
@@ -576,6 +593,7 @@ fun DgpAppContent(
             } else {
                 activeModal = ActiveModal.Account
             }
+            flagNonce = prefs.getInt("flag_nonce", -1).takeIf { it >= 0 }
             if (!skipSave) {
                 saveSeedWithBiometric(seed)
             }
@@ -641,6 +659,7 @@ fun DgpAppContent(
                         .remove("account_encrypted")
                         .remove("master_seed_encrypted")
                         .remove("master_seed")
+                        .remove("flag_nonce")
                         .apply()
                     hasSavedSeed = false
                     seedError = false
@@ -726,6 +745,8 @@ fun DgpAppContent(
                     masterSeed = ""
                     isSeeded = false
                     account = ""
+                    flagNonce = null
+                    fpBytes = null
                     (context as? android.app.Activity)?.finishAndRemoveTask()
                 },
                 onBack = { showSettings = false },
@@ -736,6 +757,7 @@ fun DgpAppContent(
             ServicesScreen(
                 services = services,
                 account = account,
+                flagIndex = headerFlagIndex,
                 searchQuery = searchQuery,
                 onSearchChange = { searchQuery = it },
                 activeFilter = activeFilter,
@@ -760,6 +782,8 @@ fun DgpAppContent(
                     masterSeed = ""
                     isSeeded = false
                     account = ""
+                    flagNonce = null
+                    fpBytes = null
                     showSeedPrompt = true
                 },
                 onOpenAccount = {
@@ -890,6 +914,8 @@ fun DgpAppContent(
                         .putString("services_encrypted", ConfigCrypto.encrypt(json, newSeed))
                         .apply()
                     masterSeed = newSeed
+                    prefs.edit().remove("flag_nonce").apply()
+                    flagNonce = null
                     saveSeedWithBiometric(newSeed)
                     activeModal = ActiveModal.None
                 },
