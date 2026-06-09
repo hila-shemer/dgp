@@ -47,6 +47,7 @@ import com.dgp.DgpService
 import com.dgp.ui.components.CopyToast
 import com.dgp.ui.components.CopyToastState
 import com.dgp.ui.components.EditorialInputField
+import com.dgp.ui.components.FlagSwatch
 import com.dgp.ui.components.PrimaryButton
 import com.dgp.ui.components.ServiceRow
 import com.dgp.ui.components.TagPill
@@ -67,6 +68,7 @@ sealed class ListFilter {
 fun ServicesScreen(
     services: List<DgpService>,
     account: String,
+    flagIndex: Int? = null,
     searchQuery: String,
     onSearchChange: (String) -> Unit,
     activeFilter: ListFilter,
@@ -149,7 +151,15 @@ fun ServicesScreen(
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = avatarLetter, style = type.chipLabel, color = editorial.accentInk)
+                if (flagIndex != null && account.isNotEmpty()) {
+                    FlagSwatch(
+                        flagIndex = flagIndex,
+                        modifier = Modifier.size(width = 26.dp, height = 18.dp),
+                        cornerDp = 4,
+                    )
+                } else {
+                    Text(text = avatarLetter, style = type.chipLabel, color = editorial.accentInk)
+                }
             }
         }
 
