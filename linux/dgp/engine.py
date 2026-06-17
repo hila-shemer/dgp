@@ -59,6 +59,32 @@ def _to_xkcd(data: bytes, count: int, words: list[str]) -> str:
     return "".join(result)
 
 
+SUBACCOUNT_SALT_PREFIX = "dgp-subaccount:v1:"
+SUBACCOUNT_WORDS = 24
+
+
+def _render_word_phrase(data: bytes, count: int, words: list[str]) -> str:
+    """Fixed-length CamelCase word phrase: exactly `count` words, low-order word
+    first (divmod by 2048). Unlike _to_xkcd this never stops early — once the
+    integer is exhausted, remaining positions yield words[0] — so the output is
+    always `count` words and matches the Kotlin renderer byte-for-byte."""
+    n = int.from_bytes(data, "big")
+    result = []
+    for _ in range(count):
+        n, mod = divmod(n, 2048)
+        word = words[mod]
+        result.append(word[0].upper() + word[1:])
+    return "".join(result)
+
+
+def derive_subaccount_seed(seed: str, account: str, label: str) -> str:
+    """One-way 24-word cap-token for `label` under the (seed, account) identity.
+    Domain-separated from password derivation via a reserved salt prefix; PBKDF2
+    is one-way, so the holder of a cap-token cannot recover seed/account."""
+    raw = pbkdf2_raw(seed, account, SUBACCOUNT_SALT_PREFIX + label)
+    return _render_word_phrase(raw, SUBACCOUNT_WORDS, _get_words())
+
+
 def generate(seed: str, name: str, entry_type: str, secret: str, *, iterations: int = 42000) -> str:
     raw = pbkdf2_raw(seed, secret, name, iters=iterations)
     if entry_type == "hex":
