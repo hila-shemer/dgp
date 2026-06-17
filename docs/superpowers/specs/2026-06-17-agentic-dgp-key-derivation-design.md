@@ -178,6 +178,38 @@ Ethereum needs **Keccak-256**, *not* NIST `sha3_256` (different padding — Pyth
 (~30-line) Keccak-256** in `linux/dgp/keccak.py` rather than add `pycryptodome` / `eth-hash`.
 Test against known Ethereum address vectors.
 
+### 5.4 Delegation & hardened boundaries (what to hand out)
+
+Three ways to hand out wallet material, least to most authority — driven by **two
+orthogonal knobs**: whether the chain code travels with the key (governs *downward* reach)
+and whether the boundary is hardened (governs *upward* seal).
+
+- **Bare private scalar ("island key")** — the 32-byte key, no chain code. The recipient gets
+  exactly one keypair: no children (chain code absent), no siblings, no parent, no path
+  metadata — indistinguishable from a randomly generated key. Use to delegate a single
+  address/identity with zero tree linkage.
+- **`xprv` (extended private) of a node** — key + chain code. Full control of that node's
+  entire subtree (all descendants), but nothing *above* a hardened boundary. Use to delegate a
+  whole sub-wallet.
+- **`xpub` (extended public) of a node** — watch-only: generate receive addresses and see
+  balances for the subtree, no spending. Two caveats: it links every address in the subtree
+  (privacy), and — the classic BIP-32 escalation — a parent `xpub` plus *any single
+  non-hardened child private key* recovers the parent `xprv` (`parent_priv = child_priv −
+  HMAC(parent_chaincode, parent_pub ‖ i)`), and from there the whole subtree.
+
+**Where to harden.** Hardening makes the step's HMAC consume the parent *private* key, so no
+`xpub` can run the subtraction above — that's the upward seal. Standard BIP-44/84 hardens
+`purpose'/coin'/account'` and leaves `change/index` non-hardened *on purpose*, so an
+account-level `xpub` can drive watch-only address generation. Rule: **harden the boundary you
+intend to seal or delegate across**; never co-release an `xpub` with a non-hardened
+descendant's private key. (A hardened leaf seals that leaf but forfeits watch-only for it.)
+
+**Relation to DGP.** Delegating a *whole identity* to an agent is the cap-token (PBKDF2 one-way
+cut at the subaccount level, §2); hardened HD steps are the cut for handing out a *slice of one
+wallet* to a third party. The §6 catalog stores `xpub`/address (public) but never `xprv` or
+private scalars, so a delegated agent's config can carry watch-only material without spend
+authority.
+
 ## 6. Metadata model (catalog, never private keys)
 
 Extend `DgpService` / `services.json` with derivation-descriptor entry types so a config dir
