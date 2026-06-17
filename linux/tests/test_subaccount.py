@@ -61,3 +61,18 @@ def test_domain_separated_from_password_salt():
     plain = pbkdf2_raw(SEED, "alice", "github")
     capped = pbkdf2_raw(SEED, "alice", SUBACCOUNT_SALT_PREFIX + "github")
     assert plain != capped
+
+
+# Golden cap-token vectors. Generated once from the Python reference and locked;
+# the Kotlin engine must reproduce these exactly (see DgpEngineTest). Editing the
+# derivation must re-green BOTH suites or it is a parity break.
+GOLDEN = [
+    ("correct horse battery staple", "",                  "agent-bob",   "FirmCaseClumpMatterFaultClickApologyThumbHugeFaultExciteWasteTiredDishSettleSayBlessGapRemoveLatinNoodleUndoOrbitResemble"),
+    ("correct horse battery staple", "alice@example.com", "agent-bob",   "AnswerAssaultWhaleUsedChucklePillFallPanicCoconutPartyWingLoopBlanketAuditAerobicObligeFeelFrozenFindGrowWiseProjectJunkNapkin"),
+    ("correct horse battery staple", "",                  "agent-alice", "OuterBuddyBounceCinnamonBounceVacantVoyageLanguageVeryArtistHawkSketchForestCushionWoolFoamAbleCongressProsperNapkinUsualRugAssumeMatrix"),
+]
+
+
+@pytest.mark.parametrize("seed,account,label,expected", GOLDEN)
+def test_golden_vectors(seed, account, label, expected):
+    assert derive_subaccount_seed(seed, account, label) == expected
