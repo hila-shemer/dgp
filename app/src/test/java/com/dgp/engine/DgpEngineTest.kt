@@ -337,4 +337,40 @@ class DgpEngineTest {
             assertNotEquals(DgpEngine.REFERENCE_FLAG_INDEX, engine.flagIndexFor(fp, n, DgpEngine.FLAG_COUNT))
         }
     }
+
+    // ── Subaccount cap-token ──────────────────────────────────────────────────
+
+    private fun splitWords(phrase: String): List<String> =
+        Regex("[A-Z][a-z]*").findAll(phrase).map { it.value.lowercase() }.toList()
+
+    @Test
+    fun subaccount_isDeterministic() {
+        val a = engine.deriveSubaccountSeed("correct horse", "alice", "agent-bob")
+        val b = engine.deriveSubaccountSeed("correct horse", "alice", "agent-bob")
+        assertEquals(a, b)
+    }
+
+    @Test
+    fun subaccount_has24Bip39Words() {
+        val phrase = engine.deriveSubaccountSeed("correct horse", "", "agent-bob")
+        assertEquals(DgpEngine.SUBACCOUNT_WORDS, phrase.count { it.isUpperCase() })
+        assertEquals(24, DgpEngine.SUBACCOUNT_WORDS)
+        val words = splitWords(phrase)
+        assertEquals(24, words.size)
+        for (w in words) assertTrue("'$w' should be a BIP-39 word", w in fpWordList)
+    }
+
+    @Test
+    fun subaccount_sensitiveToSeedAccountLabel() {
+        val base = engine.deriveSubaccountSeed("correct horse", "", "x")
+        assertNotEquals(base, engine.deriveSubaccountSeed("other seed", "", "x"))
+        assertNotEquals(base, engine.deriveSubaccountSeed("correct horse", "alice", "x"))
+        assertNotEquals(base, engine.deriveSubaccountSeed("correct horse", "", "y"))
+    }
+
+    @Test
+    fun subaccount_emptyAndLongLabels_doNotThrow() {
+        assertEquals(24, splitWords(engine.deriveSubaccountSeed("s", "", "")).size)
+        assertEquals(24, splitWords(engine.deriveSubaccountSeed("s", "", "L".repeat(200))).size)
+    }
 }

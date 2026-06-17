@@ -68,6 +68,13 @@ class DgpEngine(private val wordList: List<String>) {
         // Reserved salt that domain-separates the visual fingerprint from every
         // password / aeskey derivation (those salt with the service name).
         private val FINGERPRINT_SALT = "dgp-flag-fp:v1".toByteArray()
+
+        /** Reserved salt prefix domain-separating subaccount cap-tokens from every
+         *  password derivation (which salt with the service name). */
+        private const val SUBACCOUNT_SALT_PREFIX = "dgp-subaccount:v1:"
+
+        /** Cap-token length in BIP-39 words (~264 bits — seed-grade). */
+        const val SUBACCOUNT_WORDS = 24
     }
 
     /**
@@ -80,6 +87,36 @@ class DgpEngine(private val wordList: List<String>) {
         val keySpec: KeySpec = PBEKeySpec((seed + account).toCharArray(), FINGERPRINT_SALT, iterations, 32 * 8)
         val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
         return factory.generateSecret(keySpec).encoded
+    }
+
+    /**
+     * One-way 24-word cap-token for [label] under the (seed, account) identity.
+     * Domain-separated from password derivation via a reserved salt prefix; PBKDF2
+     * is one-way, so a cap-token holder cannot recover seed/account. The output is
+     * a seed-grade word phrase an agent can use as its own DGP seed.
+     */
+    fun deriveSubaccountSeed(seed: String, account: String, label: String): String {
+        val salt = (SUBACCOUNT_SALT_PREFIX + label).toByteArray()
+        val keySpec: KeySpec = PBEKeySpec((seed + account).toCharArray(), salt, 42000, 40 * 8)
+        val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+        val raw = factory.generateSecret(keySpec).encoded
+        return renderWordPhrase(raw, SUBACCOUNT_WORDS)
+    }
+
+    /** Fixed-length CamelCase phrase: exactly [count] words, low-order word first
+     *  (divmod by 2048). Never stops early — matches Python `_render_word_phrase`
+     *  byte-for-byte, so cap-tokens are identical across engines. */
+    private fun renderWordPhrase(data: ByteArray, count: Int): String {
+        var intData = BigInteger(1, data)
+        val wordBn = BigInteger.valueOf(2048)
+        val sb = StringBuilder()
+        repeat(count) {
+            val (div, mod) = intData.divideAndRemainder(wordBn)
+            val word = wordList[mod.toInt()]
+            sb.append(word.replaceFirstChar { it.uppercase() })
+            intData = div
+        }
+        return sb.toString()
     }
 
     /** Two lowercase BIP-39 words joined by '-'. Nonce-independent, so the
