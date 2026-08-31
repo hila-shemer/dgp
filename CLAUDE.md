@@ -75,6 +75,29 @@ A Python 3.11+ port of the same engine, packaged as `dgp` (`pyproject.toml`). Tw
 - **Beyond Android.** The CLI exposes derivations the Android app does not: `dgp ssh` (SSH key derivation, `linux/dgp/ssh.py`), `dgp btc-key` / `dgp btc-mnemonic` (Bitcoin key/mnemonic, `linux/dgp/btc.py`), `dgp prng` (deterministic byte stream, `linux/dgp/prng.py`). These are not part of the Android <-> Linux compatibility contract.
 - **pytest-qt is disabled by default** in `linux/pyproject.toml` (`addopts = "-p no:pytest-qt ..."`) because the headless sandbox lacks libxkbcommon. GUI tests need a real display.
 
+### Web UI — `web/`
+
+One file, `web/index.html`, opened straight off disk or served as a static asset. No build
+step, no framework, no dependencies, no network: a `default-src 'none'` CSP means the
+browser refuses every request the page could make, so "works offline" is enforced rather
+than promised. The seed lives in a closure for as long as the tab does and is written
+nowhere. `localStorage` holds two things and only two: the keyring (`dgp.keyring.v1`, the
+service/account list, exported in the same array shape `serialize_services` emits so a file
+moves between web, Android and Linux) and the theme.
+
+`./web/run-tests.sh` is the gate and `run_tests.sh` runs it. `test-vectors.mjs` cuts the
+engine block out of `index.html` by its markers and runs *that text* against the golden
+vectors — there is deliberately no second copy of the constants to drift. `test-ui.mjs`
+drives the rest of the page through a DOM shim and asserts, among other things, that
+neither a seed nor a derived password ever lands in storage. `gen-vectors.py` regenerates
+`web/vectors.json` from `linux/dgp/`; the golden half is copied, the reference half is
+computed.
+
+The page shows a two-word **check-word** beside the seed field, ported from
+`DgpEngine.fingerprintWord` (the flag gallery and vanity nonce are not). It answers the one
+question nothing else on the page can: a mistyped seed produces a perfectly plausible wrong
+password, and the check-word is what catches it.
+
 ## Non-obvious gotchas
 
 - **FragmentActivity + Compose ActivityResult don't compose.** `rememberLauncherForActivityResult` hangs under `FragmentActivity` in this project, so the file-import path uses classic `startActivityForResult` with `REQUEST_IMPORT_FILE = 42`. Don't "modernize" this.
