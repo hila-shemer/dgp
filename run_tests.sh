@@ -15,6 +15,22 @@ if [ -d linux ]; then
     fi
 fi
 
+# Web UI vector + behaviour gate. Skipped where node is absent; the page has no
+# build step and no dependencies, so this is the whole of it.
+if [ -x web/run-tests.sh ]; then
+    if command -v node &>/dev/null; then
+        set +e
+        ./web/run-tests.sh 2>&1 | tee -a test_results.txt
+        WEB_EXIT=${PIPESTATUS[0]}
+        set -e
+        if [ $WEB_EXIT -ne 0 ]; then
+            exit $WEB_EXIT
+        fi
+    else
+        echo "node not found — skipping the web/ tests." | tee -a test_results.txt
+    fi
+fi
+
 # Portable JDK resolution — try sandbox (Debian) path first, then Fedora, then generic.
 for candidate in \
     /usr/lib/jvm/java-25-openjdk-amd64 \
