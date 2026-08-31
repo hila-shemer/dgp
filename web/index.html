@@ -1,0 +1,1419 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<!-- Enforced, not merely intended: default-src 'none' plus connect-src 'none'
+     means the browser itself refuses every fetch, socket, beacon, font, image
+     and stylesheet this page could ever try to make. Inline script and style are
+     the only allowances, because the page is one file with everything in it.
+     If a future edit adds a network call, it does not degrade quietly - it is
+     blocked. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<title>dgp</title>
+<style>
+/* ------------------------------------------------------------------ tokens
+   One warm colour on a grey machine. Everything on this page is instrument
+   housing - hairlines, stone, slate - except the derived string, which is the
+   only saturated thing you will ever see here. That is the whole visual rule;
+   if a second thing starts competing for the brass, the second thing is wrong. */
+:root {
+  color-scheme: light;
+  --bg:      #e4e2dc;
+  --surface: #f7f6f3;
+  --raised:  #ffffff;
+  --ink:     #191d1f;
+  --muted:   #6d7478;
+  --faint:   #a8adaf;
+  --line:    #cdc9c1;
+  --line-soft: #ded9d1;
+  --brass:   #7d5c12;
+  --brass-dim: #9c7c33;
+  --danger:  #8c2f22;
+  --cell:    #d3cec5;
+  --focus:   #1c4f7a;
+  --shadow:  0 1px 0 rgba(25,29,31,.05), 0 6px 22px -14px rgba(25,29,31,.4);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg:      #101416;
+    --surface: #191e21;
+    --raised:  #212729;
+    --ink:     #e7eae8;
+    --muted:   #8d9793;
+    --faint:   #5e6866;
+    --line:    #2c3336;
+    --line-soft: #242a2d;
+    --brass:   #dcae55;
+    --brass-dim: #b08c3e;
+    --danger:  #e08373;
+    --cell:    #333b3e;
+    --focus:   #6fb2e6;
+    --shadow:  0 1px 0 rgba(0,0,0,.3), 0 8px 26px -16px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:      #101416;
+  --surface: #191e21;
+  --raised:  #212729;
+  --ink:     #e7eae8;
+  --muted:   #8d9793;
+  --faint:   #5e6866;
+  --line:    #2c3336;
+  --line-soft: #242a2d;
+  --brass:   #dcae55;
+  --brass-dim: #b08c3e;
+  --danger:  #e08373;
+  --cell:    #333b3e;
+  --focus:   #6fb2e6;
+  --shadow:  0 1px 0 rgba(0,0,0,.3), 0 8px 26px -16px rgba(0,0,0,.9);
+}
+
+/* Monospace is the display face here, not the code face. Everything this tool
+   produces is a fixed-width string, so the page is set in the shape of its own
+   output; the humanist sans is demoted to captions and running text. */
+:root {
+  --mono: ui-monospace, "DejaVu Sans Mono", "Liberation Mono", "SF Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, Cantarell, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 14px/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+:where(a) { color: var(--focus); }
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* -------------------------------------------------------------- primitives */
+.eyebrow {
+  font: 500 10px/1 var(--mono);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.hint { font-size: 12px; line-height: 1.5; color: var(--muted); }
+.hint strong { font-weight: 600; color: var(--ink); }
+.hint + .hint { margin-top: 8px; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+.btn {
+  font: 500 12px/1 var(--sans);
+  padding: 8px 13px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--raised);
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .12s, background .12s;
+}
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 8px;
+}
+.btn-quiet:hover:not(:disabled) { color: var(--ink); border-color: var(--line); }
+.btn-danger:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
+.btn-primary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) { background: var(--muted); border-color: var(--muted); }
+
+.field { display: block; }
+.field > .eyebrow { display: block; margin-bottom: 6px; }
+.input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--raised);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.input::placeholder { color: var(--faint); font-family: var(--sans); }
+select.input { font-family: var(--sans); cursor: pointer; }
+
+/* ------------------------------------------------------------------ chrome */
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 26px 22px 44px;
+}
+.masthead {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.wordmark {
+  font: 600 26px/1 var(--mono);
+  letter-spacing: -.04em;
+}
+.wordmark::after {
+  content: "";
+  display: inline-block;
+  width: 7px; height: 7px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--brass);
+  vertical-align: 3px;
+}
+.tagline { font-size: 12.5px; color: var(--muted); flex: 1 1 240px; }
+.masthead .btn-quiet { align-self: center; }
+
+/* ---------------------------------------------------------------- identity
+   The seed bar. Nothing below it does anything until this is filled, so it sits
+   above the fold as a gate rather than as one field among many. */
+.identity {
+  margin: 18px 0 22px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+.identity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+.seed-wrap { position: relative; }
+.seed-wrap .input { padding-right: 58px; letter-spacing: .06em; }
+.seed-reveal {
+  position: absolute;
+  right: 4px; bottom: 4px;
+  padding: 5px 8px;
+  font: 500 10px/1 var(--mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  border: 0; border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.seed-reveal:hover { color: var(--ink); }
+.identity-actions { display: flex; gap: 8px; }
+@media (max-width: 640px) {
+  .identity-row { grid-template-columns: minmax(0, 1fr); }
+  .identity-actions { justify-content: flex-end; }
+}
+
+.checkword {
+  margin-top: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 20px;
+}
+.checkword-value {
+  font: 500 13px/1 var(--mono);
+  color: var(--brass);
+  letter-spacing: .01em;
+}
+.checkword-note { font-size: 11.5px; color: var(--muted); }
+
+/* ------------------------------------------------------------------- board */
+.board {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+@media (max-width: 780px) {
+  .board { grid-template-columns: minmax(0, 1fr); }
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* ----------------------------------------------------------------- keyring */
+.keyring-filter { padding: 10px 12px; border-bottom: 1px solid var(--line-soft); }
+.keyring-list {
+  list-style: none;
+  margin: 0; padding: 6px;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+.entry {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+.entry:hover { background: var(--raised); }
+.entry[aria-current="true"] {
+  background: var(--raised);
+  border-color: var(--line);
+}
+.entry[aria-current="true"] .entry-name { color: var(--brass); }
+.entry-name {
+  font: 500 13px/1.3 var(--mono);
+  word-break: break-all;
+}
+.entry-sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--muted);
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.entry.is-archived .entry-name { color: var(--faint); }
+.pin { color: var(--brass-dim); }
+.empty { padding: 22px 14px; text-align: center; }
+.keyring-foot { padding: 10px 12px; border-top: 1px solid var(--line-soft); }
+
+/* ------------------------------------------------------------------ derive */
+.derive-head {
+  padding: 16px 18px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.derive-title {
+  font: 500 19px/1.2 var(--mono);
+  word-break: break-all;
+}
+.derive-title.is-placeholder { color: var(--faint); font-weight: 400; }
+.derive-meta { font-size: 12px; color: var(--muted); }
+.derive-form {
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 150px);
+  gap: 12px;
+  align-items: end;
+}
+@media (max-width: 560px) { .derive-form { grid-template-columns: minmax(0, 1fr); } }
+
+/* The slab. The one saturated element on the page. */
+.slab {
+  margin: 0 18px;
+  padding: 20px 18px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--raised);
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+}
+.slab-value {
+  font: 600 clamp(20px, 3.4vw, 30px)/1.25 var(--mono);
+  letter-spacing: -.015em;
+  color: var(--brass);
+  word-break: break-all;
+  user-select: all;
+}
+.slab-value.is-idle {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--faint);
+  user-select: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .slab-value.is-fresh { animation: settle .22s ease-out; }
+}
+@keyframes settle { from { opacity: 0; transform: translateY(2px); } }
+
+.slab-foot {
+  padding: 12px 18px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.slab-foot .grow { flex: 1 1 auto; }
+.status { font-size: 12px; color: var(--muted); min-height: 18px; }
+.status.is-error { color: var(--danger); }
+
+/* --------------------------------------------------------------- bytemap
+   Forty cells for the forty bytes PBKDF2 hands back. The lit ones are the bytes
+   this type actually reads: four for hex, eight for hexlong, the whole buffer
+   for anything that goes through the big-integer path. It is the only honest
+   way to draw what "type" means, and it leaks nothing - the cells carry no
+   values, only which slots were consulted. */
+.bytemap { padding: 0 18px 16px; }
+.bytemap-cells {
+  display: flex;
+  gap: 2px;
+  margin-top: 7px;
+}
+.bytemap-cell {
+  flex: 1 1 0;
+  height: 12px;
+  min-width: 2px;
+  border-radius: 1px;
+  background: var(--cell);
+  transition: background .18s;
+}
+.bytemap-cell.is-lit { background: var(--brass); }
+@media (prefers-reduced-motion: reduce) { .bytemap-cell { transition: none; } }
+.bytemap-label { margin-top: 7px; font-size: 11.5px; color: var(--muted); }
+
+/* ----------------------------------------------------------------- editor */
+.editor { padding: 16px 18px; border-top: 1px solid var(--line-soft); }
+.editor > .eyebrow { display: block; margin-bottom: 12px; }
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+@media (max-width: 560px) { .editor-grid { grid-template-columns: minmax(0, 1fr); } }
+.editor-actions { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+.editor-actions .grow { flex: 1 1 auto; }
+.check-row { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+
+/* ---------------------------------------------------------------- colophon */
+.colophon {
+  margin-top: 26px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 660px) { .colophon { grid-template-columns: minmax(0, 1fr); } }
+.colophon-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="wordmark">dgp</div>
+    <p class="tagline">Your passwords are not stored anywhere. They are recomputed from your seed each time you ask.</p>
+    <button type="button" class="btn btn-quiet" id="theme-btn" aria-live="off">Theme: auto</button>
+  </header>
+
+  <section class="identity" aria-labelledby="identity-h">
+    <h2 class="sr-only" id="identity-h">Identity</h2>
+    <div class="identity-row">
+      <label class="field seed-wrap">
+        <span class="eyebrow">Seed</span>
+        <input class="input" id="seed" type="password" autocomplete="off"
+               autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="master seed">
+        <button type="button" class="seed-reveal" id="seed-reveal"
+                aria-label="Show seed">Show</button>
+      </label>
+      <label class="field">
+        <span class="eyebrow">Account</span>
+        <input class="input" id="account" type="text" autocomplete="off"
+               autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="(none)">
+      </label>
+      <div class="identity-actions">
+        <button type="button" class="btn btn-danger" id="lock-btn" disabled>Lock</button>
+      </div>
+    </div>
+    <div class="checkword">
+      <span class="eyebrow">Check-word</span>
+      <span class="checkword-value" id="checkword">&mdash;</span>
+      <span class="checkword-note" id="checkword-note">Enter a seed. The same two words should appear every time.</span>
+    </div>
+  </section>
+
+  <div class="board">
+
+    <section class="panel" aria-labelledby="keyring-h">
+      <div class="panel-head">
+        <h2 class="eyebrow" id="keyring-h">Keyring</h2>
+        <span class="eyebrow" id="keyring-count"></span>
+      </div>
+      <div class="keyring-filter">
+        <input class="input" id="filter" type="search" autocomplete="off"
+               placeholder="Filter  ( / )" aria-label="Filter entries">
+      </div>
+      <ul class="keyring-list" id="keyring"></ul>
+      <div class="keyring-foot">
+        <button type="button" class="btn" id="new-btn">New entry</button>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="derive-h">
+      <h2 class="sr-only" id="derive-h">Derive</h2>
+      <div class="derive-head">
+        <span class="derive-title is-placeholder" id="derive-title">no entry selected</span>
+        <span class="derive-meta" id="derive-meta"></span>
+      </div>
+
+      <div class="derive-form">
+        <label class="field">
+          <span class="eyebrow">Service</span>
+          <input class="input" id="service" type="text" autocomplete="off"
+                 autocapitalize="off" autocorrect="off" spellcheck="false"
+                 placeholder="example.com">
+        </label>
+        <label class="field">
+          <span class="eyebrow">Account override</span>
+          <input class="input" id="entry-account" type="text" autocomplete="off"
+                 autocapitalize="off" autocorrect="off" spellcheck="false"
+                 placeholder="(uses account above)">
+        </label>
+        <label class="field">
+          <span class="eyebrow">Type</span>
+          <select class="input" id="type">
+            <option value="alnum">alnum &middot; 8</option>
+            <option value="alnumlong">alnumlong &middot; 12</option>
+            <option value="base58">base58 &middot; 8</option>
+            <option value="base58long">base58long &middot; 12</option>
+            <option value="hex">hex &middot; 8</option>
+            <option value="hexlong">hexlong &middot; 16</option>
+            <option value="xkcd">xkcd &middot; 4 words</option>
+            <option value="xkcdlong">xkcdlong &middot; 6 words</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="slab">
+        <output class="slab-value is-idle" id="slab" for="seed service type"
+                aria-live="polite">Fill in a seed and a service, then derive.</output>
+      </div>
+
+      <div class="slab-foot">
+        <button type="button" class="btn btn-primary" id="derive-btn">Derive</button>
+        <button type="button" class="btn" id="copy-btn" disabled>Copy</button>
+        <span class="grow"></span>
+        <span class="status" id="status" role="status"></span>
+      </div>
+
+      <div class="bytemap">
+        <span class="eyebrow">Bytes read</span>
+        <div class="bytemap-cells" id="bytemap" aria-hidden="true"></div>
+        <p class="bytemap-label" id="bytemap-label"></p>
+      </div>
+
+      <div class="editor" id="editor" hidden>
+        <h3 class="eyebrow" id="editor-h">Entry</h3>
+        <div class="editor-grid">
+          <label class="field">
+            <span class="eyebrow">Comment</span>
+            <input class="input" id="comment" type="text" autocomplete="off"
+                   placeholder="optional note">
+          </label>
+          <label class="field">
+            <span class="eyebrow">Tags</span>
+            <input class="input" id="tags" type="text" autocomplete="off"
+                   placeholder="comma, separated">
+          </label>
+        </div>
+        <div class="editor-actions">
+          <label class="check-row">
+            <input type="checkbox" id="pinned"> Pin to the top of the keyring
+          </label>
+          <span class="grow"></span>
+          <button type="button" class="btn" id="save-btn">Save entry</button>
+          <button type="button" class="btn btn-danger" id="delete-btn" hidden>Remove</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="colophon">
+    <div>
+      <p class="hint">
+        <strong>The keyring lives in this browser only.</strong> Clearing site data, a new
+        profile, or a different machine and it is gone. Export it and keep the file
+        somewhere you will still have it.
+      </p>
+      <p class="hint">
+        The file lists your service and account names in the clear. It is not your seed,
+        so it cannot produce a password &mdash; but it does say where you have accounts.
+        Store it accordingly. The exported shape matches the Android and Linux apps, minus
+        the per-entry account override, which only this page understands.
+      </p>
+      <p class="hint">
+        Your seed is never written down, never sent anywhere, and is gone when this tab
+        closes. This page makes no network requests at all; unplug and it still works.
+      </p>
+    </div>
+    <div class="colophon-actions">
+      <button type="button" class="btn" id="export-btn">Export keyring</button>
+      <button type="button" class="btn" id="import-btn">Import keyring</button>
+      <input type="file" id="import-file" accept="application/json,.json" class="sr-only"
+             aria-hidden="true" tabindex="-1">
+    </div>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* === DGP-ENGINE-BEGIN === */
+/* The DGP derivation. This block is cut out of this file verbatim by
+ * web/test-vectors.mjs and run against the golden vectors, so it is the same
+ * text that ships - there is no second copy to drift.
+ *
+ * Every constant below is load-bearing and every one of them has been wrong in
+ * a previous port. PBKDF2-HMAC-SHA1, 42000 iterations, 40 bytes out, password =
+ * seed + account concatenated, salt = the service name. Change one and the page
+ * keeps working, keeps looking right, and answers differently forever.
+ *
+ * Authority order: app/src/main/java/com/dgp/engine/DgpEngine.kt, then
+ * linux/dgp/engine.py, then the contract doc.
+ */
+const DGP_ITERATIONS = 42000;
+const DGP_DKLEN = 40;
+const DGP_BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+/* Domain separator for the seed check-word; deliberately not a service name, so
+ * a check-word can never collide with a password derivation. */
+const DGP_FP_SALT = "dgp-flag-fp:v1";
+
+const DGP_WORDS = (
+  "abandon ability able about above absent absorb abstract absurd abuse access accident " +
+  "account accuse achieve acid acoustic acquire across act action actor actress actual " +
+  "adapt add addict address adjust admit adult advance advice aerobic affair afford afraid " +
+  "again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all " +
+  "alley allow almost alone alpha already also alter always amateur amazing among amount " +
+  "amused analyst anchor ancient anger angle angry animal ankle announce annual another " +
+  "answer antenna antique anxiety any apart apology appear apple approve april arch arctic " +
+  "area arena argue arm armed armor army around arrange arrest arrive arrow art artefact " +
+  "artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend " +
+  "attitude attract auction audit august aunt author auto autumn average avocado avoid " +
+  "awake aware away awesome awful awkward axis baby bachelor bacon badge bag balance " +
+  "balcony ball bamboo banana banner bar barely bargain barrel base basic basket battle " +
+  "beach bean beauty because become beef before begin behave behind believe below belt " +
+  "bench benefit best betray better between beyond bicycle bid bike bind biology bird birth " +
+  "bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur " +
+  "blush board boat body boil bomb bone bonus book boost border boring borrow boss bottom " +
+  "bounce box boy bracket brain brand brass brave bread breeze brick bridge brief bright " +
+  "bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget buffalo " +
+  "build bulb bulk bullet bundle bunker burden burger burst bus business busy butter buyer " +
+  "buzz cabbage cabin cable cactus cage cake call calm camera camp can canal cancel candy " +
+  "cannon canoe canvas canyon capable capital captain car carbon card cargo carpet carry " +
+  "cart case cash casino castle casual cat catalog catch category cattle caught cause " +
+  "caution cave ceiling celery cement census century cereal certain chair chalk champion " +
+  "change chaos chapter charge chase chat cheap check cheese chef cherry chest chicken " +
+  "chief child chimney choice choose chronic chuckle chunk churn cigar cinnamon circle " +
+  "citizen city civil claim clap clarify claw clay clean clerk clever click client cliff " +
+  "climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach " +
+  "coast coconut code coffee coil coin collect color column combine come comfort comic " +
+  "common company concert conduct confirm congress connect consider control convince cook " +
+  "cool copper copy coral core corn correct cost cotton couch country couple course cousin " +
+  "cover coyote crack cradle craft cram crane crash crater crawl crazy cream credit creek " +
+  "crew cricket crime crisp critic crop cross crouch crowd crucial cruel cruise crumble " +
+  "crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion " +
+  "custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate " +
+  "debris decade december decide decline decorate decrease deer defense define defy degree " +
+  "delay deliver demand demise denial dentist deny depart depend deposit depth deputy " +
+  "derive describe desert design desk despair destroy detail detect develop device devote " +
+  "diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner " +
+  "dinosaur direct dirt disagree discover disease dish dismiss disorder display distance " +
+  "divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor " +
+  "door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip " +
+  "drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle " +
+  "early earn earth easily east easy echo ecology economy edge edit educate effort egg " +
+  "eight either elbow elder electric elegant element elephant elevator elite else embark " +
+  "embody embrace emerge emotion employ empower empty enable enact end endless endorse " +
+  "enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure " +
+  "enter entire entry envelope episode equal equip era erase erode erosion error erupt " +
+  "escape essay essence estate eternal ethics evidence evil evoke evolve exact example " +
+  "excess exchange excite exclude excuse execute exercise exhaust exhibit exile exist exit " +
+  "exotic expand expect expire explain expose express extend extra eye eyebrow fabric face " +
+  "faculty fade faint faith fall false fame family famous fan fancy fantasy farm fashion " +
+  "fat fatal father fatigue fault favorite feature february federal fee feed feel female " +
+  "fence festival fetch fever few fiber fiction field figure file film filter final find " +
+  "fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat " +
+  "flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil " +
+  "fold follow food foot force forest forget fork fortune forum forward fossil foster found " +
+  "fox fragile frame frequent fresh friend fringe frog front frost frown frozen fruit fuel " +
+  "fun funny furnace fury future gadget gain galaxy gallery game gap garage garbage garden " +
+  "garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine " +
+  "gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass glide " +
+  "glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel " +
+  "gossip govern gown grab grace grain grant grape grass gravity great green grid grief " +
+  "grit grocery group grow grunt guard guess guide guilt guitar gun gym habit hair half " +
+  "hammer hamster hand happy harbor hard harsh harvest hat have hawk hazard head health " +
+  "heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire " +
+  "history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse " +
+  "hospital host hotel hour hover hub huge human humble humor hundred hungry hunt hurdle " +
+  "hurry hurt husband hybrid ice icon idea identify idle ignore ill illegal illness image " +
+  "imitate immense immune impact impose improve impulse inch include income increase index " +
+  "indicate indoor industry infant inflict inform inhale inherit initial inject injury " +
+  "inmate inner innocent input inquiry insane insect inside inspire install intact interest " +
+  "into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz " +
+  "jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk " +
+  "just kangaroo keen keep ketchup key kick kid kidney kind kingdom kiss kit kitchen kite " +
+  "kitten kiwi knee knife knock know lab label labor ladder lady lake lamp language laptop " +
+  "large later latin laugh laundry lava law lawn lawsuit layer lazy leader leaf learn leave " +
+  "lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level " +
+  "liar liberty library license life lift light like limb limit link lion liquid list " +
+  "little live lizard load loan lobster local lock logic lonely long loop lottery loud " +
+  "lounge love loyal lucky luggage lumber lunar lunch luxury lyrics machine mad magic " +
+  "magnet maid mail main major make mammal man manage mandate mango mansion manual maple " +
+  "marble march margin marine market marriage mask mass master match material math matrix " +
+  "matter maximum maze meadow mean measure meat mechanic medal media melody melt member " +
+  "memory mention menu mercy merge merit merry mesh message metal method middle midnight " +
+  "milk million mimic mind minimum minor minute miracle mirror misery miss mistake mix " +
+  "mixed mixture mobile model modify mom moment monitor monkey monster month moon moral " +
+  "more morning mosquito mother motion motor mountain mouse move movie much muffin mule " +
+  "multiply muscle museum mushroom music must mutual myself mystery myth naive name napkin " +
+  "narrow nasty nation nature near neck need negative neglect neither nephew nerve nest net " +
+  "network neutral never news next nice night noble noise nominee noodle normal north nose " +
+  "notable note nothing notice novel now nuclear number nurse nut oak obey object oblige " +
+  "obscure observe obtain obvious occur ocean october odor off offer office often oil okay " +
+  "old olive olympic omit once one onion online only open opera opinion oppose option " +
+  "orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor " +
+  "outer output outside oval oven over own owner oxygen oyster ozone pact paddle page pair " +
+  "palace palm panda panel panic panther paper parade parent park parrot party pass patch " +
+  "path patient patrol pattern pause pave payment peace peanut pear peasant pelican pen " +
+  "penalty pencil people pepper perfect permit person pet phone photo phrase physical piano " +
+  "picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place " +
+  "planet plastic plate play please pledge pluck plug plunge poem poet point polar pole " +
+  "police pond pony pool popular portion position possible post potato pottery poverty " +
+  "powder power practice praise predict prefer prepare present pretty prevent price pride " +
+  "primary print priority prison private prize problem process produce profit program " +
+  "project promote proof property prosper protect proud provide public pudding pull pulp " +
+  "pulse pumpkin punch pupil puppy purchase purity purpose purse push put puzzle pyramid " +
+  "quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar " +
+  "radio rail rain raise rally ramp ranch random range rapid rare rate rather raven raw " +
+  "razor ready real reason rebel rebuild recall receive recipe record recycle reduce " +
+  "reflect reform refuse region regret regular reject relax release relief rely remain " +
+  "remember remind remove render renew rent reopen repair repeat replace report require " +
+  "rescue resemble resist resource response result retire retreat return reunion reveal " +
+  "review reward rhythm rib ribbon rice rich ride ridge rifle right rigid ring riot ripple " +
+  "risk ritual rival river road roast robot robust rocket romance roof rookie room rose " +
+  "rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness " +
+  "safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage " +
+  "save say scale scan scare scatter scene scheme school science scissors scorpion scout " +
+  "scrap screen script scrub sea search season seat second secret section security seed " +
+  "seek segment select sell seminar senior sense sentence series service session settle " +
+  "setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver " +
+  "shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling sick side " +
+  "siege sight sign silent silk silly silver similar simple since sing siren sister situate " +
+  "six size skate sketch ski skill skin skirt skull slab slam sleep slender slice slide " +
+  "slight slim slogan slot slow slush small smart smile smoke smooth snack snake snap sniff " +
+  "snow soap soccer social sock soda soft solar soldier solid solution solve someone song " +
+  "soon sorry sort soul sound soup source south space spare spatial spawn speak special " +
+  "speed spell spend sphere spice spider spike spin spirit split spoil sponsor spoon sport " +
+  "spot spray spread spring spy square squeeze squirrel stable stadium staff stage stairs " +
+  "stamp stand start state stay steak steel stem step stereo stick still sting stock " +
+  "stomach stone stool story stove strategy street strike strong struggle student stuff " +
+  "stumble style subject submit subway success such sudden suffer sugar suggest suit summer " +
+  "sun sunny sunset super supply supreme sure surface surge surprise surround survey " +
+  "suspect sustain swallow swamp swap swarm swear sweet swift swim swing switch sword " +
+  "symbol symptom syrup system table tackle tag tail talent talk tank tape target task " +
+  "taste tattoo taxi teach team tell ten tenant tennis tent term test text thank that theme " +
+  "then theory there they thing this thought three thrive throw thumb thunder ticket tide " +
+  "tiger tilt timber time tiny tip tired tissue title toast tobacco today toddler toe " +
+  "together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple " +
+  "torch tornado tortoise toss total tourist toward tower town toy track trade traffic " +
+  "tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger " +
+  "trim trip trophy trouble truck true truly trumpet trust truth try tube tuition tumble " +
+  "tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly " +
+  "umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique " +
+  "unit universe unknown unlock until unusual unveil update upgrade uphold upon upper upset " +
+  "urban urge usage use used useful useless usual utility vacant vacuum vague valid valley " +
+  "valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb " +
+  "verify version very vessel veteran viable vibrant vicious victory video view village " +
+  "vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano " +
+  "volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp " +
+  "waste water wave way wealth weapon wear weasel weather web wedding weekend weird welcome " +
+  "west wet whale what wheat wheel when where whip whisper wide width wife wild will win " +
+  "window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood " +
+  "wool word work world worry worth wrap wreck wrestle wrist write wrong yard year yellow " +
+  "you young youth zebra zero zone zoo"
+).split(" ");
+
+const DGP_UTF8 = new TextEncoder();
+
+async function dgpPbkdf2(password, salt, bytes) {
+  const key = await crypto.subtle.importKey(
+    "raw", DGP_UTF8.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-1", salt: DGP_UTF8.encode(salt), iterations: DGP_ITERATIONS },
+    key, bytes * 8);          /* deriveBits counts BITS, not bytes */
+  return new Uint8Array(bits);
+}
+
+/* The 40 raw bytes every password type is a view onto. */
+function dgpDerive(seed, account, service) {
+  return dgpPbkdf2(seed + account, service, DGP_DKLEN);
+}
+
+/* Big-endian over the whole buffer, matching int.from_bytes(data, "big") and
+ * Kotlin's BigInteger(1, data). */
+function dgpToBigInt(bytes) {
+  let n = 0n;
+  for (const b of bytes) n = (n << 8n) | BigInt(b);
+  return n;
+}
+
+/* Least-significant digit first, and the result is NOT reversed. That is not a
+ * bug being faithfully reproduced by accident - it is what both engines emit,
+ * and the golden vectors pin it. No leading-'1' zero padding either. */
+function dgpToBase58(bytes) {
+  let n = dgpToBigInt(bytes);
+  let out = "";
+  while (n > 0n) {
+    out += DGP_BASE58[Number(n % 58n)];
+    n /= 58n;
+  }
+  return out;
+}
+
+/* Words come off the same integer 11 bits at a time, low group first, each
+ * TitleCased and concatenated with no separator. Stops early if the integer
+ * runs out before `count` words - so a small enough buffer yields a short
+ * password, which is the existing behaviour and not something to "fix" here. */
+function dgpToXkcd(bytes, count) {
+  let n = dgpToBigInt(bytes);
+  let out = "";
+  let left = count;
+  while (n > 0n && left > 0) {
+    const w = DGP_WORDS[Number(n % 2048n)];
+    out += w[0].toUpperCase() + w.slice(1);
+    n /= 2048n;
+    left--;
+  }
+  return out;
+}
+
+/* First left-to-right window of the base58 string carrying a digit, a lowercase
+ * and an uppercase. Falls back to the leading `length` characters, which may
+ * satisfy none of those - intended, and vector-covered. */
+function dgpGrabAlnum(bytes, length) {
+  const raw = dgpToBase58(bytes);
+  for (let i = 0; i + length <= raw.length; i++) {
+    const c = raw.slice(i, i + length);
+    if (/[0-9]/.test(c) && /[a-z]/.test(c) && /[A-Z]/.test(c)) return c;
+  }
+  return raw.slice(0, length);
+}
+
+function dgpHex(bytes, n) {
+  let out = "";
+  for (let i = 0; i < n; i++) out += bytes[i].toString(16).padStart(2, "0");
+  return out;
+}
+
+/* Which of the 40 bytes a type actually consumes. Drives the bytemap readout;
+ * kept beside the switch below so the two cannot disagree. */
+function dgpBytesRead(type) {
+  switch (type) {
+    case "hex": return 4;
+    case "hexlong": return 8;
+    case "aeskey": return 32;
+    case "alnum": case "alnumlong":
+    case "base58": case "base58long":
+    case "xkcd": case "xkcdlong": return DGP_DKLEN;
+    default: return 0;
+  }
+}
+
+function dgpRender(raw, type) {
+  switch (type) {
+    case "hex":        return dgpHex(raw, 4);
+    case "hexlong":    return dgpHex(raw, 8);
+    case "alnum":      return dgpGrabAlnum(raw, 8);
+    case "alnumlong":  return dgpGrabAlnum(raw, 12);
+    case "base58":     return dgpToBase58(raw).slice(0, 8);
+    case "base58long": return dgpToBase58(raw).slice(0, 12);
+    case "xkcd":       return dgpToXkcd(raw, 4);
+    case "xkcdlong":   return dgpToXkcd(raw, 6);
+    /* Not a UI password type: 32 bytes of AES key material as hex, kept so the
+     * engine is complete against the contract. */
+    case "aeskey":     return dgpHex(raw, 32);
+    default:           return "unknown type";
+  }
+}
+
+async function dgpGenerate(seed, account, service, type) {
+  return dgpRender(await dgpDerive(seed, account, service), type);
+}
+
+/* Two BIP-39 words derived from the identity under a reserved salt. Same low
+ * group first walk as the word passwords, but lowercase and hyphenated so it
+ * can never be mistaken for one. It exists to answer one question - did I type
+ * my seed correctly - which no other part of this page can answer, because a
+ * mistyped seed produces a perfectly plausible wrong password.
+ *
+ * Ported from DgpEngine.fingerprintWord; the flag gallery and vanity nonce that
+ * accompany it on Android are deliberately left out. */
+async function dgpCheckWord(seed, account) {
+  const fp = await dgpPbkdf2(seed + account, DGP_FP_SALT, 32);
+  let n = dgpToBigInt(fp);
+  const words = [];
+  for (let i = 0; i < 2; i++) {
+    words.push(DGP_WORDS[Number(n % 2048n)]);
+    n /= 2048n;
+  }
+  return words.join("-");
+}
+/* === DGP-ENGINE-END === */
+
+/* ------------------------------------------------------------------- state
+ * The seed is a local in this closure and nowhere else. It is never written to
+ * storage, never put in a data attribute, never interpolated into a message,
+ * and never survives the tab. Same for whatever the slab is currently showing:
+ * it is on screen because it was asked for, and it goes when anything changes.
+ */
+const KEYRING_KEY = "dgp.keyring.v1";
+const THEME_KEY = "dgp.theme";
+const TYPES = ["alnum", "alnumlong", "base58", "base58long",
+               "hex", "hexlong", "xkcd", "xkcdlong"];
+
+let entries = [];
+let selectedId = null;
+let deriveToken = 0;
+
+const $ = (id) => document.getElementById(id);
+const el = {
+  seed: $("seed"), seedReveal: $("seed-reveal"), account: $("account"),
+  lock: $("lock-btn"), checkword: $("checkword"), checkwordNote: $("checkword-note"),
+  filter: $("filter"), keyring: $("keyring"), keyringCount: $("keyring-count"),
+  newBtn: $("new-btn"), title: $("derive-title"), meta: $("derive-meta"),
+  service: $("service"), entryAccount: $("entry-account"), type: $("type"),
+  slab: $("slab"), deriveBtn: $("derive-btn"), copyBtn: $("copy-btn"),
+  status: $("status"), bytemap: $("bytemap"), bytemapLabel: $("bytemap-label"),
+  editor: $("editor"), comment: $("comment"), tags: $("tags"), pinned: $("pinned"),
+  saveBtn: $("save-btn"), deleteBtn: $("delete-btn"),
+  exportBtn: $("export-btn"), importBtn: $("import-btn"), importFile: $("import-file"),
+  themeBtn: $("theme-btn"),
+};
+
+/* --------------------------------------------------------------- storage
+ * Only two things are ever persisted: the keyring and the theme. Both survive
+ * being absent, corrupt, or thrown at by a browser with storage disabled. */
+function readStore(key) {
+  try { return window.localStorage.getItem(key); } catch (e) { return null; }
+}
+function writeStore(key, value) {
+  try { window.localStorage.setItem(key, value); return true; }
+  catch (e) { return false; }
+}
+
+/* ---------------------------------------------------------------- entries
+ * Wire shape is the services array from the Android/Linux config, key order and
+ * omit-when-empty rules included, so a file exported here imports there. The one
+ * addition is `account`: those apps hold a single account for the whole app and
+ * will silently drop a per-entry one on the way through. Unknown keys are kept
+ * verbatim on round-trip - encryptedSecret in particular belongs to the vault
+ * this page does not implement, and dropping it would destroy a secret. */
+function normalizeEntry(o) {
+  if (!o || typeof o !== "object" || Array.isArray(o)) return null;
+  if (typeof o.id !== "string" || typeof o.name !== "string") return null;
+  const secret = typeof o.encryptedSecret === "string" && o.encryptedSecret
+    ? o.encryptedSecret : null;
+  return {
+    id: o.id,
+    name: o.name,
+    type: TYPES.includes(o.type) ? o.type : "alnum",
+    comment: typeof o.comment === "string" ? o.comment : "",
+    archived: o.archived === true,
+    pinned: o.pinned === true,
+    tags: Array.isArray(o.tags) ? o.tags.filter((t) => typeof t === "string") : [],
+    encryptedSecret: secret,
+    account: typeof o.account === "string" && o.account ? o.account : null,
+  };
+}
+
+function serializeEntry(e) {
+  const out = {
+    id: e.id, name: e.name, type: e.type, comment: e.comment,
+    archived: e.archived, pinned: e.pinned,
+  };
+  if (e.tags.length) out.tags = e.tags;
+  if (e.encryptedSecret !== null) out.encryptedSecret = e.encryptedSecret;
+  if (e.account !== null) out.account = e.account;
+  return out;
+}
+
+function parseKeyring(text) {
+  let data;
+  try { data = JSON.parse(text); } catch (e) { return null; }
+  if (data && !Array.isArray(data) && Array.isArray(data.services)) data = data.services;
+  if (!Array.isArray(data)) return null;
+  const out = [];
+  for (const raw of data) {
+    const e = normalizeEntry(raw);
+    if (e) out.push(e);
+  }
+  return out;
+}
+
+function loadKeyring() {
+  entries = parseKeyring(readStore(KEYRING_KEY) || "[]") || [];
+}
+
+function saveKeyring() {
+  const ok = writeStore(KEYRING_KEY, JSON.stringify(entries.map(serializeEntry)));
+  if (!ok) setStatus("This browser would not save the keyring. Export it before you close the tab.", true);
+  return ok;
+}
+
+function newId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+
+/* ------------------------------------------------------------------- view */
+function setStatus(text, isError) {
+  el.status.textContent = text;
+  el.status.classList.toggle("is-error", !!isError);
+}
+
+function clearResult(why) {
+  deriveToken++;
+  el.slab.textContent = why || "Fill in a seed and a service, then derive.";
+  el.slab.classList.add("is-idle");
+  el.slab.classList.remove("is-fresh");
+  el.copyBtn.disabled = true;
+}
+
+function sortedEntries() {
+  return entries.slice().sort((a, b) => {
+    if (a.archived !== b.archived) return a.archived ? 1 : -1;
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    return a.name.localeCompare(b.name) || (a.account || "").localeCompare(b.account || "");
+  });
+}
+
+function matches(e, q) {
+  if (!q) return true;
+  const hay = [e.name, e.account || "", e.comment, e.tags.join(" ")].join(" ").toLowerCase();
+  return hay.includes(q);
+}
+
+function renderKeyring() {
+  const q = el.filter.value.trim().toLowerCase();
+  const list = sortedEntries().filter((e) => matches(e, q));
+  el.keyring.textContent = "";
+  el.keyringCount.textContent = entries.length
+    ? (q ? `${list.length}/${entries.length}` : String(entries.length))
+    : "";
+
+  if (!list.length) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = entries.length
+      ? "Nothing matches that filter."
+      : "The keyring is empty. Add the first service you want a password for.";
+    li.appendChild(p);
+    el.keyring.appendChild(li);
+    return;
+  }
+
+  for (const e of list) {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "entry" + (e.archived ? " is-archived" : "");
+    btn.setAttribute("aria-current", String(e.id === selectedId));
+    btn.dataset.id = e.id;
+
+    const name = document.createElement("span");
+    name.className = "entry-name";
+    name.textContent = e.name || "(unnamed)";
+    btn.appendChild(name);
+
+    const sub = document.createElement("span");
+    sub.className = "entry-sub";
+    const bits = [];
+    if (e.pinned) bits.push(["pin", "pinned"]);
+    bits.push([null, e.type]);
+    if (e.account) bits.push([null, e.account]);
+    if (e.archived) bits.push([null, "archived"]);
+    if (e.comment) bits.push([null, e.comment]);
+    for (const [cls, text] of bits) {
+      const s = document.createElement("span");
+      if (cls) s.className = cls;
+      s.textContent = text;
+      sub.appendChild(s);
+    }
+    btn.appendChild(sub);
+    li.appendChild(btn);
+    el.keyring.appendChild(li);
+  }
+}
+
+function renderBytemap() {
+  const type = el.type.value;
+  const lit = dgpBytesRead(type);
+  if (!el.bytemap.children.length) {
+    for (let i = 0; i < DGP_DKLEN; i++) {
+      const c = document.createElement("span");
+      c.className = "bytemap-cell";
+      el.bytemap.appendChild(c);
+    }
+  }
+  [...el.bytemap.children].forEach((c, i) => c.classList.toggle("is-lit", i < lit));
+  el.bytemapLabel.textContent = lit === DGP_DKLEN
+    ? `${type} reads all 40 bytes as one big integer.`
+    : `${type} reads the first ${lit} of the 40 bytes; the rest are derived and discarded.`;
+}
+
+function renderHeader() {
+  const service = el.service.value.trim();
+  const entry = entries.find((e) => e.id === selectedId);
+  el.title.textContent = service || (entry ? entry.name : "no entry selected");
+  el.title.classList.toggle("is-placeholder", !service && !entry);
+  const acct = el.entryAccount.value.trim() || el.account.value.trim();
+  el.meta.textContent = acct ? `account · ${acct}` : "no account";
+  el.deleteBtn.hidden = !entry;
+  el.saveBtn.textContent = entry ? "Save entry" : "Add to keyring";
+  el.editor.hidden = false;
+}
+
+/* ------------------------------------------------------------------ derive */
+function readForm() {
+  return {
+    seed: el.seed.value,
+    account: el.entryAccount.value.trim() || el.account.value.trim(),
+    service: el.service.value.trim(),
+    type: el.type.value,
+  };
+}
+
+async function derive() {
+  const f = readForm();
+  if (!f.seed) { setStatus("Enter your seed first.", true); el.seed.focus(); return; }
+  if (!f.service) { setStatus("Enter a service name.", true); el.service.focus(); return; }
+
+  const token = ++deriveToken;
+  el.deriveBtn.disabled = true;
+  setStatus("Deriving…");
+  let value;
+  try {
+    value = await dgpGenerate(f.seed, f.account, f.service, f.type);
+  } catch (e) {
+    /* The caught error is never shown or logged: it was thrown by code holding
+     * the seed and could carry it in a message. Only the fact of failure gets
+     * out. */
+    if (token === deriveToken) setStatus("This browser could not run the derivation.", true);
+    el.deriveBtn.disabled = false;
+    return;
+  }
+  el.deriveBtn.disabled = false;
+  if (token !== deriveToken) return;      /* inputs moved on; drop the answer */
+
+  el.slab.textContent = value;
+  el.slab.classList.remove("is-idle");
+  el.slab.classList.add("is-fresh");
+  el.copyBtn.disabled = false;
+  setStatus("");
+}
+
+async function copyResult() {
+  if (el.copyBtn.disabled) return;
+  const value = el.slab.textContent;
+  try {
+    await navigator.clipboard.writeText(value);
+    setStatus("Copied.");
+    return;
+  } catch (e) { /* falls through to the selection path below */ }
+  /* No clipboard permission - hand the selection to the browser instead. The
+   * scratch node is detached again before this function returns. */
+  const ta = document.createElement("textarea");
+  ta.value = value;
+  ta.setAttribute("aria-hidden", "true");
+  ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+  ta.value = "";
+  ta.remove();
+  setStatus(ok ? "Copied." : "Copy it by hand — this browser blocked the clipboard.", !ok);
+}
+
+/* --------------------------------------------------------------- check-word */
+let checkToken = 0;
+let checkTimer = null;
+/* Debounced, because this is a full 42000-iteration PBKDF2 and firing one per
+ * keystroke makes a long seed painful to type. */
+function scheduleCheckWord() {
+  /* Emptying the field is not a derivation; answer it now rather than blinking
+     a spinner for 220ms first. */
+  if (!el.seed.value) { refreshCheckWord(); return; }
+  checkToken++;
+  el.checkword.textContent = "…";
+  el.checkwordNote.textContent = "";
+  if (checkTimer !== null) clearTimeout(checkTimer);
+  checkTimer = setTimeout(() => { checkTimer = null; refreshCheckWord(); }, 220);
+}
+
+async function refreshCheckWord() {
+  const seed = el.seed.value;
+  const account = el.account.value.trim();
+  const token = ++checkToken;
+  if (checkTimer !== null) { clearTimeout(checkTimer); checkTimer = null; }
+  if (!seed) {
+    el.checkword.textContent = "—";
+    el.checkwordNote.textContent = "Enter a seed. The same two words should appear every time.";
+    return;
+  }
+  let word;
+  try { word = await dgpCheckWord(seed, account); }
+  catch (e) { word = null; }
+  if (token !== checkToken) return;
+  el.checkword.textContent = word || "—";
+  el.checkwordNote.textContent = word
+    ? "Wrong words mean a wrong seed — and a wrong password that looks right."
+    : "";
+}
+
+/* ------------------------------------------------------------------- entry */
+function selectEntry(id) {
+  const e = entries.find((x) => x.id === id);
+  if (!e) return;
+  selectedId = id;
+  el.service.value = e.name;
+  el.entryAccount.value = e.account || "";
+  el.type.value = TYPES.includes(e.type) ? e.type : "alnum";
+  el.comment.value = e.comment;
+  el.tags.value = e.tags.join(", ");
+  el.pinned.checked = e.pinned;
+  clearResult(`Ready. Derive ${e.name}.`);
+  setStatus("");
+  renderKeyring();
+  renderHeader();
+  renderBytemap();
+}
+
+function newEntry() {
+  selectedId = null;
+  el.service.value = "";
+  el.entryAccount.value = "";
+  el.comment.value = "";
+  el.tags.value = "";
+  el.pinned.checked = false;
+  clearResult();
+  setStatus("");
+  renderKeyring();
+  renderHeader();
+  el.service.focus();
+}
+
+function saveEntry() {
+  const name = el.service.value.trim();
+  if (!name) { setStatus("An entry needs a service name.", true); el.service.focus(); return; }
+  const fields = {
+    name,
+    type: el.type.value,
+    comment: el.comment.value.trim(),
+    pinned: el.pinned.checked,
+    tags: el.tags.value.split(",").map((t) => t.trim()).filter(Boolean),
+    account: el.entryAccount.value.trim() || null,
+  };
+  const existing = entries.find((e) => e.id === selectedId);
+  if (existing) {
+    Object.assign(existing, fields);
+    setStatus(`Saved ${name}.`);
+  } else {
+    const e = { id: newId(), archived: false, encryptedSecret: null, ...fields };
+    entries.push(e);
+    selectedId = e.id;
+    setStatus(`Added ${name}.`);
+  }
+  saveKeyring();
+  renderKeyring();
+  renderHeader();
+}
+
+function deleteEntry() {
+  const e = entries.find((x) => x.id === selectedId);
+  if (!e) return;
+  if (!window.confirm(`Remove ${e.name} from the keyring? The password itself is not stored, so it can always be derived again.`)) return;
+  entries = entries.filter((x) => x.id !== e.id);
+  selectedId = null;
+  saveKeyring();
+  newEntry();
+  setStatus(`Removed ${e.name}.`);
+}
+
+/* ---------------------------------------------------------- export/import */
+function exportKeyring() {
+  if (!entries.length) { setStatus("Nothing to export yet.", true); return; }
+  const text = JSON.stringify(entries.map(serializeEntry), null, 1);
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.download = `dgp-keyring-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  setStatus(`Exported ${entries.length} ${entries.length === 1 ? "entry" : "entries"}.`);
+}
+
+async function readKeyringFile(file) {
+  if (!file) return;
+  let text;
+  try { text = await file.text(); }
+  catch (e) { setStatus("That file could not be read.", true); return; }
+  const incoming = parseKeyring(text);
+  if (incoming === null) {
+    setStatus("That file is not a DGP keyring.", true);
+    return;
+  }
+  if (!incoming.length) { setStatus("That keyring is empty — nothing changed.", true); return; }
+
+  /* Merge on id, the same key the Android and Linux apps merge on; anything with
+   * an id already here is replaced, anything new is appended. Nothing is dropped
+   * on the floor without saying so. */
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  let added = 0, replaced = 0;
+  for (const e of incoming) {
+    if (byId.has(e.id)) replaced++; else added++;
+    byId.set(e.id, e);
+  }
+  entries = [...byId.values()];
+  saveKeyring();
+  selectedId = null;
+  renderKeyring();
+  newEntry();
+  setStatus(`Imported ${added} new, replaced ${replaced}.`);
+}
+
+/* ------------------------------------------------------------------- theme */
+function applyTheme(mode) {
+  document.documentElement.setAttribute("data-theme", mode);
+  el.themeBtn.textContent = `Theme: ${mode}`;
+  writeStore(THEME_KEY, mode);
+}
+
+/* -------------------------------------------------------------------- wire */
+function lock() {
+  el.seed.value = "";
+  el.seed.type = "password";
+  el.seedReveal.textContent = "Show";
+  el.seedReveal.setAttribute("aria-label", "Show seed");
+  el.lock.disabled = true;
+  clearResult("Locked. Enter your seed to derive again.");
+  refreshCheckWord();
+  setStatus("");
+  el.seed.focus();
+}
+
+el.seed.addEventListener("input", () => {
+  el.lock.disabled = !el.seed.value;
+  clearResult();
+  scheduleCheckWord();
+});
+el.account.addEventListener("input", () => { clearResult(); renderHeader(); scheduleCheckWord(); });
+el.seedReveal.addEventListener("click", () => {
+  const shown = el.seed.type === "text";
+  el.seed.type = shown ? "password" : "text";
+  el.seedReveal.textContent = shown ? "Show" : "Hide";
+  el.seedReveal.setAttribute("aria-label", shown ? "Show seed" : "Hide seed");
+  el.seed.focus();
+});
+el.lock.addEventListener("click", lock);
+
+for (const node of [el.service, el.entryAccount]) {
+  node.addEventListener("input", () => { clearResult(); renderHeader(); });
+}
+el.type.addEventListener("change", () => { clearResult(); renderBytemap(); });
+
+el.deriveBtn.addEventListener("click", derive);
+el.copyBtn.addEventListener("click", copyResult);
+el.newBtn.addEventListener("click", newEntry);
+el.saveBtn.addEventListener("click", saveEntry);
+el.deleteBtn.addEventListener("click", deleteEntry);
+el.filter.addEventListener("input", renderKeyring);
+el.exportBtn.addEventListener("click", exportKeyring);
+el.importBtn.addEventListener("click", () => el.importFile.click());
+el.importFile.addEventListener("change", () => {
+  const f = el.importFile.files && el.importFile.files[0];
+  el.importFile.value = "";
+  readKeyringFile(f);
+});
+el.themeBtn.addEventListener("click", () => {
+  const order = ["auto", "light", "dark"];
+  const next = order[(order.indexOf(document.documentElement.getAttribute("data-theme")) + 1) % 3];
+  applyTheme(next);
+});
+
+el.keyring.addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".entry");
+  if (btn) selectEntry(btn.dataset.id);
+});
+
+document.addEventListener("keydown", (ev) => {
+  const inField = /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName);
+  if (ev.key === "/" && !inField && !ev.metaKey && !ev.ctrlKey) {
+    ev.preventDefault();
+    el.filter.focus();
+    el.filter.select();
+    return;
+  }
+  if (ev.key === "Enter" && inField && ev.target !== el.filter
+      && ev.target !== el.comment && ev.target !== el.tags
+      && ev.target !== el.pinned) {
+    ev.preventDefault();
+    derive();
+  }
+  if (ev.key === "Escape" && ev.target === el.filter && el.filter.value) {
+    el.filter.value = "";
+    renderKeyring();
+  }
+});
+
+/* Firefox and friends restore form values across a reload. The seed must not
+ * come back, so both entry points blank it before anything else runs. */
+function blankSeed() {
+  el.seed.value = "";
+  el.seed.type = "password";
+  el.lock.disabled = true;
+}
+window.addEventListener("pageshow", () => { blankSeed(); clearResult(); refreshCheckWord(); });
+
+blankSeed();
+applyTheme(readStore(THEME_KEY) || "auto");
+loadKeyring();
+renderKeyring();
+renderHeader();
+renderBytemap();
+clearResult();
+</script>
