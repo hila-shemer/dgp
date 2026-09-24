@@ -201,6 +201,16 @@ const SEED = "fake-seed-not-a-real-one";
 eq("keyring starts empty", app.entries().length, 0);
 check("empty keyring invites an entry",
   /keyring is empty/i.test(g("keyring").textContent), g("keyring").textContent);
+check("empty keyring points at the phone import",
+  /Import from phone/.test(g("keyring").textContent), g("keyring").textContent);
+{
+  // Import used to live only at the foot of the page, under the colophon, which
+  // is where nobody looks for it.
+  let opened = 0;
+  g("import-file").addEventListener("click", () => { opened++; });
+  g("phone-import-btn").click();
+  eq("the keyring panel's import button opens the file picker", opened, 1);
+}
 check("lock is disabled with no seed", g("lock-btn").disabled === true, "enabled");
 check("copy is disabled with no result", g("copy-btn").disabled === true, "enabled");
 check("bytemap draws 40 cells", g("bytemap").children.length === 40,
