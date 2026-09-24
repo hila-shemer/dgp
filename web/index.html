@@ -430,6 +430,10 @@ select.input { font-family: var(--sans); cursor: pointer; }
 }
 @media (max-width: 660px) { .colophon { grid-template-columns: minmax(0, 1fr); } }
 .colophon-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pin-row { flex-basis: 100%; display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+.pin-row[hidden] { display: none; }
+.pin-row .field { flex: 1 1 180px; }
+.pin-note { flex-basis: 100%; margin: 0; }
 .sr-only {
   position: absolute; width: 1px; height: 1px;
   padding: 0; margin: -1px; overflow: hidden;
@@ -522,6 +526,7 @@ select.input { font-family: var(--sans); cursor: pointer; }
             <option value="hexlong">hexlong &middot; 16</option>
             <option value="xkcd">xkcd &middot; 4 words</option>
             <option value="xkcdlong">xkcdlong &middot; 6 words</option>
+            <option value="vault" hidden>vault &middot; stored secret</option>
           </select>
         </label>
       </div>
@@ -591,8 +596,20 @@ select.input { font-family: var(--sans); cursor: pointer; }
     <div class="colophon-actions">
       <button type="button" class="btn" id="export-btn">Export keyring</button>
       <button type="button" class="btn" id="import-btn">Import keyring</button>
-      <input type="file" id="import-file" accept="application/json,.json" class="sr-only"
-             aria-hidden="true" tabindex="-1">
+      <input type="file" id="import-file"
+             accept="application/json,.json,.enc,application/octet-stream,text/plain"
+             class="sr-only" aria-hidden="true" tabindex="-1">
+      <div class="pin-row" id="pin-row" hidden>
+        <label class="field">
+          <span class="eyebrow">Export PIN</span>
+          <input class="input" id="import-pin" type="password" autocomplete="off"
+                 autocapitalize="off" autocorrect="off" spellcheck="false"
+                 placeholder="the PIN you exported with">
+        </label>
+        <button type="button" class="btn btn-primary" id="pin-ok">Unlock</button>
+        <button type="button" class="btn btn-quiet" id="pin-cancel">Cancel</button>
+        <p class="status pin-note" id="pin-note" role="status"></p>
+      </div>
     </div>
   </footer>
 </div>
@@ -902,6 +919,42 @@ async function dgpCheckWord(seed, account) {
 }
 /* === DGP-ENGINE-END === */
 
+/* ------------------------------------------------------------ phone export
+ * The file Android writes from Settings > Export (dgp-export.enc), and the Linux
+ * app's export: base64(iv[12] | AES-256-GCM(services JSON) | tag[16]), keyed by
+ * PBKDF2-HMAC-SHA256(PIN, "dgp-export-v1", 600000) -> 32 bytes. Pinned in
+ * docs/superpowers/specs/2026-06-14-web-app-contract.md section 3 and in
+ * linux/dgp/exportcrypto.py. Returns the plaintext, or null for a wrong PIN, a
+ * damaged file, or anything that is not an export - GCM cannot tell those
+ * apart, so the caller must not pretend to. */
+const EXPORT_SALT = "dgp-export-v1";
+const EXPORT_ITERATIONS = 600000;
+
+function exportBase64(text) {
+  const b64 = String(text).replace(/[\r\n]+/g, "").trim();
+  if (b64.length < 40 || b64.length % 4 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) return null;
+  return b64;
+}
+
+async function dgpDecryptExport(text, pin) {
+  const b64 = exportBase64(text);
+  if (b64 === null) return null;
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  try {
+    const base = await crypto.subtle.importKey(
+      "raw", DGP_UTF8.encode(pin), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey(
+      { name: "PBKDF2", hash: "SHA-256", salt: DGP_UTF8.encode(EXPORT_SALT),
+        iterations: EXPORT_ITERATIONS },
+      base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: bytes.subarray(0, 12) }, key, bytes.subarray(12));
+    return new TextDecoder("utf-8", { fatal: true }).decode(plain);
+  } catch (e) {
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------- state
  * The seed is a local in this closure and nowhere else. It is never written to
  * storage, never put in a data attribute, never interpolated into a message,
@@ -912,6 +965,11 @@ const KEYRING_KEY = "dgp.keyring.v1";
 const THEME_KEY = "dgp.theme";
 const TYPES = ["alnum", "alnumlong", "base58", "base58long",
                "hex", "hexlong", "xkcd", "xkcdlong"];
+/* A vault entry holds a user-chosen secret the phone encrypted under a key
+ * derived from seed + name + account. It is not a derivation, so it is never
+ * derived here, and it keeps its type: rewriting it to alnum would offer a
+ * plausible password that is not the secret, and export that damage back. */
+const VAULT = "vault";
 
 let entries = [];
 let selectedId = null;
@@ -930,6 +988,8 @@ const el = {
   saveBtn: $("save-btn"), deleteBtn: $("delete-btn"),
   exportBtn: $("export-btn"), importBtn: $("import-btn"), importFile: $("import-file"),
   themeBtn: $("theme-btn"), derivePanel: $("derive-panel"),
+  pinRow: $("pin-row"), importPin: $("import-pin"), pinOk: $("pin-ok"),
+  pinCancel: $("pin-cancel"), pinNote: $("pin-note"),
 };
 
 /* --------------------------------------------------------------- storage
@@ -958,7 +1018,7 @@ function normalizeEntry(o) {
   return {
     id: o.id,
     name: o.name,
-    type: TYPES.includes(o.type) ? o.type : "alnum",
+    type: TYPES.includes(o.type) || o.type === VAULT ? o.type : "alnum",
     comment: typeof o.comment === "string" ? o.comment : "",
     archived: o.archived === true,
     pinned: o.pinned === true,
@@ -1015,6 +1075,12 @@ function newId() {
 function setStatus(text, isError) {
   el.status.textContent = text;
   el.status.classList.toggle("is-error", !!isError);
+  /* On a phone the status line is a screen away from the PIN field; while the
+     PIN row is open, say it there too. */
+  if (!el.pinRow.hidden) {
+    el.pinNote.textContent = text;
+    el.pinNote.classList.toggle("is-error", !!isError);
+  }
 }
 
 function clearResult(why) {
@@ -1104,7 +1170,9 @@ function renderBytemap() {
     }
   }
   [...el.bytemap.children].forEach((c, i) => c.classList.toggle("is-lit", i < lit));
-  el.bytemapLabel.textContent = lit === DGP_DKLEN
+  el.bytemapLabel.textContent = type === VAULT
+    ? "vault entries are not derived; the phone stores their secret encrypted."
+    : lit === DGP_DKLEN
     ? `${type} reads all 40 bytes as one big integer.`
     : `${type} reads the first ${lit} of the 40 bytes; the rest are derived and discarded.`;
 }
@@ -1133,6 +1201,10 @@ function readForm() {
 
 async function derive() {
   const f = readForm();
+  if (f.type === VAULT) {
+    setStatus("A vault entry's secret is stored, not derived. Open it on the phone.", true);
+    return;
+  }
   if (!f.seed) { setStatus("Enter your seed first.", true); el.seed.focus(); return; }
   if (!f.service) { setStatus("Enter a service name.", true); el.service.focus(); return; }
 
@@ -1226,7 +1298,7 @@ function selectEntry(id) {
   selectedId = id;
   el.service.value = e.name;
   el.entryAccount.value = e.account || "";
-  el.type.value = TYPES.includes(e.type) ? e.type : "alnum";
+  el.type.value = TYPES.includes(e.type) || e.type === VAULT ? e.type : "alnum";
   el.comment.value = e.comment;
   el.tags.value = e.tags.join(", ");
   el.pinned.checked = e.pinned;
@@ -1250,6 +1322,7 @@ function revealDerivePanel() {
 
 function newEntry() {
   selectedId = null;
+  if (el.type.value === VAULT) { el.type.value = "alnum"; renderBytemap(); }
   el.service.value = "";
   el.entryAccount.value = "";
   el.comment.value = "";
@@ -1274,6 +1347,12 @@ function saveEntry() {
     account: el.entryAccount.value.trim() || null,
   };
   const existing = entries.find((e) => e.id === selectedId);
+  if (existing && existing.type === VAULT &&
+      (fields.name !== existing.name || fields.account !== existing.account ||
+       fields.type !== VAULT)) {
+    setStatus("A vault entry's secret is locked to its name and account. Rename it on the phone.", true);
+    return;
+  }
   if (existing) {
     Object.assign(existing, fields);
     setStatus(`Saved ${name}.`);
@@ -1322,10 +1401,53 @@ async function readKeyringFile(file) {
   try { text = await file.text(); }
   catch (e) { setStatus("That file could not be read.", true); return; }
   const incoming = parseKeyring(text);
-  if (incoming === null) {
-    setStatus("That file is not a DGP keyring.", true);
+  if (incoming !== null) { mergeKeyring(incoming); return; }
+  if (exportBase64(text) !== null) { askExportPin(text); return; }
+  setStatus("That file is not a DGP keyring.", true);
+}
+
+/* The PIN is read out of the field and the field emptied before the slow part,
+ * and the encrypted text is dropped once used or cancelled; neither is stored. */
+let pendingExport = null;
+
+function askExportPin(text) {
+  pendingExport = text;
+  el.importPin.value = "";
+  el.pinRow.hidden = false;
+  el.importPin.focus();
+  setStatus("Encrypted export from the phone. Enter the PIN you chose when exporting.");
+}
+
+function closeExportPin() {
+  pendingExport = null;
+  el.importPin.value = "";
+  el.pinRow.hidden = true;
+  el.pinNote.textContent = "";
+}
+
+async function unlockExport() {
+  const blob = pendingExport;
+  if (blob === null || el.pinOk.disabled) return;
+  const pin = el.importPin.value;
+  el.importPin.value = "";
+  if (!pin) { setStatus("Enter the export PIN.", true); el.importPin.focus(); return; }
+  el.pinOk.disabled = true;
+  setStatus("Decrypting…");
+  const json = await dgpDecryptExport(blob, pin);
+  el.pinOk.disabled = false;
+  if (pendingExport !== blob) return;       /* cancelled or replaced meanwhile */
+  if (json === null) {
+    setStatus("Wrong PIN, or not a DGP export.", true);
+    el.importPin.focus();
     return;
   }
+  closeExportPin();
+  const incoming = parseKeyring(json);
+  if (incoming === null) { setStatus("That export opened but holds no DGP keyring.", true); return; }
+  mergeKeyring(incoming);
+}
+
+function mergeKeyring(incoming) {
   if (!incoming.length) { setStatus("That keyring is empty — nothing changed.", true); return; }
 
   /* Merge on id, the same key the Android and Linux apps merge on; anything with
@@ -1359,6 +1481,7 @@ function lock() {
   el.seedReveal.textContent = "Show";
   el.seedReveal.setAttribute("aria-label", "Show seed");
   el.lock.disabled = true;
+  closeExportPin();
   clearResult("Locked. Enter your seed to derive again.");
   refreshCheckWord();
   setStatus("");
@@ -1393,6 +1516,12 @@ el.deleteBtn.addEventListener("click", deleteEntry);
 el.filter.addEventListener("input", renderKeyring);
 el.exportBtn.addEventListener("click", exportKeyring);
 el.importBtn.addEventListener("click", () => el.importFile.click());
+el.pinOk.addEventListener("click", unlockExport);
+el.pinCancel.addEventListener("click", () => { closeExportPin(); setStatus("Import cancelled."); });
+el.importPin.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") unlockExport();
+  else if (ev.key === "Escape") { closeExportPin(); setStatus("Import cancelled."); }
+});
 el.importFile.addEventListener("change", () => {
   const f = el.importFile.files && el.importFile.files[0];
   el.importFile.value = "";
