@@ -98,6 +98,12 @@ computed.
 `tailscale serve --https=8453`: `crypto.subtle` needs a secure context, so plain http on a LAN IP
 loads the page and then cannot derive.
 
+**Import** takes the plain JSON keyring or the phone's `dgp-export.enc` (Settings > Export): the
+latter asks for its PIN inline and decrypts in the browser with the section-3 export format
+(`linux/dgp/exportcrypto.py`). `vault` entries keep their type and `encryptedSecret` verbatim, are
+never derived, and cannot be renamed here - their key is seed + name + account, so only the phone
+can re-encrypt them.
+
 The page shows a two-word **check-word** beside the seed field, ported from
 `DgpEngine.fingerprintWord` (the flag gallery and vanity nonce are not). It answers the one
 question nothing else on the page can: a mistyped seed produces a perfectly plausible wrong

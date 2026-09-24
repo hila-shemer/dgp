@@ -158,7 +158,7 @@ const scriptSrc = (() => {
 
 const run = new Function(
   "window", "document", "crypto", "navigator", "URL", "Blob",
-  `${scriptSrc}\nreturn { dgpGenerate, dgpCheckWord, serializeEntry, parseKeyring, entries: () => entries };`
+  `${scriptSrc}\nreturn { dgpGenerate, dgpCheckWord, dgpDecryptExport, serializeEntry, parseKeyring, entries: () => entries };`
 );
 
 let failures = [];
@@ -406,6 +406,102 @@ const exported = await downloaded.blob.text();
   eq("a bad file changes nothing", JSON.stringify(app.entries()), before);
   check("a bad file says so", /not a DGP keyring/.test(g("status").textContent),
     g("status").textContent);
+}
+
+// --- Import: the phone's PIN-encrypted export (Settings > Export, dgp-export.enc).
+/* Made by linux/dgp/exportcrypto.encrypt_export, the Python side of the format
+ * Android's ConfigCrypto is proven wire-compatible with by
+ * linux/tests/test_android_compat.py. Synthetic: PIN 2468, no real services. */
+const PHONE_PIN = "2468";
+const PHONE_BLOB = "Yhk9xxjhfJCzu/pAGXJe+lbTIR7BpmrlBBnMdZXHpXXbY+993QvjhxzLwvXY19qLeUZukeQY1Kf7YZ4XqGEUNwn0pPs82NCDJXtPilBJi9UQJecVW2p8q9oT/AX2bXfgOm6d6VSduuhrAhQbL7HStdVtX1DnoEXCdv/9SLYAO0/xN92iXpbHaKq9MvaIrytcaGt/e/juKzLy+s5bEtEAQVxLDxlkvyfEFelQtfsXuhz4BFxitkfiWURdusmewFTloum1EZM1thBUhiR3KYib2HObbcAG5dGeaNekPWW2qKxSo/mKX3jC59HL69gFXuWY78wEXv2mdrvZs8w3/bHOTMnEkwUa1yJ7dhIlE7knxX8GpRzzpDcUywvaxeQohljZKyuFNteWAc/WFa2qO7q6CJiW8IhKA79IwwvYbQq1pu/t2BxAobVqEqrPLMjzhu31FvcYjosfanEkvv2ERn75QqGwkzvCEFshk3AV8l9VrZWY22cdAVGx978VaemGGHWXXqWS7sGOjvW7pNDYuIWzIhYhyOm/bSxbG+Nq06bCHQmRyQDIRx05SbXjRCUmd1gpqHzCc4vj5dLxiXJjIwoRfE+ffuHwdcQ2pGQqcW89/S8E2oRIlq8KgzzhjIKziPR3jf4+9ZbL9jo=";
+const PHONE_SERVICES = [
+  { id: "a1", name: "github.com", type: "alnumlong", comment: "work", archived: false, pinned: true, tags: ["dev"] },
+  { id: "b2", name: "bank.example", type: "xkcdlong", comment: "", archived: false, pinned: false },
+  { id: "c3", name: "old-router", type: "vault", comment: "legacy", archived: true, pinned: false, encryptedSecret: "AAECAwQFBgcICQoLDA0ODxAREhM=" },
+  { id: "d4", name: "café.example", type: "hex", comment: "ünicöde", archived: false, pinned: false },
+];
+{
+  eq("the phone's export decrypts with its PIN",
+     JSON.parse(await app.dgpDecryptExport(PHONE_BLOB, PHONE_PIN)), PHONE_SERVICES);
+  eq("a wrong PIN decrypts nothing", await app.dgpDecryptExport(PHONE_BLOB, "2469"), null);
+  eq("a newline-wrapped export still decrypts",
+     JSON.parse(await app.dgpDecryptExport(PHONE_BLOB.replace(/(.{76})/g, "$1\n") + "\n", PHONE_PIN)),
+     PHONE_SERVICES);
+  eq("a truncated export decrypts nothing",
+     await app.dgpDecryptExport(PHONE_BLOB.slice(0, 40), PHONE_PIN), null);
+  check("the file picker offers .enc files", /id="import-file"[^>]*accept="[^"]*\.enc/.test(html),
+    "accept= would grey out dgp-export.enc");
+
+  eq("the PIN row starts hidden", g("pin-row").hidden, true);
+  const before = JSON.stringify(app.entries());
+  const pick = () => {
+    byId.get("import-file").files = [{ text: async () => PHONE_BLOB }];
+    byId.get("import-file").fire("change");
+  };
+
+  pick();
+  await waitFor("the PIN request", () => g("pin-row").hidden === false);
+  check("an encrypted file asks for its PIN", /PIN/.test(g("status").textContent),
+    g("status").textContent);
+  g("pin-cancel").click();
+  eq("cancel hides the PIN row", g("pin-row").hidden, true);
+  eq("cancel changes nothing", JSON.stringify(app.entries()), before);
+
+  pick();
+  await waitFor("the PIN request again", () => g("pin-row").hidden === false);
+  g("import-pin").value = "2469";
+  g("pin-ok").click();
+  await waitFor("the wrong-PIN refusal", () => /Wrong PIN/.test(g("status").textContent));
+  eq("a wrong PIN changes nothing", JSON.stringify(app.entries()), before);
+  eq("a wrong PIN clears the field", g("import-pin").value, "");
+  eq("a wrong PIN leaves the row up for another try", g("pin-row").hidden, false);
+  check("a wrong PIN is said beside the PIN field", /Wrong PIN/.test(g("pin-note").textContent),
+    g("pin-note").textContent);
+
+  g("import-pin").value = PHONE_PIN;
+  g("import-pin").fire("keydown", { key: "Enter" });
+  await waitFor("the encrypted import", () => /Imported 4 new/.test(g("status").textContent));
+  eq("the right PIN hides the row", g("pin-row").hidden, true);
+  eq("the right PIN clears the field", g("import-pin").value, "");
+  const stored = JSON.parse(localStorage.getItem("dgp.keyring.v1"));
+  const vault = stored.find((e) => e.id === "c3");
+  eq("a vault entry keeps its type", vault.type, "vault");
+  eq("a vault entry keeps its secret", vault.encryptedSecret, "AAECAwQFBgcICQoLDA0ODxAREhM=");
+  eq("unicode names survive", stored.find((e) => e.id === "d4").name, "café.example");
+  check("the PIN never reaches storage",
+    ![...store.values()].some((v) => v.includes(PHONE_PIN)), "found the PIN in localStorage");
+
+  // A vault entry is a stored secret, not a derivation: deriving one would show a
+  // plausible password that is not the secret.
+  const target = [...g("keyring").children].map((li) => li.children[0])
+    .find((b) => b && b.textContent.startsWith("old-router"));
+  target.fire("click", { target });
+  eq("the form shows the vault type", g("type").value, "vault");
+  g("derive-btn").click();
+  await settle();
+  check("deriving a vault entry is refused", /vault/i.test(g("status").textContent),
+    g("status").textContent);
+  eq("deriving a vault entry shows nothing", g("copy-btn").disabled, true);
+
+  // Its secret is keyed on name + account; only the phone can re-encrypt it.
+  g("service").value = "new-router";
+  g("service").fire("input");
+  g("save-btn").click();
+  check("renaming a vault entry is refused", /phone/i.test(g("status").textContent),
+    g("status").textContent);
+  eq("the vault entry keeps its name",
+     app.entries().find((e) => e.id === "c3").name, "old-router");
+  g("service").value = "old-router";
+  g("service").fire("input");
+  g("comment").value = "still legacy";
+  g("save-btn").click();
+  const saved = app.entries().find((e) => e.id === "c3");
+  eq("a vault entry's comment can still be edited", saved.comment, "still legacy");
+  eq("and it is still a vault entry", saved.type, "vault");
+  eq("and its secret is untouched", saved.encryptedSecret, "AAECAwQFBgcICQoLDA0ODxAREhM=");
+
+  g("new-btn").click();
+  eq("a new entry does not inherit the vault type", g("type").value, "alnum");
 }
 
 // --- Deriving with a field missing says which one, and derives nothing.
