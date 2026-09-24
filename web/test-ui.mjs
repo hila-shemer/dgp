@@ -310,6 +310,19 @@ eq("per-entry account overrides the identity account",
   eq("selecting fills the pin", g("pinned").checked, true);
   eq("selecting clears the override", g("entry-account").value, "");
   check("selecting clears any showing password", g("copy-btn").disabled === true, "result survived");
+
+  /* Stacked layout puts the derive panel under the whole keyring; a tap must
+   * bring it into view there, and must leave the page alone side by side. */
+  let scrolls = 0;
+  g("derive-panel").scrollIntoView = () => { scrolls++; };
+  for (const [narrow, want] of [[true, 1], [false, 0]]) {
+    scrolls = 0;
+    win.matchMedia = (q) => ({ matches: q.includes("max-width") ? narrow : false });
+    target.fire("click", { target });
+    eq(`selecting ${narrow ? "stacked" : "side by side"} scrolls to the result ${want}x`,
+       scrolls, want);
+  }
+  delete win.matchMedia;
 }
 
 // --- Filter.

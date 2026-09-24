@@ -93,6 +93,11 @@ neither a seed nor a derived password ever lands in storage. `gen-vectors.py` re
 `web/vectors.json` from `linux/dgp/`; the golden half is copied, the reference half is
 computed.
 
+`web/serve.py` (stdlib) serves the page on 127.0.0.1:8453 and nothing else, adding the headers a
+`<meta>` CSP can't carry (frame-ancestors, no-store). On flatpot it sits behind
+`tailscale serve --https=8453`: `crypto.subtle` needs a secure context, so plain http on a LAN IP
+loads the page and then cannot derive.
+
 The page shows a two-word **check-word** beside the seed field, ported from
 `DgpEngine.fingerprintWord` (the flag gallery and vanity nonce are not). It answers the one
 question nothing else on the page can: a mistyped seed produces a perfectly plausible wrong
