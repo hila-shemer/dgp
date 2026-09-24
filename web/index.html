@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#e4e2dc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101416" media="(prefers-color-scheme: dark)">
 <!-- Enforced, not merely intended: default-src 'none' plus connect-src 'none'
      means the browser itself refuses every fetch, socket, beacon, font, image
      and stylesheet this page could ever try to make. Inline script and style are
@@ -120,7 +122,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   white-space: nowrap;
   transition: border-color .12s, background .12s;
 }
-.btn:hover:not(:disabled) { border-color: var(--muted); }
+@media (hover: hover) { .btn:hover:not(:disabled) { border-color: var(--muted); } }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn-quiet {
   border-color: transparent;
@@ -128,15 +130,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
   color: var(--muted);
   padding: 6px 8px;
 }
-.btn-quiet:hover:not(:disabled) { color: var(--ink); border-color: var(--line); }
-.btn-danger:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
+@media (hover: hover) { .btn-quiet:hover:not(:disabled) { color: var(--ink); border-color: var(--line); } }
+@media (hover: hover) { .btn-danger:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); } }
 .btn-primary {
   border-color: var(--ink);
   background: var(--ink);
   color: var(--bg);
   font-weight: 600;
 }
-.btn-primary:hover:not(:disabled) { background: var(--muted); border-color: var(--muted); }
+@media (hover: hover) { .btn-primary:hover:not(:disabled) { background: var(--muted); border-color: var(--muted); } }
 
 .field { display: block; }
 .field > .eyebrow { display: block; margin-bottom: 6px; }
@@ -213,7 +215,7 @@ select.input { font-family: var(--sans); cursor: pointer; }
   color: var(--muted);
   cursor: pointer;
 }
-.seed-reveal:hover { color: var(--ink); }
+@media (hover: hover) { .seed-reveal:hover { color: var(--ink); } }
 .identity-actions { display: flex; gap: 8px; }
 @media (max-width: 640px) {
   .identity-row { grid-template-columns: minmax(0, 1fr); }
@@ -278,7 +280,7 @@ select.input { font-family: var(--sans); cursor: pointer; }
   background: transparent;
   cursor: pointer;
 }
-.entry:hover { background: var(--raised); }
+@media (hover: hover) { .entry:hover { background: var(--raised); } }
 .entry[aria-current="true"] {
   background: var(--raised);
   border-color: var(--line);
@@ -384,6 +386,9 @@ select.input { font-family: var(--sans); cursor: pointer; }
   transition: background .18s;
 }
 .bytemap-cell.is-lit { background: var(--brass); }
+/* Until something is derived the map is an explainer, not a readout - keep it
+   from looking like output. */
+.panel:has(.slab-value.is-idle) .bytemap-cell.is-lit { background: var(--brass-dim); opacity: .45; }
 @media (prefers-reduced-motion: reduce) { .bytemap-cell { transition: none; } }
 .bytemap-label { margin-top: 7px; font-size: 11.5px; color: var(--muted); }
 
@@ -399,6 +404,19 @@ select.input { font-family: var(--sans); cursor: pointer; }
 .editor-actions { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
 .editor-actions .grow { flex: 1 1 auto; }
 .check-row { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+@media (max-width: 560px) {
+  .editor-actions .check-row { flex-basis: 100%; }
+  .editor-actions .grow { display: none; }
+}
+/* Fingers, not cursors: 44px targets, and 16px text in inputs because iOS
+   Safari zooms the whole page on focusing anything smaller. */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; padding: 0 16px; font-size: 14px; }
+  .btn-quiet { min-height: 44px; }
+  .input { min-height: 44px; font-size: 16px; }
+  .seed-reveal { min-height: 44px; bottom: 0; right: 0; padding: 0 12px; }
+  .entry { min-height: 44px; }
+}
 
 /* ---------------------------------------------------------------- colophon */
 .colophon {
@@ -473,7 +491,7 @@ select.input { font-family: var(--sans); cursor: pointer; }
       </div>
     </section>
 
-    <section class="panel" aria-labelledby="derive-h">
+    <section class="panel" id="derive-panel" aria-labelledby="derive-h">
       <h2 class="sr-only" id="derive-h">Derive</h2>
       <div class="derive-head">
         <span class="derive-title is-placeholder" id="derive-title">no entry selected</span>
@@ -911,7 +929,7 @@ const el = {
   editor: $("editor"), comment: $("comment"), tags: $("tags"), pinned: $("pinned"),
   saveBtn: $("save-btn"), deleteBtn: $("delete-btn"),
   exportBtn: $("export-btn"), importBtn: $("import-btn"), importFile: $("import-file"),
-  themeBtn: $("theme-btn"),
+  themeBtn: $("theme-btn"), derivePanel: $("derive-panel"),
 };
 
 /* --------------------------------------------------------------- storage
@@ -1217,6 +1235,17 @@ function selectEntry(id) {
   renderKeyring();
   renderHeader();
   renderBytemap();
+  revealDerivePanel();
+}
+
+/* Stacked layout (phone): the derive panel sits below the whole keyring, so a tap
+ * on an entry would otherwise change nothing the user can see. */
+function revealDerivePanel() {
+  if (typeof window.matchMedia !== "function") return;
+  if (!window.matchMedia("(max-width: 780px)").matches) return;
+  if (typeof el.derivePanel.scrollIntoView !== "function") return;
+  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.derivePanel.scrollIntoView({ block: "start", behavior: smooth ? "smooth" : "auto" });
 }
 
 function newEntry() {
