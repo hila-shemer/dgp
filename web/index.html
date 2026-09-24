@@ -299,7 +299,7 @@ select.input { font-family: var(--sans); cursor: pointer; }
 .entry.is-archived .entry-name { color: var(--faint); }
 .pin { color: var(--brass-dim); }
 .empty { padding: 22px 14px; text-align: center; }
-.keyring-foot { padding: 10px 12px; border-top: 1px solid var(--line-soft); }
+.keyring-foot { padding: 10px 12px; border-top: 1px solid var(--line-soft); display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ------------------------------------------------------------------ derive */
 .derive-head {
@@ -492,6 +492,7 @@ select.input { font-family: var(--sans); cursor: pointer; }
       <ul class="keyring-list" id="keyring"></ul>
       <div class="keyring-foot">
         <button type="button" class="btn" id="new-btn">New entry</button>
+        <button type="button" class="btn" id="phone-import-btn">Import from phone</button>
       </div>
     </section>
 
@@ -980,7 +981,7 @@ const el = {
   seed: $("seed"), seedReveal: $("seed-reveal"), account: $("account"),
   lock: $("lock-btn"), checkword: $("checkword"), checkwordNote: $("checkword-note"),
   filter: $("filter"), keyring: $("keyring"), keyringCount: $("keyring-count"),
-  newBtn: $("new-btn"), title: $("derive-title"), meta: $("derive-meta"),
+  newBtn: $("new-btn"), phoneImportBtn: $("phone-import-btn"), title: $("derive-title"), meta: $("derive-meta"),
   service: $("service"), entryAccount: $("entry-account"), type: $("type"),
   slab: $("slab"), deriveBtn: $("derive-btn"), copyBtn: $("copy-btn"),
   status: $("status"), bytemap: $("bytemap"), bytemapLabel: $("bytemap-label"),
@@ -1120,7 +1121,8 @@ function renderKeyring() {
     p.className = "hint";
     p.textContent = entries.length
       ? "Nothing matches that filter."
-      : "The keyring is empty. Add the first service you want a password for.";
+      : "The keyring is empty. Add the first service you want a password for, or use "
+        + "Import from phone with the dgp-export.enc the Android app writes from Settings › Export.";
     li.appendChild(p);
     el.keyring.appendChild(li);
     return;
@@ -1516,6 +1518,7 @@ el.deleteBtn.addEventListener("click", deleteEntry);
 el.filter.addEventListener("input", renderKeyring);
 el.exportBtn.addEventListener("click", exportKeyring);
 el.importBtn.addEventListener("click", () => el.importFile.click());
+el.phoneImportBtn.addEventListener("click", () => el.importFile.click());
 el.pinOk.addEventListener("click", unlockExport);
 el.pinCancel.addEventListener("click", () => { closeExportPin(); setStatus("Import cancelled."); });
 el.importPin.addEventListener("keydown", (ev) => {
