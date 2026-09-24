@@ -13,3 +13,4 @@ set -euo pipefail
 cd "$(dirname "$0")"
 node test-vectors.mjs
 node test-ui.mjs
+python3 -B -m unittest -q test_serve
