@@ -4,6 +4,7 @@ import android.app.assist.AssistStructure
 import android.text.InputType
 import android.view.View
 import android.view.autofill.AutofillId
+import com.dgp.engine.FillPolicy
 import com.dgp.engine.SiteMatcher
 
 /** The password fields of a fill request, and who is asking (a web domain or an app). */
@@ -12,35 +13,54 @@ data class ParsedForm(
     val target: SiteMatcher.Target,
 )
 
+/** What the view tree claims. FillPolicy decides how much of it to believe. */
+data class RawForm(
+    val passwordIds: List<AutofillId>,
+    val packageName: String,
+    val webDomain: String?,
+    val webScheme: String?,
+)
+
 object FormParser {
 
-    fun parse(structure: AssistStructure): ParsedForm {
+    /** Null when FillPolicy says to offer nothing. */
+    fun parse(structure: AssistStructure): ParsedForm? {
+        val raw = parseRaw(structure)
+        val target = FillPolicy.target(raw.packageName, raw.webDomain, raw.webScheme) ?: return null
+        return ParsedForm(raw.passwordIds, target)
+    }
+
+    private fun parseRaw(structure: AssistStructure): RawForm {
         val ids = mutableListOf<AutofillId>()
         var domain: String? = null
+        var scheme: String? = null
         for (i in 0 until structure.windowNodeCount) {
-            walk(structure.getWindowNodeAt(i).rootViewNode, null) { node, inheritedDomain ->
+            walk(structure.getWindowNodeAt(i).rootViewNode, null, null) { node, inheritedDomain, inheritedScheme ->
                 val id = node.autofillId
                 if (id != null && isPassword(node)) {
                     ids.add(id)
                     // The domain of the first password field wins, so an iframe from
                     // another site can't borrow the page's entries.
-                    if (domain == null) domain = inheritedDomain
+                    if (domain == null) { domain = inheritedDomain; scheme = inheritedScheme }
                 }
             }
         }
-        val pkg = structure.activityComponent.packageName
-        val target = domain?.let { SiteMatcher.Target.Web(it) } ?: SiteMatcher.Target.App(pkg)
-        return ParsedForm(ids, target)
+        return RawForm(ids, structure.activityComponent.packageName, domain, scheme)
     }
 
     private fun walk(
         node: AssistStructure.ViewNode,
         parentDomain: String?,
-        visit: (AssistStructure.ViewNode, String?) -> Unit,
+        parentScheme: String?,
+        visit: (AssistStructure.ViewNode, String?, String?) -> Unit,
     ) {
-        val domain = node.webDomain?.takeIf { it.isNotBlank() } ?: parentDomain
-        visit(node, domain)
-        for (i in 0 until node.childCount) walk(node.getChildAt(i), domain, visit)
+        val own = node.webDomain?.takeIf { it.isNotBlank() }
+        val domain = own ?: parentDomain
+        val scheme = if (own != null) {
+            if (android.os.Build.VERSION.SDK_INT >= 28) node.webScheme else null
+        } else parentScheme
+        visit(node, domain, scheme)
+        for (i in 0 until node.childCount) walk(node.getChildAt(i), domain, scheme, visit)
     }
 
     private fun isPassword(node: AssistStructure.ViewNode): Boolean {

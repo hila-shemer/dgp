@@ -47,16 +47,22 @@ A request is either `web(host)` or `app(package)`.
    in its `sites` satisfies `H == s` or `H` ends with `"." + s`. For `app(P)`, it
    matches when some `s == P`.
 2. **Name fallback.** Only entries with an EMPTY `sites` list take part. Name `n` is
-   lowercased with spaces removed. For `web(H)`, it matches when
-   `n == registrable(H)` or `n == first label of registrable(H)`. For `app(P)`, it
-   matches when `n` equals any label of P other than
-   `com org net io app apps android www mobile`.
+   lowercased with spaces removed. For `web(H)`, it matches only when
+   `n == registrable(H)`. A bare first label (`google`) would be offered on
+   `google.evil`. Apps get no name fallback, because any app can put a `google`
+   label in its package name. (Changed after the security review, 2026-09-27.)
 3. Archived entries never match.
 4. The result lists site matches first, then name matches, each in list order.
 
 The fill UI always offers "search all", so a miss costs one extra tap.
 
 ## Android (`app/`)
+
+- **Who is asking.** A fill request's `webDomain` is trusted only when the requesting
+  package is a known browser (`FillPolicy.BROWSERS`). Any other app can set any
+  webDomain in its own view tree, so its request is matched as `app(package)`. A
+  browser request with no webDomain, or on plain `http` (localhost aside), gets no
+  suggestions. The Linux popup and native host likewise refuse non-https origins.
 
 - `DgpService.sites: List<String>`, handled in parse and serialize, plus an editable
   "sites" field in EditEntryScreen (comma- or newline-separated).

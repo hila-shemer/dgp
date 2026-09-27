@@ -27,7 +27,7 @@ class DgpAutofillService : AutofillService() {
 
     override fun onFillRequest(request: FillRequest, cancellationSignal: CancellationSignal, callback: FillCallback) {
         val structure = request.fillContexts.lastOrNull()?.structure ?: return callback.onSuccess(null)
-        val form = FormParser.parse(structure)
+        val form = FormParser.parse(structure) ?: return callback.onSuccess(null)
         if (form.passwordIds.isEmpty() || structure.activityComponent.packageName == packageName) {
             return callback.onSuccess(null)
         }

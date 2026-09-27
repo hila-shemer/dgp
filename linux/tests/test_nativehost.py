@@ -128,3 +128,18 @@ def test_subprocess_stderr_empty(cfg):
     r = _unframe(p.stdout)
     assert [x["ok"] for x in r] == [True, True, False]
     assert r[1]["password"] == engine.generate(SEED, "my code", "alnum", ACCOUNT)
+
+
+def test_match_refuses_plain_http_except_localhost(cfg):
+    r = _serve([
+        {"op": "match", "origin": "http://gist.github.com/x"},
+        {"op": "match", "origin": "http://localhost:8080/"},
+    ])
+    assert r[0]["ok"] is False and "https" in r[0]["error"]
+    assert r[1] == {"ok": True, "services": []}
+
+
+def test_match_refuses_lookalike_domain(cfg):
+    # An entry named "google" (no sites) must not be offered on google.evil.
+    r = _serve([{"op": "match", "origin": "https://google.evil/"}])
+    assert r[0] == {"ok": True, "services": []}

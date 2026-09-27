@@ -28,7 +28,9 @@ function setStatus(text) { statusEl.textContent = text || ''; }
 function originOf(url) {
   try {
     const u = new URL(url);
-    return (u.protocol === 'https:' || u.protocol === 'http:') ? u.origin : null;
+    // Plain http only for this machine: anyone on the path could read the fill.
+    const local = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '[::1]';
+    return (u.protocol === 'https:' || (u.protocol === 'http:' && local)) ? u.origin : null;
   } catch (e) { return null; }
 }
 

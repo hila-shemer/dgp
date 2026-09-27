@@ -9,7 +9,6 @@ from __future__ import annotations
 from dgp.service import DgpService
 
 _SLD_WORDS = {"co", "com", "net", "org", "ac", "gov", "edu", "ltd", "plc"}
-_PKG_NOISE = {"com", "org", "net", "io", "app", "apps", "android", "www", "mobile"}
 
 
 def normalize_host(h: str) -> str:
@@ -46,15 +45,17 @@ def match(services: list[DgpService], kind: str, value: str) -> list[DgpService]
     """kind is "web" (value: host or URL) or "app" (value: package name).
 
     Site matches first, then name-fallback matches, each in list order.
-    Archived entries never match.
+    Archived entries never match. The name fallback needs the whole registrable
+    domain ("github.com", not "github"): a bare label would offer an entry named
+    "google" on google.evil. Apps have no name fallback at all, since any app can
+    pick a package name with a "google" label.
     """
     live = [s for s in services if not s.archived]
     if kind == "web":
         host = normalize_host(value)
         if not host:
             return []
-        reg = registrable(host)
-        names = {reg, reg.split(".")[0]}
+        names = {registrable(host)}
 
         def site_hit(s: DgpService) -> bool:
             return any(host == x or host.endswith("." + x) for x in s.sites)
@@ -62,7 +63,7 @@ def match(services: list[DgpService], kind: str, value: str) -> list[DgpService]
         pkg = value.strip().lower()
         if not pkg:
             return []
-        names = {lab for lab in pkg.split(".") if lab and lab not in _PKG_NOISE}
+        names = set()
 
         def site_hit(s: DgpService) -> bool:
             return pkg in s.sites

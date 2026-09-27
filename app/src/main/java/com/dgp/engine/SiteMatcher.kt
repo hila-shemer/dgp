@@ -17,7 +17,6 @@ object SiteMatcher {
     }
 
     private val SECOND_LEVEL = setOf("co", "com", "net", "org", "ac", "gov", "edu", "ltd", "plc")
-    private val PACKAGE_NOISE = setOf("com", "org", "net", "io", "app", "apps", "android", "www", "mobile")
 
     /** Host from a URL or bare host: lowercase, no scheme/path/port/trailing dot/leading www. */
     fun normalizeHost(input: String): String {
@@ -63,16 +62,13 @@ object SiteMatcher {
         is Target.App -> site == target.packageName.lowercase()
     }
 
+    /**
+     * Name fallback for entries with no sites: the name must be the whole registrable
+     * domain ("github.com", not "github"), or an entry named "google" would be offered
+     * on google.evil. Apps get no fallback: any app can take a "google" package label.
+     */
     private fun nameMatches(name: String, target: Target): Boolean {
         val n = name.lowercase().replace(" ", "")
-        if (n.isEmpty()) return false
-        return when (target) {
-            is Target.Web -> {
-                val reg = registrable(normalizeHost(target.host))
-                n == reg || n == reg.substringBefore('.')
-            }
-            is Target.App -> target.packageName.lowercase().split('.')
-                .any { it !in PACKAGE_NOISE && it == n }
-        }
+        return target is Target.Web && n.isNotEmpty() && n == registrable(normalizeHost(target.host))
     }
 }

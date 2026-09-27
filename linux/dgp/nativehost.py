@@ -19,7 +19,7 @@ from typing import BinaryIO
 from dgp import engine, store, vault
 from dgp.cli import USER_VISIBLE_TYPES
 from dgp.service import DgpService
-from dgp.sitematch import match
+from dgp.sitematch import match, normalize_host
 
 # Chrome caps host->extension messages at 1 MiB; requests are tiny, so refuse
 # anything bigger rather than buffering it.
@@ -101,6 +101,16 @@ def _password_for(s: DgpService) -> str:
     return engine.generate(seed, s.name, s.type, account)
 
 
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+
+def _fillable_origin(origin: str) -> bool:
+    o = origin.strip().lower()
+    if o.startswith("https://"):
+        return True
+    return o.startswith("http://") and normalize_host(o) in _LOCAL_HOSTS
+
+
 def handle(req: dict) -> dict:
     op = req.get("op")
     services = store.read_services()
@@ -110,6 +120,8 @@ def handle(req: dict) -> dict:
         origin = req.get("origin")
         if not isinstance(origin, str):
             raise _Refused("match needs an origin string")
+        if not _fillable_origin(origin):
+            raise _Refused("only https pages (or http on localhost) are filled")
         return {"ok": True, "services": [_summary(s) for s in match(services, "web", origin)]}
     if op == "get":
         sid = req.get("id")
