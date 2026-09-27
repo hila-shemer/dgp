@@ -63,10 +63,11 @@ class ChromeImportTest {
 
     @Test
     fun plan_generatedMatchByNameGetsTheSiteAdded() {
-        val existing = listOf(DgpService(id = "g", name = "github"))
-        val rows = listOf(ChromeImport.Row("github.com", false, "me", "gen:github"))
+        // "my code host" matches github.com by neither site nor name; the password does.
+        val existing = listOf(DgpService(id = "g", name = "my code host"))
+        val rows = listOf(ChromeImport.Row("gist.github.com", false, "me", "gen:my code host"))
         val p = ChromeImport.plan(rows, existing, ::secretOf, ::encrypt)
         assertEquals(1, p.generated)
-        assertEquals(listOf("github.com"), p.services.single().sites)
+        assertEquals(listOf("gist.github.com"), p.services.single().sites)
     }
 }

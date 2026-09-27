@@ -1,7 +1,9 @@
 """Import a Google Password Manager CSV export into DGP entries.
 
-For each row: if an existing entry for the site already derives the same
-password, DGP generated it and only the site is recorded on that entry.
+For each row: if any existing entry already derives the same password, DGP
+generated it and only the site is recorded on that entry. Every entry is tried
+(site matches first), because Hila's entry names are arbitrary and the name
+fallback in sitematch is deliberately strict; password equality is the evidence.
 Otherwise the password becomes a `vault` entry. Re-running the import is
 harmless: a vault entry for the site that already decrypts to the row's
 password makes the row a no-op. Nothing here prints or logs a password.
@@ -72,6 +74,13 @@ def import_rows(rows: Iterable[dict[str, str]], services: list[DgpService],
                 seed: str, account: str) -> ImportReport:
     """Apply the rows to `services` in place and report what changed."""
     rep = ImportReport()
+    derived: dict[str, str] = {}
+
+    def derive(s: DgpService) -> str:
+        if s.id not in derived:
+            derived[s.id] = engine.generate(seed, s.name, s.type, account)
+        return derived[s.id]
+
     for row in rows:
         password = row.get("password", "")
         where = site_of(row.get("url", ""))
@@ -81,12 +90,10 @@ def import_rows(rows: Iterable[dict[str, str]], services: list[DgpService],
         kind, site = where
         username = row.get("username", "").strip()
 
-        hit = None
-        for s in match(services, kind, site):
-            if s.type in USER_VISIBLE_TYPES and \
-                    engine.generate(seed, s.name, s.type, account) == password:
-                hit = s
-                break
+        matched = match(services, kind, site)
+        candidates = matched + [s for s in services if s not in matched]
+        hit = next((s for s in candidates
+                    if s.type in USER_VISIBLE_TYPES and derive(s) == password), None)
         if hit is not None:
             rep.generated += 1
             if site not in hit.sites:

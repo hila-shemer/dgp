@@ -6,8 +6,10 @@ import com.dgp.DgpService
  * Import from a Google Password Manager CSV export (Chrome, desktop or Android).
  *
  * Hila's rule (2026-09-27): every Chrome password DGP did not generate becomes a
- * vault entry. A row whose password DGP already derives for a matching entry only
- * adds the site to that entry. The rules match docs/chrome-autofill-plan.md and
+ * vault entry. A row whose password DGP already derives for any entry (site
+ * matches tried first) only adds the site to that entry: her entry names are
+ * arbitrary and SiteMatcher's name fallback is deliberately strict, so password
+ * equality is the evidence. The rules match docs/chrome-autofill-plan.md and
  * linux/dgp's import-chrome. Passwords are never logged; a Row is dropped as soon
  * as the plan is built.
  */
@@ -64,7 +66,8 @@ object ChromeImport {
             if (row.password.isEmpty()) { skipped++; continue }
             val target = if (row.isApp) SiteMatcher.Target.App(row.site) else SiteMatcher.Target.Web(row.site)
 
-            val gen = SiteMatcher.match(services, target)
+            val matched = SiteMatcher.match(services, target)
+            val gen = (matched + services.filter { it !in matched })
                 .firstOrNull { it.type != "vault" && secret(it) == row.password }
             if (gen != null) {
                 if (row.site !in gen.sites) {
