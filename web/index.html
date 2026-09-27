@@ -1024,6 +1024,12 @@ function normalizeEntry(o) {
     archived: o.archived === true,
     pinned: o.pinned === true,
     tags: Array.isArray(o.tags) ? o.tags.filter((t) => typeof t === "string") : [],
+    // Web hosts / Android packages the autofill paths match on. This page does
+    // not edit them, only keeps them, lowercased and trimmed like the apps do.
+    sites: Array.isArray(o.sites)
+      ? [...new Set(o.sites.filter((t) => typeof t === "string")
+          .map((t) => t.trim().toLowerCase()).filter(Boolean))]
+      : [],
     encryptedSecret: secret,
     account: typeof o.account === "string" && o.account ? o.account : null,
   };
@@ -1035,6 +1041,7 @@ function serializeEntry(e) {
     archived: e.archived, pinned: e.pinned,
   };
   if (e.tags.length) out.tags = e.tags;
+  if (e.sites && e.sites.length) out.sites = e.sites;
   if (e.encryptedSecret !== null) out.encryptedSecret = e.encryptedSecret;
   if (e.account !== null) out.account = e.account;
   return out;
@@ -1359,7 +1366,7 @@ function saveEntry() {
     Object.assign(existing, fields);
     setStatus(`Saved ${name}.`);
   } else {
-    const e = { id: newId(), archived: false, encryptedSecret: null, ...fields };
+    const e = { id: newId(), archived: false, encryptedSecret: null, sites: [], ...fields };
     entries.push(e);
     selectedId = e.id;
     setStatus(`Added ${name}.`);

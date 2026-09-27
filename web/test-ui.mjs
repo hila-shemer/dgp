@@ -364,6 +364,7 @@ const exported = await downloaded.blob.text();
     id: "11111111-2222-3333-4444-555555555555",
     name: "vaulted.example", type: "alnumlong", comment: "from the phone",
     archived: true, pinned: false, tags: ["work"],
+    sites: [" Vaulted.Example ", "com.vaulted.app"],
     encryptedSecret: "ZmFrZS1ub3QtcmVhbA==",
   }]);
   byId.get("import-file").files = [{ text: async () => foreign }];
@@ -375,6 +376,10 @@ const exported = await downloaded.blob.text();
   eq("encryptedSecret survives a round-trip", v.encryptedSecret, "ZmFrZS1ub3QtcmVhbA==");
   eq("archived survives a round-trip", v.archived, true);
   eq("tags survive a round-trip", v.tags, ["work"]);
+  eq("sites survive a round-trip, normalized", v.sites, ["vaulted.example", "com.vaulted.app"]);
+  eq("sites serialize right after tags", Object.keys(v).slice(Object.keys(v).indexOf("tags"), Object.keys(v).indexOf("tags") + 2), ["tags", "sites"]);
+  eq("no sites key when there are none",
+     stored.filter((e) => e.name !== "vaulted.example").some((e) => "sites" in e), false);
   check("import reports what it did", /Imported 1 new/.test(g("status").textContent),
     g("status").textContent);
 }
