@@ -93,3 +93,23 @@ def test_read_write_services_round_trip(tmp_path, monkeypatch):
     result = store.read_services()
     assert len(result) == 2
     assert {r.name for r in result} == {"alpha", "beta"}
+
+
+def test_sites_round_trip_after_tags():
+    s = DgpService(id="x", name="gh", tags=["t"], encrypted_secret="e",
+                   sites=["github.com", "com.github.android"])
+    j = serialize_services([s])
+    assert j.index('"tags"') < j.index('"sites"') < j.index('"encryptedSecret"')
+    parsed = parse_services(j)
+    assert parsed[0].sites == ["github.com", "com.github.android"]
+    assert serialize_services(parsed) == j
+
+
+def test_sites_omitted_when_empty():
+    assert "sites" not in serialize_services([new_service("foo")])
+    assert parse_services('[{"id":"x","name":"y"}]')[0].sites == []
+
+
+def test_sites_lowercased_and_trimmed():
+    parsed = parse_services('[{"id":"x","name":"y","sites":["  GitHub.COM ", "", 7]}]')
+    assert parsed[0].sites == ["github.com"]

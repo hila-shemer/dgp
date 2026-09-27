@@ -14,6 +14,21 @@ class DgpService:
     pinned: bool = False
     tags: list[str] = field(default_factory=list)
     encrypted_secret: str | None = None
+    sites: list[str] = field(default_factory=list)
+
+
+def normalize_sites(sites) -> list[str]:
+    """Lowercase + trim each site, drop empties and non-strings, keep order, dedupe."""
+    out: list[str] = []
+    if not isinstance(sites, list):
+        return out
+    for x in sites:
+        if not isinstance(x, str):
+            continue
+        v = x.strip().lower()
+        if v and v not in out:
+            out.append(v)
+    return out
 
 
 def parse_services(json_str: str) -> list[DgpService]:
@@ -42,6 +57,7 @@ def parse_services(json_str: str) -> list[DgpService]:
                 pinned=obj.get("pinned", False),
                 tags=tags,
                 encrypted_secret=encrypted_secret,
+                sites=normalize_sites(obj.get("sites")),
             ))
         return services
     except Exception:
@@ -61,6 +77,9 @@ def serialize_services(services: list[DgpService]) -> str:
         }
         if s.tags:
             d["tags"] = s.tags
+        sites = normalize_sites(s.sites)
+        if sites:
+            d["sites"] = sites
         if s.encrypted_secret is not None:
             d["encryptedSecret"] = s.encrypted_secret
         arr.append(d)
