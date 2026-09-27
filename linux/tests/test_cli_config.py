@@ -182,3 +182,27 @@ def test_import_no_pin_no_tty(tmp_path):
     r = _run(tmp_path, "config", "import", str(dummy_file), input="")
     assert r.returncode != 0
     assert "pin" in r.stderr.lower() or "PIN" in r.stderr
+
+
+def test_add_with_sites_then_list(tmp_path):
+    r = _run(tmp_path, "config", "add", "gh", "--site", "GitHub.com ", "--site", "com.github.android")
+    assert r.returncode == 0, r.stderr
+    assert store_sites(tmp_path, "gh") == ["github.com", "com.github.android"]
+    r = _run(tmp_path, "config", "list")
+    assert "[github.com, com.github.android]" in r.stdout
+
+
+def test_edit_sites_without_editor(tmp_path):
+    _run(tmp_path, "config", "add", "gh", "--site", "old.com")
+    r = _run(tmp_path, "config", "edit", "gh", "--site", "a.com", "--site", "b.com",
+             extra_env={"EDITOR": "false"})
+    assert r.returncode == 0, r.stderr
+    assert store_sites(tmp_path, "gh") == ["a.com", "b.com"]
+    r = _run(tmp_path, "config", "edit", "gh", "--site", "")
+    assert r.returncode == 0
+    assert store_sites(tmp_path, "gh") == []
+
+
+def store_sites(tmp_path, name):
+    data = json.loads((tmp_path / "services.json").read_text())
+    return next(o for o in data if o["name"] == name).get("sites", [])

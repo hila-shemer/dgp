@@ -10,7 +10,8 @@ import tempfile
 from pathlib import Path
 
 from dgp import store
-from dgp.service import DgpService, new_service, parse_services, serialize_services
+from dgp.service import (DgpService, new_service, normalize_sites, parse_services,
+                         serialize_services)
 from dgp.exportcrypto import encrypt_export, decrypt_export
 from dgp.vault import encrypt_vault, decrypt_vault
 from dgp.cli import USER_VISIBLE_TYPES, resolve_seed, resolve_account, _add_common_args
@@ -58,6 +59,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     add_p.add_argument("--pin", action="store_true", dest="pinned", help="Mark as pinned")
     add_p.add_argument("--tag", action="append", dest="tags", metavar="X", default=[])
     add_p.add_argument("--secret-file", metavar="PATH")
+    add_p.add_argument("--site", action="append", dest="sites", metavar="HOST", default=[],
+                       help="Web host or Android package this entry fills (repeatable)")
     _add_common_args(add_p)
     add_p.set_defaults(func=_add_cmd)
 
@@ -67,6 +70,9 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 
     edit_p = sub.add_parser("edit", help="Edit a service in $EDITOR")
     edit_p.add_argument("name", help="Service name")
+    edit_p.add_argument("--site", action="append", dest="sites", metavar="HOST", default=None,
+                        help="Replace the entry's sites without opening $EDITOR "
+                             "(repeatable; --site '' clears them)")
     _add_common_args(edit_p)
     edit_p.set_defaults(func=_edit_cmd)
 
@@ -94,7 +100,8 @@ def _list_cmd(args: argparse.Namespace) -> int:
             continue
         pin_mark = " [P]" if s.pinned else ""
         comment = f"  {s.comment}" if s.comment else ""
-        print(f"{s.name}  {s.type}{pin_mark}{comment}")
+        sites = f"  [{', '.join(s.sites)}]" if s.sites else ""
+        print(f"{s.name}  {s.type}{pin_mark}{sites}{comment}")
     return 0
 
 
@@ -130,6 +137,7 @@ def _add_cmd(args: argparse.Namespace) -> int:
         pinned=args.pinned,
         tags=args.tags,
         encrypted_secret=encrypted_secret,
+        sites=normalize_sites(args.sites),
     )
     services.append(svc)
     store.write_services(services)
@@ -154,6 +162,11 @@ def _edit_cmd(args: argparse.Namespace) -> int:
         return 1
 
     svc = services[idx]
+    if args.sites is not None:
+        svc.sites = normalize_sites(args.sites)
+        store.write_services(services)
+        return 0
+
     is_vault = svc.type == "vault"
 
     data: dict = {
@@ -164,6 +177,7 @@ def _edit_cmd(args: argparse.Namespace) -> int:
         "archived": svc.archived,
         "pinned": svc.pinned,
         "tags": svc.tags,
+        "sites": svc.sites,
     }
     seed = account = None
     if is_vault:
@@ -202,6 +216,7 @@ def _edit_cmd(args: argparse.Namespace) -> int:
             pinned=edited.get("pinned", svc.pinned),
             tags=edited.get("tags", svc.tags),
             encrypted_secret=encrypted_secret,
+            sites=normalize_sites(edited.get("sites", svc.sites)),
         )
         services[idx] = new_svc
         store.write_services(services)
