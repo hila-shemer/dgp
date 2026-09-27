@@ -45,7 +45,8 @@ dgp native-host            # run by Chrome, not by hand
 `--site` (repeatable) lists the web hosts (`github.com`) or Android package names
 (`com.github.android`) an entry fills. `config edit NAME --site X` replaces the list
 without opening `$EDITOR`; `--site ''` clears it. An entry with no sites still matches
-a page whose domain equals its name (`github` matches `gist.github.com`).
+a page when its name is the page's whole registrable domain (`github.com` matches
+`gist.github.com`; `github` matches nothing). Apps never match by name.
 
 ## Chrome extension
 
