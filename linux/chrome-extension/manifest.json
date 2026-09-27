@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "DGP fill",
+  "version": "0.1.0",
+  "description": "Fill a DGP-derived password into the current page, via the local dgp native host.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtpb/dGawkJ7pYmUnjJZXjZftwuVvfMB0LN/Zys+aBl8b/ZeAhHaQBDP2O3nrlMP5V4kNRvVEe5IggpUALXuhCQ3GplxPyFC6OCYTjTVGg2zDWQJyQoalHubQ5fvy3P/erQLWOH4rEBvgUT8MkEK+m9zIfdiyUyKqQQK3qANN5Ev5tptzvbgZ7SqEbsSXre1e1G9A1BEpDV5hkQiz1pyjAh7xhKUfU8B2ugnD2Zl+mfEEP73M47Qk7vvL44uAmzt/IAD9kOEkND/z0hhnhTMZL1tHLgsrJZyrS13ck8Xo5fmOhyDFFW54XXWMck72RRBdY9A3Ryi3PQBtocw9t4taDwIDAQAB",
+  "permissions": ["nativeMessaging", "activeTab", "scripting"],
+  "action": {
+    "default_title": "DGP fill",
+    "default_popup": "popup.html"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Ctrl+Shift+L" },
+      "description": "Open the DGP fill popup"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+  }
+}
