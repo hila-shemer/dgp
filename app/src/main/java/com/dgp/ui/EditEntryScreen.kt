@@ -51,6 +51,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dgp.DgpService
+import com.dgp.normalizeSites
 import com.dgp.engine.DgpEngine
 import com.dgp.security.ConfigCrypto
 import com.dgp.ui.components.autoFocus
@@ -169,6 +170,8 @@ fun EditEntryScreen(
     var name by remember(service, initialName) { mutableStateOf(service?.name ?: initialName) }
     var type by remember { mutableStateOf(service?.type ?: "alnum") }
     var comment by remember { mutableStateOf(service?.comment ?: "") }
+    val originalSitesText = remember { service?.sites?.joinToString(" ") ?: "" }
+    var sitesText by remember { mutableStateOf(originalSitesText) }
     var pinned by remember { mutableStateOf(service?.pinned ?: false) }
     var archived by remember { mutableStateOf(service?.archived ?: false) }
     var vaultSecret by remember { mutableStateOf("") }
@@ -212,6 +215,7 @@ fun EditEntryScreen(
     val hasUnsavedChanges = name != (service?.name ?: "") ||
         type != (service?.type ?: "alnum") ||
         comment != (service?.comment ?: "") ||
+        sitesText != originalSitesText ||
         pinned != (service?.pinned ?: false) ||
         archived != (service?.archived ?: false) ||
         (type == "vault" && vaultSecret != initialVaultPlaintext)
@@ -236,6 +240,7 @@ fun EditEntryScreen(
             name = name,
             type = type,
             comment = comment,
+            sites = normalizeSites(sitesText.split(' ', ',', '\n')),
             pinned = pinned,
             archived = archived,
             encryptedSecret = encryptedSecret,
@@ -365,6 +370,27 @@ fun EditEntryScreen(
                     placeholder = "optional note",
                     singleLine = true,
                     modifier = Modifier.semantics { testTag = "service-comment-input" },
+                )
+            }
+
+            // Sites field
+            Column {
+                Row {
+                    Text("sites", style = t.caption, color = editorial.inkMuted)
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "// domains or app ids autofill offers this for",
+                        style = t.caption,
+                        color = editorial.inkFaint,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                EditorialInputField(
+                    value = sitesText,
+                    onValueChange = { sitesText = it },
+                    placeholder = "github.com com.github.android",
+                    singleLine = true,
+                    modifier = Modifier.semantics { testTag = "service-sites-input" },
                 )
             }
 

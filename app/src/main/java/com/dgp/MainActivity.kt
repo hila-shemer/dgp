@@ -70,6 +70,8 @@ data class DgpService(
     val archived: Boolean = false,
     val pinned: Boolean = false,
     val tags: List<String> = emptyList(),
+    // Web hosts or Android package names this entry autofills. See SiteMatcher.
+    val sites: List<String> = emptyList(),
     // Base64(IV ‖ AES-256-GCM ciphertext). Only set for "vault" entries.
     // Key derivation: DgpEngine.deriveAesKey(seed, name, account).
     val encryptedSecret: String? = null,
@@ -170,6 +172,7 @@ fun parseServices(json: String): List<DgpService> {
                 obj.optBoolean("archived", false),
                 obj.optBoolean("pinned", false),
                 obj.optJSONArray("tags")?.let { ja -> (0 until ja.length()).map(ja::getString) } ?: emptyList(),
+                obj.optJSONArray("sites")?.let { ja -> normalizeSites((0 until ja.length()).map(ja::getString)) } ?: emptyList(),
                 if (obj.has("encryptedSecret") && !obj.isNull("encryptedSecret"))
                     obj.getString("encryptedSecret") else null
             ))
@@ -177,6 +180,10 @@ fun parseServices(json: String): List<DgpService> {
     } catch (_: Exception) {}
     return list
 }
+
+/** Lowercased, trimmed, blank-free, de-duplicated; the stored form of `sites`. */
+fun normalizeSites(raw: List<String>): List<String> =
+    raw.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct()
 
 fun serializeServices(services: List<DgpService>): String {
     val arr = JSONArray()
@@ -189,6 +196,7 @@ fun serializeServices(services: List<DgpService>): String {
             put("archived", it.archived)
             put("pinned", it.pinned)
             if (it.tags.isNotEmpty()) put("tags", JSONArray(it.tags))
+            if (it.sites.isNotEmpty()) put("sites", JSONArray(it.sites))
             if (it.encryptedSecret != null) put("encryptedSecret", it.encryptedSecret)
         })
     }

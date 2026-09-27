@@ -306,4 +306,20 @@ class ServiceParsingTest {
         assertFalse(services[0].pinned)
         assertTrue(services[0].tags.isEmpty())
     }
+
+    // ── sites ─────────────────────────────────────────────────────────────────
+
+    @Test
+    fun sites_roundTripAndNormalize() {
+        val json = """[{"id":"a","name":"x","sites":[" GitHub.com ","","com.github.android","github.com"]}]"""
+        val parsed = parseServices(json)
+        assertEquals(listOf("github.com", "com.github.android"), parsed[0].sites)
+        assertEquals(parsed, parseServices(serializeServices(parsed)))
+    }
+
+    @Test
+    fun sites_omittedWhenEmpty() {
+        val out = serializeServices(listOf(DgpService(id = "a", name = "x")))
+        assertFalse(out.contains("sites"))
+    }
 }
