@@ -30,6 +30,7 @@ import com.dgp.engine.FlagFingerprint
 import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
+import com.dgp.session.DgpSession
 import com.dgp.ui.EditEntryScreen
 import com.dgp.ui.ListFilter
 import com.dgp.ui.ReorderScreen
@@ -271,11 +272,17 @@ fun DgpAppContent(
     val context = LocalContext.current as FragmentActivity
     val scope = rememberCoroutineScope()
     val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-    // Core state
-    var masterSeed by remember { mutableStateOf("") }
-    var isSeeded by remember { mutableStateOf(false) }
-    var account by remember { mutableStateOf("") }
-    var services by remember { mutableStateOf(listOf<DgpService>()) }
+    // Core state. It starts from DgpSession so an unlock outlives this activity,
+    // and is mirrored back into it below for the autofill picker to use.
+    val startSession = remember { DgpSession.current }
+    var masterSeed by remember { mutableStateOf(startSession?.seed ?: "") }
+    var isSeeded by remember { mutableStateOf(startSession != null) }
+    var account by remember { mutableStateOf(startSession?.account ?: "") }
+    var services by remember { mutableStateOf(startSession?.services ?: listOf<DgpService>()) }
+
+    LaunchedEffect(masterSeed, account, services, isSeeded) {
+        if (isSeeded) DgpSession.set(masterSeed, account, services)
+    }
 
     // Visual flag fingerprint of seed+account. fpBytes is the one expensive
     // derivation; recompute off the main thread whenever seed or account changes.
@@ -391,7 +398,23 @@ fun DgpAppContent(
     }
 
     // UI States
-    var showSeedPrompt by remember { mutableStateOf(true) }
+    var showSeedPrompt by remember { mutableStateOf(startSession == null) }
+
+    // The autofill picker can unlock, or add a site to an entry, while this screen
+    // exists; take its changes. Our own writes come back equal and change nothing.
+    val sessionState by DgpSession.state.collectAsState()
+    LaunchedEffect(sessionState) {
+        val s = sessionState ?: return@LaunchedEffect
+        if (!isSeeded) {
+            masterSeed = s.seed
+            account = s.account
+            services = s.services
+            isSeeded = true
+            showSeedPrompt = false
+        } else if (s.services != services) {
+            services = s.services
+        }
+    }
     var searchQuery by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
     val testResults = remember { mutableStateListOf<TestVectors.SingleTestResult>() }
@@ -634,18 +657,12 @@ fun DgpAppContent(
 
     // Clear account on reboot
     LaunchedEffect(Unit) {
-        val bootTime = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime()
-        val lastBootTime = prefs.getLong("last_boot_time", 0L)
-        // Allow 5s tolerance for timing differences
-        if (lastBootTime == 0L || kotlin.math.abs(bootTime - lastBootTime) > 5000) {
-            clearAccount()
-        }
-        prefs.edit().putLong("last_boot_time", bootTime).apply()
+        if (DgpSession.clearAccountIfRebooted(prefs)) clearAccount()
     }
 
     // Try biometric unlock on first launch if seed is saved
     LaunchedEffect(Unit) {
-        loadSeedWithBiometric { seed -> unlockWithSeed(seed, skipSave = true) }
+        if (!isSeeded) loadSeedWithBiometric { seed -> unlockWithSeed(seed, skipSave = true) }
     }
 
     // Pick the top-level screen. Dialogs and sheets below render on top of
@@ -742,6 +759,19 @@ fun DgpAppContent(
                     activeModal = ActiveModal.ImportPin(null)
                 },
                 onImportPlaintext = { launchImportFilePicker() },
+                onAutofillService = {
+                    val afm = context.getSystemService(android.view.autofill.AutofillManager::class.java)
+                    if (afm?.hasEnabledAutofillServices() == true) {
+                        android.widget.Toast.makeText(context,
+                            "DGP is your autofill service. For Chrome: Settings > Autofill services > Autofill using another service",
+                            android.widget.Toast.LENGTH_LONG).show()
+                    } else {
+                        context.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE)
+                                .setData(Uri.parse("package:${context.packageName}"))
+                        )
+                    }
+                },
                 onClearAll = {
                     saveServices(emptyList())
                 },
@@ -752,6 +782,7 @@ fun DgpAppContent(
                             clipboardManager.clearPrimaryClip()
                         }
                     }
+                    DgpSession.lock()
                     masterSeed = ""
                     isSeeded = false
                     account = ""
@@ -789,6 +820,7 @@ fun DgpAppContent(
                             clipboardManager.clearPrimaryClip()
                         }
                     }
+                    DgpSession.lock()
                     masterSeed = ""
                     isSeeded = false
                     account = ""

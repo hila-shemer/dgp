@@ -64,6 +64,7 @@ fun SettingsScreen(
     onImportEncrypted: () -> Unit,
     onImportPlaintext: () -> Unit,
     onClearAll: () -> Unit,
+    onAutofillService: () -> Unit = {},
     onLockAndQuit: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -211,6 +212,8 @@ fun SettingsScreen(
                 )
                 HorizontalDivider(color = editorial.rule, thickness = 1.dp)
                 SettingsRow(label = "change seed", onClick = onChangeSeed)
+                HorizontalDivider(color = editorial.rule, thickness = 1.dp)
+                SettingsRow(label = "autofill service", onClick = onAutofillService)
                 HorizontalDivider(color = editorial.rule, thickness = 1.dp)
                 SettingsRow(label = "export (encrypted)", onClick = onExportConfig)
                 HorizontalDivider(color = editorial.rule, thickness = 1.dp)

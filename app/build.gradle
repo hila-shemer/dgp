@@ -47,6 +47,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
+        debug {
+            // -PdgpIdSuffix=.debug installs a debug build beside the release app on a
+            // phone, without touching the release app's data.
+            if (project.hasProperty('dgpIdSuffix')) applicationIdSuffix = project.property('dgpIdSuffix')
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
