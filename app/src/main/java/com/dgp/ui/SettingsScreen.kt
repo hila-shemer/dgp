@@ -65,6 +65,7 @@ fun SettingsScreen(
     onImportPlaintext: () -> Unit,
     onClearAll: () -> Unit,
     onAutofillService: () -> Unit = {},
+    onImportChrome: () -> Unit = {},
     onLockAndQuit: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -230,6 +231,11 @@ fun SettingsScreen(
                 SettingsRow(
                     label = "import (plaintext json file)",
                     onClick = onImportPlaintext,
+                )
+                HorizontalDivider(color = editorial.rule, thickness = 1.dp)
+                SettingsRow(
+                    label = "import from chrome (csv)",
+                    onClick = onImportChrome,
                 )
                 HorizontalDivider(color = editorial.rule, thickness = 1.dp)
                 SettingsRow(

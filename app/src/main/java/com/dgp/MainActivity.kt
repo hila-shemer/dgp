@@ -31,6 +31,7 @@ import com.dgp.engine.TestVectors
 import com.dgp.security.BiometricHelper
 import com.dgp.security.ConfigCrypto
 import com.dgp.session.DgpSession
+import com.dgp.engine.ChromeImport
 import com.dgp.ui.EditEntryScreen
 import com.dgp.ui.ListFilter
 import com.dgp.ui.ReorderScreen
@@ -325,6 +326,43 @@ fun DgpAppContent(
                     if (json != null) loadImportedJson(json)
                 } catch (e: Exception) {
                     android.widget.Toast.makeText(context, "Import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    // Import from Chrome: the plan is built (all the PBKDF2 work) before the preview,
+    // so confirming only saves. The CSV text is dropped once the plan exists.
+    var chromePlan by remember { mutableStateOf<ChromeImport.Plan?>(null) }
+    var chromeWorking by remember { mutableStateOf(false) }
+
+    fun launchChromeImport() {
+        if (account.isEmpty()) {
+            android.widget.Toast.makeText(context, "Set your account first", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        mainActivity.launchFilePicker { uri ->
+            if (uri == null) return@launchFilePicker
+            val seed = masterSeed
+            val acct = account
+            val current = services
+            chromeWorking = true
+            scope.launch {
+                try {
+                    val plan = withContext(Dispatchers.Default) {
+                        val text = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() } ?: ""
+                        val unlocked = DgpSession.Unlocked(seed, acct, current)
+                        ChromeImport.plan(
+                            ChromeImport.parseCsv(text), current,
+                            secretOf = { DgpSession.secretFor(engine, unlocked, it) },
+                            encrypt = { name, pw -> ConfigCrypto.encryptWithRawKey(pw, engine.deriveAesKey(seed, name, acct)) },
+                        )
+                    }
+                    chromePlan = plan
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "Chrome import failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                } finally {
+                    chromeWorking = false
                 }
             }
         }
@@ -759,6 +797,7 @@ fun DgpAppContent(
                     activeModal = ActiveModal.ImportPin(null)
                 },
                 onImportPlaintext = { launchImportFilePicker() },
+                onImportChrome = { launchChromeImport() },
                 onAutofillService = {
                     val afm = context.getSystemService(android.view.autofill.AutofillManager::class.java)
                     if (afm?.hasEnabledAutofillServices() == true) {
@@ -841,6 +880,37 @@ fun DgpAppContent(
                 onToastUndo = { copyToast = CopyToastState.Idle },
             )
         }
+    }
+
+    if (chromeWorking) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Reading Chrome export") },
+            text = { Text("Checking each password against DGP. This takes a few seconds per hundred rows.") },
+            confirmButton = {},
+        )
+    }
+    chromePlan?.let { plan ->
+        AlertDialog(
+            onDismissRequest = { chromePlan = null },
+            title = { Text("Import from Chrome") },
+            text = {
+                Text(
+                    "${plan.added.size} new vault entries (tag #${ChromeImport.TAG})\n" +
+                    "${plan.generated} already DGP passwords (site added to the entry)\n" +
+                    "${plan.skipped} skipped (empty or already imported)\n\n" +
+                    "Delete the CSV file afterwards: it holds every password in plain text."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    saveServices(plan.services)
+                    chromePlan = null
+                    android.widget.Toast.makeText(context, "Imported ${plan.added.size} entries", android.widget.Toast.LENGTH_SHORT).show()
+                }) { Text("Import") }
+            },
+            dismissButton = { TextButton(onClick = { chromePlan = null }) { Text("Cancel") } },
+        )
     }
 
     when (val m = activeModal) {
