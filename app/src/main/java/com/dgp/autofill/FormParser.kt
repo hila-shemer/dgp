@@ -26,7 +26,7 @@ object FormParser {
     /** Null when FillPolicy says to offer nothing. */
     fun parse(structure: AssistStructure): ParsedForm? {
         val raw = parseRaw(structure)
-        val target = FillPolicy.target(raw.packageName, raw.webDomain, raw.webScheme) ?: return null
+        val target = FillPolicy.target(raw.packageName, raw.webDomain, raw.webScheme, android.os.Build.VERSION.SDK_INT) ?: return null
         return ParsedForm(raw.passwordIds, target)
     }
 

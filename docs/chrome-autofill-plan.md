@@ -63,6 +63,8 @@ The fill UI always offers "search all", so a miss costs one extra tap.
   webDomain in its own view tree, so its request is matched as `app(package)`. A
   browser request with no webDomain, or on plain `http` (localhost aside), gets no
   suggestions. The Linux popup and native host likewise refuse non-https origins.
+  Below API 28 nothing is offered: webScheme doesn't exist there, and the
+  requester's activityComponent may be forged.
 
 - `DgpService.sites: List<String>`, handled in parse and serialize, plus an editable
   "sites" field in EditEntryScreen (comma- or newline-separated).
