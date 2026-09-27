@@ -1,0 +1,28 @@
+{
+  "services": [
+    {"id": "gh",   "name": "my code host", "sites": ["github.com", "com.github.android"]},
+    {"id": "goo",  "name": "google",       "sites": []},
+    {"id": "bank", "name": "Leumi Online", "sites": ["leumi.co.il"]},
+    {"id": "acc",  "name": "work sso",     "sites": ["accounts.example.com"]},
+    {"id": "old",  "name": "github",       "sites": [], "archived": true},
+    {"id": "gh2",  "name": "github.com",   "sites": []},
+    {"id": "okta", "name": "okta",         "sites": []}
+  ],
+  "cases": [
+    {"kind": "web", "input": "https://github.com/login",            "expect": ["gh", "gh2"]},
+    {"kind": "web", "input": "gist.github.com",                     "expect": ["gh", "gh2"]},
+    {"kind": "web", "input": "https://WWW.GitHub.com.:443/",        "expect": ["gh", "gh2"]},
+    {"kind": "web", "input": "https://notgithub.com/",              "expect": []},
+    {"kind": "web", "input": "https://accounts.google.com/signin",  "expect": ["goo"]},
+    {"kind": "web", "input": "https://online.leumi.co.il/",         "expect": ["bank"]},
+    {"kind": "web", "input": "https://leumi.co.il",                 "expect": ["bank"]},
+    {"kind": "web", "input": "https://accounts.example.com/x",      "expect": ["acc"]},
+    {"kind": "web", "input": "https://example.com/",                "expect": []},
+    {"kind": "web", "input": "https://acme.okta.com/",              "expect": ["okta"]},
+    {"kind": "web", "input": "https://okta.com/",                   "expect": ["okta"]},
+    {"kind": "app", "input": "com.github.android",                  "expect": ["gh"]},
+    {"kind": "app", "input": "com.google.android.gm",               "expect": ["goo"]},
+    {"kind": "app", "input": "com.okta.android.mobile",             "expect": ["okta"]},
+    {"kind": "app", "input": "com.unknown.app",                     "expect": []}
+  ]
+}
