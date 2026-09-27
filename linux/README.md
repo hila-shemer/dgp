@@ -25,19 +25,52 @@ pip wheel -w dist .
 dgp gen <service> [--type TYPE] --seed-file FILE
 dgp test-vectors [--all]
 dgp config list [--archived] [--json]
-dgp config add <name> [--type T] [--comment C] [--pin] [--tag X] [--vault]
+dgp config add <name> [--type T] [--comment C] [--pin] [--tag X] [--site HOST] [--vault]
 dgp config remove <name>
-dgp config edit <name>
+dgp config edit <name> [--site HOST ...]
 dgp config export [--out PATH] [--pin PIN]
 dgp config import <file> [--plaintext] [--pin PIN]
 dgp ssh <service> [--out PATH]
 dgp btc-key <service>
 dgp btc-mnemonic <service>
 dgp prng <service> --bytes N [--out PATH]
+dgp chrome-install [--extension-id ID] [--dry-run]
+dgp import-chrome FILE [--dry-run]
+dgp native-host            # run by Chrome, not by hand
 ```
 
 `--type` choices: `alnum`, `alnumlong`, `hex`, `hexlong`, `base58`, `base58long`,
 `xkcd`, `xkcdlong`. Vault entries are read via `dgp config edit`, not `dgp gen`.
+
+`--site` (repeatable) lists the web hosts (`github.com`) or Android package names
+(`com.github.android`) an entry fills. `config edit NAME --site X` replaces the list
+without opening `$EDITOR`; `--site ''` clears it. An entry with no sites still matches
+a page whose domain equals its name (`github` matches `gist.github.com`).
+
+## Chrome extension
+
+`linux/chrome-extension/` is a small Manifest V3 extension that fills DGP passwords.
+It talks to `dgp native-host` over Chrome native messaging; the seed stays in the
+`dgp` process.
+
+1. `dgp chrome-install` writes `~/.local/share/dgp/native-host` (a launcher for the
+   current Python) and the `io.github.hilashemer.dgp.json` host manifest into
+   `~/.config/google-chrome/NativeMessagingHosts/` and
+   `~/.config/chromium/NativeMessagingHosts/`. Re-run it if you move the virtualenv.
+2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**,
+   and pick `linux/chrome-extension`. The manifest's fixed key makes the extension ID
+   `iagcagolicncaaanhhmdhfohinomcnhi`, which is what `chrome-install` allows.
+3. On a login page click the DGP icon (or press Ctrl+Shift+L). Pick an entry and it
+   fills the focused password field, or the first one on the page. Type in the box to
+   search all entries.
+
+## Importing Chrome passwords
+
+Export from Google Password Manager (Settings, Export passwords) and run
+`dgp import-chrome passwords.csv --dry-run`, then again without `--dry-run`. A
+password DGP already derives only adds the site to that entry; every other one becomes
+a `vault` entry named after the site, with the username as its comment and the tag
+`chrome-import`. Re-running is harmless. Delete the CSV afterwards; it is plaintext.
 
 ## GUI launch
 
